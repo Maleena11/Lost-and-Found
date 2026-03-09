@@ -57,6 +57,8 @@ const verificationRequestSchema = new mongoose.Schema({
   }
 });
 
+
+
 const VerificationRequest = mongoose.model('VerificationRequest', verificationRequestSchema);
 
 module.exports = VerificationRequest;

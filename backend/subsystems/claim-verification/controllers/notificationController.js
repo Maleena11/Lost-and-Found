@@ -21,6 +21,7 @@ const savePreference = async (req, res) => {
   }
 };
 
+
 // Get notification preference by email
 const getPreference = async (req, res) => {
   try {

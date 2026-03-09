@@ -4,7 +4,7 @@ const AppNotification = require('../../claim-verification/models/AppNotification
 const { sendNoticeNotification } = require('../../../utils/emailService');
 
 /**
- * @desc    Create a new notice
+ * @desc    Create a new notice 
  * @route   POST /api/notices
  */
 const createNotice = async (req, res) => {

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \":*)",
+      "Bash(BASE=\"E:/SLIIT/New project copy/Lost-and-found-management-system-for-government-public-transport\")",
+      "Bash(__NEW_LINE_9c8979d07a672ff4__ echo \"=== Final verification of updated App.jsx imports ===\")",
+      "Read(//e/SLIIT/New project copy/Lost-and-found-management-system-for-government-public-transport/$BASE/src/**)"
+    ]
+  }
+}

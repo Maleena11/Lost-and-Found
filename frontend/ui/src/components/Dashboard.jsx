@@ -27,7 +27,7 @@ export default function Dashboard() {
         setRoutes(rRes.data);
         setAssignments(aRes.data);
       } catch (err) {
-        console.error("Error loading dashboard data:", err);
+        console.error("Error loading dashboard data: ", err);
       }
     };
     fetchData();

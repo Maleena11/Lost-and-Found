@@ -27,7 +27,7 @@ const getAllUsers = async (req, res) => {
 // Create new user
 const createUser = async (req, res) => {
   try {
-    console.log("Received user data:", req.body); // Debug log
+    console.log("Received user data: ", req.body); // Debug log
     
     // Map frontend fields to backend fields
     const userData = {

@@ -8,25 +8,22 @@ import AdminNoticeEditModal from '../components/AdminNoticeEditModal';
 import NoticePDFGenerator from '../../notice-management/components/NoticePDFGenerator';
 
 export default function AdminNotices() {
-  // Existing state variables
-  const [editingNotice, setEditingNotice] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [notices, setNotices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("notices");
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null);
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cleanupStatus, setCleanupStatus] = useState(null);
-  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [editingNotice, setEditingNotice]     = useState(null);
+  const [showEditModal, setShowEditModal]     = useState(false);
+  const [notices, setNotices]                 = useState([]);
+  const [loading, setLoading]                 = useState(true);
+  const [error, setError]                     = useState(null);
+  const [sidebarOpen, setSidebarOpen]         = useState(false);
+  const [activeSection, setActiveSection]     = useState("notices");
+  const [deleteLoading, setDeleteLoading]     = useState(false);
+  const [confirmDelete, setConfirmDelete]     = useState(null);
+  const [filterCategory, setFilterCategory]   = useState('all');
+  const [filterPriority, setFilterPriority]   = useState('all');
+  const [searchTerm, setSearchTerm]           = useState('');
+  const [cleanupStatus, setCleanupStatus]     = useState(null);
+  const [cleanupLoading, setCleanupLoading]   = useState(false);
 
-  useEffect(() => {
-    fetchNotices();
-  }, []);
+  useEffect(() => { fetchNotices(); }, []);
 
   const fetchNotices = async () => {
     setLoading(true);
@@ -46,7 +43,7 @@ export default function AdminNotices() {
     setDeleteLoading(true);
     try {
       await axios.delete(`http://localhost:3001/api/notices/${id}`);
-      setNotices(notices.filter(notice => notice._id !== id));
+      setNotices(notices.filter(n => n._id !== id));
       setConfirmDelete(null);
     } catch (error) {
       console.error('Error deleting notice:', error);
@@ -56,65 +53,30 @@ export default function AdminNotices() {
     }
   };
 
-  // Filter and search notices
   const filteredNotices = notices.filter(notice => {
-    // Apply category filter
-    if (filterCategory !== 'all' && notice.category !== filterCategory) {
-      return false;
-    }
-    
-    // Apply priority filter
-    if (filterPriority !== 'all' && notice.priority !== filterPriority) {
-      return false;
-    }
-    
-    // Apply search
+    if (filterCategory !== 'all' && notice.category !== filterCategory) return false;
+    if (filterPriority !== 'all' && notice.priority !== filterPriority) return false;
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        notice.title.toLowerCase().includes(searchLower) ||
-        notice.content.toLowerCase().includes(searchLower)
-      );
+      const s = searchTerm.toLowerCase();
+      return notice.title.toLowerCase().includes(s) || notice.content.toLowerCase().includes(s);
     }
-    
     return true;
   });
 
-  // Format date for display
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    if (!dateString) return '—';
+    const [year, month, day] = dateString.toString().substring(0, 10).split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  // Get priority badge styling
-  const getPriorityBadge = (priority) => {
-    switch (priority) {
-      case 'urgent':
-        return "bg-red-100 text-red-800 border border-red-300";
-      case 'high':
-        return "bg-orange-100 text-orange-800 border border-orange-300";
-      case 'medium':
-        return "bg-yellow-100 text-yellow-800 border border-yellow-300";
-      case 'low':
-        return "bg-blue-100 text-blue-800 border border-blue-300";
-      default:
-        return "bg-gray-100 text-gray-800 border border-gray-300";
-    }
-  };
-
-  // Add this function to handle opening the edit modal
   const handleEditClick = (notice, e) => {
     if (e) e.stopPropagation();
     setEditingNotice(notice);
     setShowEditModal(true);
   };
 
-  // Add this function to handle notice updates
   const handleNoticeUpdate = (updatedNotice) => {
-    // Update the notices array with the updated notice
-    setNotices(notices.map(notice => 
-      notice._id === updatedNotice._id ? updatedNotice : notice
-    ));
+    setNotices(notices.map(n => n._id === updatedNotice._id ? updatedNotice : n));
   };
 
   const handleCleanupExpired = async () => {
@@ -134,28 +96,45 @@ export default function AdminNotices() {
     }
   };
 
-  // Create filter summary for PDF report
   const getFilterSummary = () => {
     const filters = [];
-    
-    if (filterCategory !== 'all') {
-      filters.push(`Category: ${filterCategory.charAt(0).toUpperCase() + filterCategory.slice(1)}`);
-    }
-    
-    if (filterPriority !== 'all') {
-      filters.push(`Priority: ${filterPriority.charAt(0).toUpperCase() + filterPriority.slice(1)}`);
-    }
-    
-    if (searchTerm) {
-      filters.push(`Search: "${searchTerm}"`);
-    }
-    
-    if (filters.length === 0) {
-      return "All notices";
-    }
-    
-    return `Filtered by: ${filters.join(', ')}`;
+    if (filterCategory !== 'all') filters.push(`Category: ${filterCategory}`);
+    if (filterPriority !== 'all') filters.push(`Priority: ${filterPriority}`);
+    if (searchTerm) filters.push(`Search: "${searchTerm}"`);
+    return filters.length === 0 ? "All notices" : `Filtered by: ${filters.join(', ')}`;
   };
+
+  const getPriorityConfig = (priority) => {
+    switch (priority) {
+      case 'urgent': return { bg: 'bg-red-100 text-red-700 border border-red-200',   dot: 'bg-red-500 animate-ping', label: 'Urgent',  icon: 'fas fa-exclamation-circle text-red-500' };
+      case 'medium': return { bg: 'bg-green-100 text-green-700 border border-green-200', dot: 'bg-green-500', label: 'Medium', icon: 'fas fa-minus-circle text-green-500' };
+      case 'low':    return { bg: 'bg-yellow-100 text-yellow-700 border border-yellow-200', dot: 'bg-yellow-400', label: 'Low',    icon: 'fas fa-arrow-circle-down text-yellow-500' };
+      default:       return { bg: 'bg-gray-100 text-gray-600 border border-gray-200',  dot: 'bg-gray-400', label: priority, icon: 'fas fa-circle text-gray-400' };
+    }
+  };
+
+  const getCategoryConfig = (category) => {
+    switch (category) {
+      case 'lost-item':    return { bg: 'bg-orange-50 text-orange-700 border border-orange-200', icon: 'fas fa-search text-orange-500',      label: 'Lost Item' };
+      case 'found-item':   return { bg: 'bg-emerald-50 text-emerald-700 border border-emerald-200', icon: 'fas fa-hand-holding text-emerald-500', label: 'Found Item' };
+      case 'announcement': return { bg: 'bg-blue-50 text-blue-700 border border-blue-200',     icon: 'fas fa-bullhorn text-blue-500',       label: 'Announcement' };
+      case 'advisory':     return { bg: 'bg-purple-50 text-purple-700 border border-purple-200', icon: 'fas fa-info-circle text-purple-500',  label: 'Advisory' };
+      default:             return { bg: 'bg-gray-50 text-gray-600 border border-gray-200',      icon: 'fas fa-tag text-gray-400',            label: category };
+    }
+  };
+
+  const getRowAccent = (priority) => {
+    switch (priority) {
+      case 'urgent': return 'border-l-4 border-l-red-400';
+      case 'medium': return 'border-l-4 border-l-green-400';
+      case 'low':    return 'border-l-4 border-l-yellow-400';
+      default:       return 'border-l-4 border-l-gray-200';
+    }
+  };
+
+  const urgentCount = notices.filter(n => n.priority === 'urgent').length;
+  const mediumCount = notices.filter(n => n.priority === 'medium').length;
+  const lowCount    = notices.filter(n => n.priority === 'low').length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -174,218 +153,307 @@ export default function AdminNotices() {
           subtitle="Create, edit and manage university notices"
         />
 
-        <main className="flex-1 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div></div>
-            <div className="flex gap-3 items-center flex-wrap">
-              {cleanupStatus && (
-                <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                  cleanupStatus.type === 'success'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  {cleanupStatus.type === 'success'
-                    ? cleanupStatus.deleted === 0
-                      ? 'No expired notices found.'
-                      : `${cleanupStatus.deleted} expired notice(s) removed.`
-                    : 'Cleanup failed. Try again.'}
-                </span>
-              )}
+        <main className="flex-1 p-4 sm:p-6">
 
+          {/* Page Header Banner */}
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl px-5 py-5 mb-6 shadow-lg shadow-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+                <i className="fas fa-bullhorn text-white text-lg"></i>
+              </div>
+              <div>
+                <h2 className="text-xl font-extrabold text-white tracking-tight">Notice Management</h2>
+                <p className="text-xs text-blue-100 mt-0.5">Manage all university notices from one place</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={handleCleanupExpired}
                 disabled={cleanupLoading}
-                className="bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors flex items-center shadow-sm disabled:opacity-60"
-                title="Delete all notices whose expiry date has passed"
+                className="relative flex items-center gap-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 border border-white/25 shadow-sm hover:shadow-md disabled:opacity-60 overflow-hidden group"
               >
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
                 {cleanupLoading ? (
-                  <svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <>
+                    <div className="relative w-4 h-4 flex-shrink-0">
+                      <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                    </div>
+                    <span className="flex flex-col items-start leading-none">
+                      <span className="text-xs font-bold">Cleaning...</span>
+                      <span className="text-[10px] text-white/60 font-normal">Please wait</span>
+                    </span>
+                  </>
                 ) : (
-                  <i className="fas fa-clock mr-2"></i>
+                  <>
+                    <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
+                      <i className="fas fa-broom text-sm"></i>
+                    </div>
+                    <span className="flex flex-col items-start leading-none">
+                      <span className="text-xs font-bold tracking-wide">Clean Expired</span>
+                      <span className="text-[10px] text-white/60 font-normal">Remove outdated</span>
+                    </span>
+                  </>
                 )}
-                Clean Expired
               </button>
-
-              {/* PDF generator button */}
-              <NoticePDFGenerator
-                notices={filteredNotices}
-                filterSummary={getFilterSummary()}
-              />
-
+              <NoticePDFGenerator notices={filteredNotices} filterSummary={getFilterSummary()} />
               <Link
                 to="/create-notice"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+                className="flex items-center gap-2 bg-white text-blue-700 hover:bg-blue-50 text-sm font-bold px-4 py-2 rounded-xl transition-colors shadow-md"
               >
-                <i className="fas fa-plus mr-2"></i>
+                <i className="fas fa-plus text-xs"></i>
                 Create Notice
               </Link>
             </div>
           </div>
 
-          {/* Filters and search */}
-          <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex-1">
-                <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-                  Search
-                </label>
-                <input
-                  type="text"
-                  id="search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by title or content"
-                  className="w-full border border-gray-300 rounded-md p-2"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <select
-                  id="category"
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="border border-gray-300 rounded-md p-2 w-full"
-                >
-                  <option value="all">All Categories</option>
-                  <option value="lost-item">Lost Item Notice</option>
-                  <option value="found-item">Found Item Notice</option>
-                  <option value="announcement">Announcement</option>
-                  <option value="advisory">Advisory</option>
-                </select>
-              </div>
-              
-              <div>
-                <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
-                </label>
-                <select
-                  id="priority"
-                  value={filterPriority}
-                  onChange={(e) => setFilterPriority(e.target.value)}
-                  className="border border-gray-300 rounded-md p-2 w-full"
-                >
-                  <option value="all">All Priorities</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
+          {/* Cleanup status toast */}
+          {cleanupStatus && (
+            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium shadow-sm ${
+              cleanupStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              <i className={`fas ${cleanupStatus.type === 'success' ? 'fa-check-circle text-green-500' : 'fa-exclamation-circle text-red-500'}`}></i>
+              {cleanupStatus.type === 'success'
+                ? cleanupStatus.deleted === 0 ? 'No expired notices found.' : `${cleanupStatus.deleted} expired notice(s) removed successfully.`
+                : 'Cleanup failed. Please try again.'}
             </div>
+          )}
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            {[
+              { label: 'Total Notices', value: notices.length, icon: 'fas fa-layer-group', bg: 'bg-blue-50', iconBg: 'bg-blue-100', iconColor: 'text-blue-500', border: 'border-2 border-blue-200', textColor: 'text-blue-700', subColor: 'text-blue-400' },
+              { label: 'Urgent',        value: urgentCount,    icon: 'fas fa-exclamation-circle', bg: 'bg-red-50',    iconBg: 'bg-red-100',    iconColor: 'text-red-500',   border: 'border-2 border-red-200',   textColor: 'text-red-700',   subColor: 'text-red-400' },
+              { label: 'Medium',        value: mediumCount,    icon: 'fas fa-minus-circle',       bg: 'bg-green-50',  iconBg: 'bg-green-100',  iconColor: 'text-green-500', border: 'border-2 border-green-200', textColor: 'text-green-700', subColor: 'text-green-400' },
+              { label: 'Low',           value: lowCount,       icon: 'fas fa-arrow-circle-down',  bg: 'bg-yellow-50', iconBg: 'bg-yellow-100', iconColor: 'text-yellow-500',border: 'border-2 border-yellow-200',textColor: 'text-yellow-700',subColor: 'text-yellow-500' },
+            ].map(({ label, value, icon, bg, iconBg, iconColor, border, textColor, subColor }) => (
+              <div key={label} className={`${bg} ${border} rounded-2xl px-5 py-5 flex items-center gap-4 shadow-md hover:shadow-lg transition-shadow duration-200`}>
+                <div className={`w-14 h-14 ${iconBg} rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0`}>
+                  <i className={`${icon} ${iconColor} text-2xl`}></i>
+                </div>
+                <div>
+                  <p className={`text-4xl font-black ${textColor} leading-none`}>{value}</p>
+                  <p className={`text-sm ${subColor} font-semibold mt-1`}>{label}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Notices list */}
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500"></div>
-            </div>
-          ) : error ? (
-            <div className="bg-red-100 p-4 rounded-lg text-red-700 text-center">
-              {error}
-            </div>
-          ) : filteredNotices.length === 0 ? (
-            <div className="bg-white p-8 rounded-lg text-center text-gray-600 shadow-sm">
-              <i className="fas fa-info-circle text-4xl mb-4 text-blue-500"></i>
-              <p className="text-lg">No notices found matching your criteria.</p>
+          {/* Filter & Search Panel */}
+          <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center gap-2">
+              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                <i className="fas fa-filter text-blue-500 text-xs"></i>
+              </div>
+              <span className="text-sm font-bold text-gray-700">Filter & Search</span>
               {(searchTerm || filterCategory !== 'all' || filterPriority !== 'all') && (
                 <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setFilterCategory('all');
-                    setFilterPriority('all');
-                  }}
-                  className="mt-4 text-blue-600 hover:underline"
+                  onClick={() => { setSearchTerm(''); setFilterCategory('all'); setFilterPriority('all'); }}
+                  className="ml-auto text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-lg border border-red-100 transition-colors"
                 >
-                  Clear filters
+                  <i className="fas fa-undo text-xs"></i> Reset
                 </button>
               )}
             </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50/80">
+              {/* Search */}
+              <div className="sm:col-span-1">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Search</label>
+                <div className="relative">
+                  <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Title or content..."
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Category</label>
+                <div className="relative">
+                  <i className="fas fa-tag absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                  <select
+                    value={filterCategory}
+                    onChange={e => setFilterCategory(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:bg-white appearance-none transition-colors"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="lost-item">Lost Item Notice</option>
+                    <option value="found-item">Found Item Notice</option>
+                    <option value="announcement">Announcement</option>
+                    <option value="advisory">Advisory</option>
+                  </select>
+                </div>
+              </div>
+              {/* Priority */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Priority</label>
+                <div className="relative">
+                  <i className="fas fa-flag absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                  <select
+                    value={filterPriority}
+                    onChange={e => setFilterPriority(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:bg-white appearance-none transition-colors"
+                  >
+                    <option value="all">All Priorities</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            {filteredNotices.length !== notices.length && (
+              <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 text-xs text-blue-600 font-medium flex items-center gap-1.5">
+                <i className="fas fa-info-circle"></i>
+                Showing <strong>{filteredNotices.length}</strong> of <strong>{notices.length}</strong> notices
+              </div>
+            )}
+          </div>
+
+          {/* Table */}
+          {loading ? (
+            <div className="flex flex-col justify-center items-center h-64 gap-3">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+              <p className="text-sm text-gray-400">Loading notices...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-200 p-8 rounded-2xl text-red-700 text-center flex flex-col items-center gap-2">
+              <i className="fas fa-exclamation-circle text-3xl text-red-400"></i>
+              <p className="font-medium">{error}</p>
+            </div>
+          ) : filteredNotices.length === 0 ? (
+            <div className="bg-white border border-gray-100 shadow-sm p-12 rounded-2xl text-center flex flex-col items-center gap-3">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                <i className="fas fa-bell-slash text-2xl text-gray-300"></i>
+              </div>
+              <p className="text-gray-600 font-medium">No notices matched your filters.</p>
+              <button
+                onClick={() => { setSearchTerm(''); setFilterCategory('all'); setFilterPriority('all'); }}
+                className="text-sm text-blue-600 hover:underline font-medium"
+              >
+                Clear filters
+              </button>
+            </div>
           ) : (
-            <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Title
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category & Priority
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date Range
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Posted By
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredNotices.map((notice) => (
-                    <tr key={notice._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                          {notice.title}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 max-w-xs truncate">
-                          {notice.content.substring(0, 60)}...
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-2">
-                          <span className="px-2 py-1 text-xs rounded-full inline-flex items-center justify-center bg-blue-100 text-blue-800">
-                            {notice.category.charAt(0).toUpperCase() + notice.category.slice(1).replace('-', ' ')}
-                          </span>
-                          <span className={`px-2 py-1 text-xs rounded-full inline-flex items-center justify-center ${getPriorityBadge(notice.priority)}`}>
-                            {notice.priority.charAt(0).toUpperCase() + notice.priority.slice(1)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {formatDate(notice.startDate)}
-                          {notice.endDate && (
-                            <>
-                              <br />
-                              <span className="text-xs">to</span>
-                              <br />
-                              {formatDate(notice.endDate)}
-                            </>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {notice.userId || notice.postedBy || 'Unknown'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={(e) => handleEditClick(notice, e)}
-                            className="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-blue-100"
-                            title="Edit"
-                          >
-                            <i className="fas fa-edit"></i>
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(notice._id)}
-                            className="text-red-600 hover:text-red-900 p-2 rounded-full hover:bg-red-100"
-                            title="Delete"
-                          >
-                            <i className="fas fa-trash"></i>
-                          </button>
-                        </div>
-                      </td>
+            <div className="bg-white border-2 border-gray-300 rounded-2xl shadow-sm overflow-hidden">
+              {/* Table header */}
+              <div className="px-5 py-3 bg-gray-100 border-b-2 border-gray-300 flex items-center justify-between">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <i className="fas fa-list text-gray-400"></i> All Notices
+                </p>
+                <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full">
+                  {filteredNotices.length} notice{filteredNotices.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b-2 border-gray-300">
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Notice</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Priority</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date Range</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Posted By</th>
+                      <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {[...filteredNotices]
+                      .sort((a, b) => {
+                        const order = { urgent: 0, medium: 1, low: 2 };
+                        return (order[a.priority] ?? 3) - (order[b.priority] ?? 3);
+                      })
+                      .map((notice) => {
+                        const pc = getPriorityConfig(notice.priority);
+                        const cc = getCategoryConfig(notice.category);
+                        return (
+                          <tr
+                            key={notice._id}
+                            className="hover:bg-gray-50 transition-colors group border-b border-gray-200"
+                          >
+                            {/* Notice title + preview */}
+                            <td className="px-5 py-4">
+                              <p className="text-sm font-bold text-gray-900 max-w-xs truncate">{notice.title}</p>
+                              <p className="text-xs text-gray-400 mt-0.5 max-w-xs truncate leading-relaxed">
+                                {notice.content.substring(0, 70)}...
+                              </p>
+                            </td>
+
+                            {/* Category badge */}
+                            <td className="px-5 py-4">
+                              <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${cc.bg}`}>
+                                <i className={`${cc.icon} text-xs`}></i>
+                                {cc.label}
+                              </span>
+                            </td>
+
+                            {/* Priority badge */}
+                            <td className="px-5 py-4">
+                              <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${pc.bg}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${pc.dot}`}></span>
+                                {pc.label}
+                              </span>
+                            </td>
+
+                            {/* Date range */}
+                            <td className="px-5 py-4">
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                  <i className="fas fa-calendar-alt text-gray-300 text-xs"></i>
+                                  <span>{formatDate(notice.startDate)}</span>
+                                </div>
+                                {notice.endDate && (
+                                  <div className="flex items-center gap-1.5 text-xs text-red-400 font-medium">
+                                    <i className="fas fa-hourglass-end text-xs"></i>
+                                    <span>Exp. {formatDate(notice.endDate)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Posted by */}
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <i className="fas fa-user text-blue-500 text-xs"></i>
+                                </div>
+                                <span className="text-xs text-gray-500 font-medium truncate max-w-[80px]">
+                                  {notice.userId || notice.postedBy || 'Unknown'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-5 py-4 text-right">
+                              <div className="flex justify-end gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={e => handleEditClick(notice, e)}
+                                  className="flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+                                  title="Edit"
+                                >
+                                  <i className="fas fa-pen text-xs"></i>
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDelete(notice._id)}
+                                  className="flex items-center gap-1.5 text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors"
+                                  title="Delete"
+                                >
+                                  <i className="fas fa-trash text-xs"></i>
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </main>
@@ -399,41 +467,40 @@ export default function AdminNotices() {
         onUpdate={handleNoticeUpdate}
       />
 
-      {/* Delete confirmation modal */}
+      {/* Delete Confirmation Modal */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Confirm Delete
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this notice? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                disabled={deleteLoading}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteConfirm(confirmDelete)}
-                disabled={deleteLoading}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
-              >
-                {deleteLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Deleting...
-                  </>
-                ) : (
-                  "Delete Notice"
-                )}
-              </button>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-red-500 to-rose-400"></div>
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-5">
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-trash text-red-500 text-lg"></i>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 mb-1">Delete Notice</h3>
+                  <p className="text-sm text-gray-500">Are you sure you want to delete this notice? This action cannot be undone.</p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={deleteLoading}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteConfirm(confirmDelete)}
+                  disabled={deleteLoading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors text-sm font-semibold flex items-center gap-2 shadow-sm disabled:opacity-60"
+                >
+                  {deleteLoading
+                    ? <><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Deleting...</>
+                    : <><i className="fas fa-trash text-xs"></i>Delete Notice</>
+                  }
+                </button>
+              </div>
             </div>
           </div>
         </div>

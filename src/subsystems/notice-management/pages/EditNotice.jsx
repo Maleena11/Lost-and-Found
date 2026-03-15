@@ -14,6 +14,8 @@ export default function EditNotice() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dateError, setDateError] = useState(null); // Add this state if not present
+  const [phoneError, setPhoneError] = useState(null);
+  const [emailError, setEmailError] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -98,8 +100,22 @@ export default function EditNotice() {
     }
   };
 
-  const phoneRegex = /^\d{0,10}$/;
-  const emailRegex = /^[a-zA-Z0-9@.]*$/;
+  const handlePhoneBlur = () => {
+    if (formData.contactPhone && formData.contactPhone.length !== 10) {
+      setPhoneError("Phone number must be exactly 10 digits.");
+    } else {
+      setPhoneError(null);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (formData.contactEmail && !emailRegex.test(formData.contactEmail)) {
+      setEmailError("Enter a valid email address (e.g. user@example.com).");
+    } else {
+      setEmailError(null);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -107,35 +123,23 @@ export default function EditNotice() {
 
     // Phone number validation: only digits, max 10
     if (name === "contactPhone") {
-      if (!phoneRegex.test(value)) {
-        setDateError("Phone number must be up to 10 digits, no letters or special characters.");
-        return;
-      }
+      if (!/^\d*$/.test(value)) return; // block non-digits
+      if (value.length > 10) return;    // block more than 10 digits
+      setPhoneError(null);
     }
 
-    // Email validation: only letters, numbers, @ and .
+    // Email validation: clear error while user is typing
     if (name === "contactEmail") {
-      if (!emailRegex.test(value)) {
-        setDateError("Email can only contain letters, numbers, @ and .");
-        return;
-      }
+      setEmailError(null);
     }
 
-    // Validate start date is not in the past
-    if (name === 'startDate') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    // Validate end date is not before start date
+    if (name === 'startDate' && newFormData.endDate) {
       const startDate = new Date(value);
-      if (startDate < today) {
-        setDateError("Start date cannot be before today.");
+      const endDate = new Date(newFormData.endDate);
+      if (endDate < startDate) {
+        setDateError("End date cannot be before start date.");
         return;
-      }
-      if (newFormData.endDate) {
-        const endDate = new Date(newFormData.endDate);
-        if (endDate < startDate) {
-          setDateError("End date cannot be before start date.");
-          return;
-        }
       }
     }
 
@@ -190,6 +194,21 @@ export default function EditNotice() {
     try {
       if (!tempUser) {
         throw new Error("User information not available");
+      }
+
+      // Validate contact phone
+      if (formData.contactPhone && formData.contactPhone.length !== 10) {
+        setPhoneError("Phone number must be exactly 10 digits.");
+        setSubmitLoading(false);
+        return;
+      }
+
+      // Validate contact email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (formData.contactEmail && !emailRegex.test(formData.contactEmail)) {
+        setEmailError("Enter a valid email address (e.g. user@example.com).");
+        setSubmitLoading(false);
+        return;
       }
 
       // Create a copy of the form data to modify
@@ -368,7 +387,7 @@ export default function EditNotice() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  min={getTodayString()} // Add this line to prevent past dates
+                  min="2026-01-01"
                   required
                   className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -415,25 +434,33 @@ export default function EditNotice() {
                   name="contactPhone"
                   value={formData.contactPhone}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                  maxLength="15"
-                  pattern="[0-9+\- ]*"
-                  placeholder="e.g. 0771234567 or +94771234567"
+                  onBlur={handlePhoneBlur}
+                  inputMode="numeric"
+                  className={`w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm ${phoneError ? 'border-red-500' : 'border-gray-300'}`}
+                  maxLength="10"
+                  placeholder="e.g. 0771234567"
                 />
+                {phoneError && (
+                  <p className="text-red-500 text-sm mt-1">{phoneError}</p>
+                )}
               </div>
               <div>
                 <label className="block mb-2 font-semibold text-gray-700">
                   Contact Email
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   name="contactEmail"
                   value={formData.contactEmail}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  onBlur={handleEmailBlur}
+                  className={`w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm ${emailError ? 'border-red-500' : 'border-gray-300'}`}
                   maxLength="100"
                   placeholder="e.g. user@example.com"
                 />
+                {emailError && (
+                  <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                )}
               </div>
             </div>
 

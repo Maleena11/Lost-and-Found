@@ -10,11 +10,15 @@ const {
   getNoticesByCategory,
   getNoticesByAudience,
   deleteExpiredNotices,
-  searchNotices
+  searchNotices,
+  getArchivedNotices
 } = require('../controllers/noticeController');
 
 // Smart keyword search (must be before /:id)
 router.get('/search', searchNotices);
+
+// Archived notices
+router.get('/archived', getArchivedNotices);
 
 // Get latest notices
 router.get('/latest', getLatestNotices);

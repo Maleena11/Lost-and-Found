@@ -1,29 +1,37 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import { getTempUser } from "../../../shared/utils/tempUserAuth"; // Adjust the import based on your project structure
 
+const getTodayString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export default function CreateNotice() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const repostNotice = location.state?.repost || null;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
   // Items that should be flagged as urgent
   const URGENT_ITEMS = ["student-id", "laptop", "mobile-phone", "atm-card", "license"];
 
   const [formData, setFormData] = useState({
-    title: "",
-    content: "",
-    category: "lost-item",
-    itemType: "",
-    priority: "medium",
-    startDate: new Date().toISOString().split('T')[0],
+    title: repostNotice?.title || "",
+    content: repostNotice?.content || "",
+    category: repostNotice?.category || "lost-item",
+    itemType: repostNotice?.itemType || "",
+    priority: repostNotice?.priority || "medium",
+    startDate: getTodayString(),
     endDate: "",
-    targetAudience: "all-students",
-    attachments: [],
-    contactPhone: "",
-    contactEmail: ""
+    targetAudience: repostNotice?.targetAudience || "all-students",
+    attachments: repostNotice?.attachments || [],
+    contactPhone: repostNotice?.contactPhone || "",
+    contactEmail: repostNotice?.contactEmail || ""
   });
   const [dateError, setDateError] = useState(null);
   const [errors, setErrors] = useState({ contactPhone: '', contactEmail: '' });
@@ -50,22 +58,13 @@ export default function CreateNotice() {
       setErrors(prev => ({ ...prev, contactEmail: '' }));
     }
 
-    // Validate start date is not in the past
-    if (name === 'startDate') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    // Validate end date is not before start date
+    if (name === 'startDate' && newFormData.endDate) {
       const startDate = new Date(value);
-      if (startDate < today) {
-        setDateError("Start date cannot be before today.");
+      const endDate = new Date(newFormData.endDate);
+      if (endDate < startDate) {
+        setDateError("End date cannot be before start date.");
         return;
-      }
-      // If endDate exists, check if it's before new startDate
-      if (newFormData.endDate) {
-        const endDate = new Date(newFormData.endDate);
-        if (endDate < startDate) {
-          setDateError("End date cannot be before start date.");
-          return;
-        }
       }
     }
 
@@ -177,11 +176,6 @@ export default function CreateNotice() {
     }
   };
 
-  // Add this function near the top of your component
-  const getTodayString = () => {
-    return new Date().toISOString().split('T')[0];
-  };
-
   return (
     <div className="flex flex-col min-h-screen w-full bg-gray-100">
       <Header />
@@ -189,11 +183,29 @@ export default function CreateNotice() {
       <main className="flex-1 w-full flex justify-center items-start p-6">
         <div className="w-full max-w-3xl bg-white shadow-lg rounded-xl p-8">
           <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold text-blue-800">Create Item Notice</h2>
+            <h2 className="text-2xl font-bold text-blue-800">
+              {repostNotice ? 'Repost Archived Notice' : 'Create Item Notice'}
+            </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Staff portal — publish a notice for a reported lost or found item on campus
+              {repostNotice
+                ? 'The form has been pre-filled from the archived notice. Set new dates and submit to repost.'
+                : 'Staff portal — publish a notice for a reported lost or found item on campus'}
             </p>
           </div>
+
+          {repostNotice && (
+            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl flex items-start gap-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                <i className="fas fa-redo text-purple-600 text-sm"></i>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-purple-800">Reposting archived notice</p>
+                <p className="text-xs text-purple-600 mt-0.5">
+                  All original details have been pre-filled. Please set a new <strong>Start Date</strong> and <strong>Expiry Date</strong> before submitting.
+                </p>
+              </div>
+            </div>
+          )}
 
           {message.text && (
             <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -347,7 +359,7 @@ export default function CreateNotice() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  min={getTodayString()} // Add this line to prevent past dates
+                  {...(!repostNotice && { min: getTodayString() })}
                   required
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 />
@@ -361,7 +373,7 @@ export default function CreateNotice() {
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleChange}
-                  min={formData.startDate}
+                  {...(formData.startDate && { min: formData.startDate })}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 />
               </div>

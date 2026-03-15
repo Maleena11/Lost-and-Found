@@ -393,33 +393,33 @@ const NoticePDFGenerator = ({ notices, filterSummary = "" }) => {
     <button
       onClick={generatePdf}
       disabled={isGenerating}
-      className="bg-blue-800 hover:bg-blue-900 text-white px-4 py-2 rounded-md text-sm flex items-center disabled:bg-blue-300"
+      className="relative flex items-center gap-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 border border-white/25 shadow-sm hover:shadow-md disabled:opacity-60 overflow-hidden group"
     >
+      {/* Subtle shimmer on hover */}
+      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
+
       {isGenerating ? (
         <>
-          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Generating Report...
+          <div className="relative w-4 h-4 flex-shrink-0">
+            <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+          <span className="flex flex-col items-start leading-none">
+            <span className="text-xs font-bold">Generating...</span>
+            <span className="text-[10px] text-white/60 font-normal">Please wait</span>
+          </span>
         </>
       ) : (
         <>
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-5 w-5 mr-2" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-            />
-          </svg>
-          Generate Report
+          <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
+            <i className="fas fa-file-download text-sm"></i>
+          </div>
+          <span className="flex flex-col items-start leading-none">
+            <span className="text-xs font-bold tracking-wide">Generate Report</span>
+            <span className="text-[10px] text-white/60 font-normal">Export as PDF</span>
+          </span>
         </>
       )}
     </button>

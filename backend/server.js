@@ -11,18 +11,48 @@ const notificationRoutes = require('./subsystems/claim-verification/routes/notif
 const errorHandler = require('./middleware/errorHandler');
 const { default: mongoose } = require('mongoose');
 const Notice = require('./subsystems/notice-management/models/Notice');
+const { sendArchiveNotification } = require('./utils/emailService');
 
 // Load environment variables
 dotenv.config();
 
-// Cleanup function — deletes notices whose endDate has passed
+// Cleanup function — archives urgent expired notices, deletes low/medium expired notices
 const cleanupExpiredNotices = async () => {
   try {
-    const result = await Notice.deleteMany({
-      endDate: { $exists: true, $lt: new Date() }
+    const now = new Date();
+
+    // Find urgent notices that have expired and are not yet archived (bypass pre hook)
+    const urgentExpired = await Notice.findWithArchived({
+      priority: 'urgent',
+      isArchived: { $ne: true },
+      endDate: { $exists: true, $lt: now }
     });
-    if (result.deletedCount > 0) {
-      console.log(`[Notice Cleanup] Removed ${result.deletedCount} expired notice(s).`);
+
+    if (urgentExpired.length > 0) {
+      // Mark them as archived in the database
+      const urgentIds = urgentExpired.map(n => n._id);
+      await Notice.collection.updateMany(
+        { _id: { $in: urgentIds } },
+        { $set: { isArchived: true, archivedAt: now } }
+      );
+      console.log(`[Notice Cleanup] Archived ${urgentExpired.length} urgent expired notice(s).`);
+
+      // Send email to security/student affairs office for each archived notice
+      for (const notice of urgentExpired) {
+        sendArchiveNotification(notice).catch(err =>
+          console.error(`[Archive Email] Failed for "${notice.title}":`, err.message)
+        );
+      }
+    }
+
+    // Permanently delete low and medium priority expired notices (bypass pre hook)
+    const deleted = await Notice.deleteWithArchived({
+      priority: { $in: ['low', 'medium'] },
+      isArchived: { $ne: true },
+      endDate: { $exists: true, $lt: now }
+    });
+    if (deleted.deletedCount > 0) {
+      console.log(`[Notice Cleanup] Deleted ${deleted.deletedCount} low/medium expired notice(s).`);
     }
   } catch (err) {
     console.error('[Notice Cleanup] Error:', err.message);
@@ -33,9 +63,9 @@ const cleanupExpiredNotices = async () => {
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log("MongoDB Connected");
-        // Run once on startup, then every hour
+        // Run once on startup, then every 5 minutes
         cleanupExpiredNotices();
-        setInterval(cleanupExpiredNotices, 60 * 60 * 1000);
+        setInterval(cleanupExpiredNotices, 5 * 60 * 1000);
     })
     .catch(err => console.log(err));
 

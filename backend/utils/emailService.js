@@ -105,4 +105,57 @@ const sendNoticeNotification = async (toEmail, notice) => {
   }
 };
 
-module.exports = { sendNoticeNotification };
+const sendArchiveNotification = async (notice) => {
+  const officeEmail = process.env.SECURITY_OFFICE_EMAIL || process.env.STUDENT_AFFAIRS_EMAIL;
+  if (!officeEmail) {
+    console.log('[Archive Email] No office email configured (SECURITY_OFFICE_EMAIL). Skipping.');
+    return;
+  }
+
+  const transport = await getTransporter();
+  const archivedOn = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 24px; border-radius: 8px;">
+      <div style="background: #7c3aed; padding: 16px 24px; border-radius: 8px 8px 0 0;">
+        <h2 style="color: white; margin: 0; font-size: 18px;">Lost & Found — Urgent Notice Archived</h2>
+      </div>
+      <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
+        <p style="color: #374151; margin: 0 0 16px 0;">
+          The following <strong>urgent</strong> notice has reached its deadline and has been automatically archived.
+          Please review and take any necessary follow-up action.
+        </p>
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+          <h3 style="color: #92400e; margin: 0 0 8px 0; font-size: 16px;">${notice.title}</h3>
+          <p style="color: #78350f; margin: 0 0 8px 0; font-size: 13px;">${notice.content.substring(0, 200)}${notice.content.length > 200 ? '...' : ''}</p>
+          <p style="color: #92400e; margin: 0; font-size: 12px;"><strong>Category:</strong> ${notice.category} &nbsp;|&nbsp; <strong>Archived on:</strong> ${archivedOn}</p>
+          ${notice.contactPhone || notice.contactEmail ? `
+          <p style="color: #92400e; margin: 4px 0 0 0; font-size: 12px;">
+            <strong>Contact:</strong>
+            ${notice.contactPhone ? `Phone: ${notice.contactPhone}` : ''}
+            ${notice.contactPhone && notice.contactEmail ? ' | ' : ''}
+            ${notice.contactEmail ? `Email: ${notice.contactEmail}` : ''}
+          </p>` : ''}
+        </div>
+        <p style="color: #6b7280; font-size: 12px; margin: 0;">
+          This is an automated message from the Lost & Found system. The notice is now in the archive and visible to administrators.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const info = await transport.sendMail({
+    from: `"Lost & Found System" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@lostfound.lk'}>`,
+    to: officeEmail,
+    subject: `[Action Required] Urgent Notice Archived: ${notice.title}`,
+    html
+  });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Archive Email] Preview: ${previewUrl}`);
+  }
+  console.log(`[Archive Email] Sent archive notification to ${officeEmail} for notice: "${notice.title}"`);
+};
+
+module.exports = { sendNoticeNotification, sendArchiveNotification };

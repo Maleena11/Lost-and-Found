@@ -75,12 +75,20 @@ const NoticeSchema = new mongoose.Schema({
   contactEmail: {
     type: String,
     trim: true
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  archivedAt: {
+    type: Date
   }
 }, { timestamps: true });
 
-// Auto-update isActive based on dates
+// Exclude expired and archived notices from normal queries
 NoticeSchema.pre('find', function() {
   this.where({
+    isArchived: { $ne: true },
     $or: [
       { endDate: { $gt: new Date() } },
       { endDate: { $exists: false } }
@@ -93,6 +101,14 @@ NoticeSchema.virtual('isExpired').get(function() {
   if (!this.endDate) return false;
   return this.endDate < new Date();
 });
+
+// Static methods that bypass the pre('find') hook (use raw collection)
+NoticeSchema.statics.findWithArchived = function(query) {
+  return this.collection.find(query).toArray();
+};
+NoticeSchema.statics.deleteWithArchived = function(query) {
+  return this.collection.deleteMany(query);
+};
 
 // Index for faster queries
 NoticeSchema.index({ category: 1, startDate: -1 });

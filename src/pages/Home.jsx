@@ -5,7 +5,7 @@ import OurServices from "../shared/components/OurServices";
 import HowItWorks from "../shared/components/HowItWorks";
 import AboutUs from "../shared/components/AboutUs";
 import Footer from "../shared/components/Footer";
-import ChatBotWidget from "../shared/components/ChatBotWidget";
+import ChatBotWidget from "../shared/components/ChatBotWidget ";
 
 export default function Home() {
   return (

@@ -199,7 +199,7 @@ exports.deleteItem = async (req, res) => {
   }
 };
 
-// Search items
+// Search lost and found items with filters (type, category, location, date range, keyword)
 exports.searchItems = async (req, res) => {
   try {
     const { itemType, category, location, dateFrom, dateTo, query } = req.query;

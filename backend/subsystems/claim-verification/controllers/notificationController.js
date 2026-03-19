@@ -9,6 +9,7 @@ const savePreference = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email is required' });
     }
 
+    
     const preference = await NotificationPreference.findOneAndUpdate(
       { email: email.toLowerCase() },
       { email: email.toLowerCase(), name, receiveEmails, receiveInApp },

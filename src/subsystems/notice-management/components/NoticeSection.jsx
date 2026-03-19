@@ -6,6 +6,8 @@ import { getTempUser } from "../../../shared/utils/tempUserAuth";
 export default function NoticeSection() {
   const navigate = useNavigate();
   const [notices, setNotices] = useState([]);
+  const [archivedNotices, setArchivedNotices] = useState([]);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'archived'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedNotice, setSelectedNotice] = useState(null);
@@ -21,6 +23,15 @@ export default function NoticeSection() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredNotices, setFilteredNotices] = useState(null);
   const searchRef = useRef(null);
+
+  // Filter state
+  const [filterPriority, setFilterPriority] = useState(null);
+  const [filterCategory, setFilterCategory] = useState(null);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [openFilterSections, setOpenFilterSections] = useState({ priority: false, category: false });
+
+  const toggleFilterSection = (section) =>
+    setOpenFilterSections(prev => ({ ...prev, [section]: !prev[section] }));
 
   // Stop words for smart keyword extraction
   const STOP_WORDS = new Set(['lost','found','a','the','my','i','is','it','was',
@@ -41,6 +52,7 @@ export default function NoticeSection() {
     const user = getTempUser();
     setTempUser(user);
     fetchNotices();
+    fetchArchivedNotices();
   }, []);
 
   const fetchNotices = async () => {
@@ -57,6 +69,15 @@ export default function NoticeSection() {
     }
   };
 
+  const fetchArchivedNotices = async () => {
+    try {
+      const response = await axios.get('http://localhost:3001/api/notices/archived');
+      setArchivedNotices(response.data.data || []);
+    } catch (err) {
+      console.error("Error fetching archived notices:", err);
+    }
+  };
+
   const openNoticeDetails = (notice) => {
     setSelectedNotice(notice);
     setShowModal(true);
@@ -68,8 +89,16 @@ export default function NoticeSection() {
   };
 
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    if (!dateString) return '—';
+    const str = String(dateString);
+    const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch.map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   const getPriorityBadgeStyle = (priority) => {
@@ -94,12 +123,79 @@ export default function NoticeSection() {
 
   const getCategoryBadgeStyle = (category) => {
     switch (category) {
+      case 'lost-item':     return "bg-white text-gray-700 border border-gray-500 font-bold";
+      case 'found-item':    return "bg-white text-gray-700 border border-gray-500 font-bold";
       case 'announcement':  return "bg-purple-100 text-purple-700 border border-purple-200";
       case 'service-update':return "bg-blue-100 text-blue-700 border border-blue-200";
       case 'emergency':     return "bg-red-100 text-red-700 border border-red-200";
       case 'advisory':      return "bg-yellow-100 text-yellow-700 border border-yellow-200";
-      default:              return "bg-green-100 text-green-700 border border-green-200";
+      default:              return "bg-gray-100 text-gray-600 border border-gray-200";
     }
+  };
+
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'lost-item':     return "fas fa-search";
+      case 'found-item':    return "fas fa-hand-holding";
+      case 'announcement':  return "fas fa-bullhorn";
+      case 'advisory':      return "fas fa-info-circle";
+      case 'emergency':     return "fas fa-exclamation-triangle";
+      default:              return "fas fa-tag";
+    }
+  };
+
+  const getCategoryLabel = (category) => {
+    switch (category) {
+      case 'lost-item':  return "Lost Item";
+      case 'found-item': return "Found Item";
+      default: return category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ');
+    }
+  };
+
+  const getItemTypeLabel = (itemType) => {
+    const labels = {
+      'student-id':   'Student ID Card',
+      'laptop':       'Laptop / Tablet',
+      'mobile-phone': 'Mobile Phone',
+      'atm-card':     'ATM / Bank Card',
+      'license':      'Driving License / NIC',
+      'wallet':       'Wallet / Purse',
+      'keys':         'Keys',
+      'books':        'Books / Lecture Notes',
+      'stationery':   'Stationery / USB Drive',
+      'clothing':     'Clothing / Bag',
+      'other':        'Other',
+    };
+    return labels[itemType] || itemType;
+  };
+
+  const getItemTypeIcon = (itemType) => {
+    const icons = {
+      'student-id':   'fas fa-id-card',
+      'laptop':       'fas fa-laptop',
+      'mobile-phone': 'fas fa-mobile-alt',
+      'atm-card':     'fas fa-credit-card',
+      'license':      'fas fa-id-badge',
+      'wallet':       'fas fa-wallet',
+      'keys':         'fas fa-key',
+      'books':        'fas fa-book',
+      'stationery':   'fas fa-pen',
+      'clothing':     'fas fa-tshirt',
+      'other':        'fas fa-box-open',
+    };
+    return icons[itemType] || 'fas fa-tag';
+  };
+
+  const getTargetAudienceLabel = (audience) => {
+    const labels = {
+      'all-students':       'All Students',
+      'undergraduate':      'Undergraduate Students',
+      'postgraduate':       'Postgraduate Students',
+      'academic-staff':     'Academic Staff',
+      'non-academic-staff': 'Non-Academic Staff',
+      'all-university':     'All University Community',
+    };
+    return labels[audience] || audience;
   };
 
   const isBase64Image = (str) => {
@@ -182,6 +278,20 @@ export default function NoticeSection() {
     setFilteredNotices(null);
   };
 
+  const clearFilters = () => {
+    setFilterPriority(null);
+    setFilterCategory(null);
+  };
+
+  const hasActiveFilters = filterPriority || filterCategory;
+
+  const getDisplayNotices = () => {
+    let base = filteredNotices ?? notices;
+    if (filterPriority) base = base.filter(n => n.priority === filterPriority);
+    if (filterCategory) base = base.filter(n => n.category === filterCategory);
+    return base;
+  };
+
   const selectSuggestion = (notice) => {
     setFilteredNotices([notice]);
     setShowDropdown(false);
@@ -226,27 +336,120 @@ export default function NoticeSection() {
     <section className="mt-12 pb-8">
 
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-            <i className="fas fa-bullhorn text-blue-600 text-sm"></i>
+      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl px-4 sm:px-6 py-4 sm:py-5 mb-6 shadow-lg shadow-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+            <i className="fas fa-bullhorn text-white text-base sm:text-lg"></i>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">University Notices</h2>
-            <p className="text-xs text-gray-400">Official announcements from campus administration</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">University Notices</h2>
+            <p className="text-xs sm:text-sm text-blue-100 mt-0.5">Official announcements from campus administration</p>
           </div>
         </div>
         <Link
           to="/create-notice"
-          className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm"
+          className="inline-flex items-center justify-center gap-2 bg-white text-blue-700 hover:bg-blue-50 px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-md w-full sm:w-auto"
         >
           <i className="fas fa-plus text-xs"></i>
           Create Notice
         </Link>
       </div>
 
-      {/* Smart Search Bar */}
-      <div className="relative mb-6" ref={searchRef}>
+      {/* Tabs */}
+      <div className="flex gap-2 mb-5">
+        <button
+          onClick={() => setActiveTab('active')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${activeTab === 'active' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'}`}
+        >
+          Active Notices
+          {notices.length > 0 && <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">{notices.length}</span>}
+        </button>
+        <button
+          onClick={() => { setActiveTab('archived'); fetchArchivedNotices(); }}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'archived' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'}`}
+        >
+          <i className="fas fa-archive text-xs"></i>
+          Archived
+          {archivedNotices.length > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === 'archived' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{archivedNotices.length}</span>}
+        </button>
+      </div>
+
+      {/* Smart Search Bar — only on active tab */}
+      {activeTab === 'archived' ? (
+        /* Archive Tab Content */
+        <div>
+          {archivedNotices.length === 0 ? (
+            <div className="bg-white border border-gray-100 shadow-sm p-12 rounded-2xl text-center flex flex-col items-center gap-3">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
+                <i className="fas fa-archive text-2xl text-blue-300"></i>
+              </div>
+              <p className="text-gray-600 font-medium">No archived notices yet.</p>
+              <p className="text-sm text-gray-400">Urgent notices that reach their deadline will appear here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {archivedNotices.map((notice) => (
+                <div
+                  key={notice._id}
+                  className="bg-gray-50 rounded-2xl border-2 border-gray-300 ring-1 ring-gray-200 overflow-hidden hover:shadow-md hover:border-gray-400 transition-all duration-200"
+                >
+                  <div className="h-1.5 bg-gradient-to-r from-blue-400 to-gray-400" />
+                  <div className="p-5">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
+                        <i className="fas fa-archive text-xs"></i> Archived
+                      </span>
+                      <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-100 text-red-700 border border-red-200">
+                        Urgent
+                      </span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 ${getCategoryBadgeStyle(notice.category)}`}>
+                        <i className={`${getCategoryIcon(notice.category)} text-xs`}></i>
+                        {getCategoryLabel(notice.category)}
+                      </span>
+                    </div>
+                    <h3
+                      className="font-semibold text-base mb-2 leading-snug text-gray-500 line-through cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => openNoticeDetails(notice)}
+                    >
+                      {notice.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm mb-4 line-clamp-2 leading-relaxed">
+                      {notice.content.length > 150 ? `${notice.content.substring(0, 150)}...` : notice.content}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-1.5">
+                        <i className="fas fa-calendar-alt"></i>
+                        <span>Posted {formatDate(notice.createdAt || new Date())}</span>
+                      </div>
+                      {notice.archivedAt && (
+                        <div className="flex items-center gap-1.5 text-blue-400 font-medium">
+                          <i className="fas fa-archive"></i>
+                          <span>Archived {formatDate(notice.archivedAt)}</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Repost button */}
+                    <div className="mt-4 flex justify-center">
+                      <button
+                        onClick={() => navigate('/create-notice', { state: { repost: notice } })}
+                        className="flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300 text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors shadow-sm"
+                      >
+                        <i className="fas fa-redo text-xs"></i>
+                        Repost to Notice Board
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {activeTab === 'active' && (
+      <div>
+        {/* Smart Search Bar */}
+        <div className="relative mb-6" ref={searchRef}>
         <div className={`flex items-center gap-3 bg-white border-2 rounded-xl px-4 py-3 shadow-sm transition-colors ${showDropdown ? 'border-blue-400' : 'border-gray-200 hover:border-gray-300'}`}>
           <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -276,6 +479,172 @@ export default function NoticeSection() {
           </p>
         )}
 
+        {/* Filter Panel — Dropdown */}
+        <div className="mt-4 bg-gray-50 border-2 border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+
+          {/* Main Toggle Header */}
+          <button
+            onClick={() => setShowFilterPanel(prev => !prev)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-150 hover:to-gray-100 transition-colors group"
+          >
+            <div className="flex items-center gap-2">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${showFilterPanel ? 'bg-blue-500' : 'bg-blue-100'}`}>
+                <i className={`fas fa-filter text-xs transition-colors ${showFilterPanel ? 'text-white' : 'text-blue-500'}`}></i>
+              </div>
+              <span className="text-sm font-bold text-gray-700">Filter Notices</span>
+              {hasActiveFilters && (
+                <span className="text-xs bg-blue-600 text-white font-semibold px-2 py-0.5 rounded-full">
+                  {[filterPriority, filterCategory].filter(Boolean).length} active
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <button
+                  onClick={e => { e.stopPropagation(); clearFilters(); }}
+                  className="text-xs text-red-400 hover:text-red-600 font-semibold flex items-center gap-1 transition-colors bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-lg border border-red-100"
+                >
+                  <i className="fas fa-undo text-xs"></i> Reset
+                </button>
+              )}
+              <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200 ${showFilterPanel ? 'rotate-180' : ''}`}></i>
+            </div>
+          </button>
+
+          {/* Children — shown when panel is open */}
+          {showFilterPanel && (
+            <div className="border-t border-gray-200">
+
+          {/* Section 1 — Priority Level */}
+          <div className="border-b border-gray-100">
+            <button
+              onClick={() => toggleFilterSection('priority')}
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${openFilterSections.priority ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'}`}>
+                  <i className={`fas fa-flag text-sm transition-colors ${openFilterSections.priority ? 'text-blue-500' : 'text-gray-400'}`}></i>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-gray-700">Priority Level</p>
+                  <p className="text-xs text-gray-400">Filter by urgency</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {filterPriority && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 capitalize">{filterPriority}</span>
+                )}
+                <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200 ${openFilterSections.priority ? 'rotate-180' : ''}`}></i>
+              </div>
+            </button>
+
+            {openFilterSections.priority && (
+              <div className="px-3 sm:px-4 pb-4 pt-1 grid grid-cols-3 gap-2 sm:gap-2.5 bg-gray-50/50">
+                {[
+                  { value: 'urgent', label: 'Urgent', icon: 'fas fa-exclamation-circle',
+                    active: 'bg-red-50 text-red-600 border-red-400',
+                    inactive: 'bg-white text-red-400 border-red-200 hover:border-red-300 hover:bg-red-50',
+                    dot: 'bg-red-500 animate-ping', activeDot: 'bg-red-500 animate-ping',
+                    count: notices.filter(n => n.priority === 'urgent').length },
+                  { value: 'medium', label: 'Medium', icon: 'fas fa-minus-circle',
+                    active: 'bg-green-50 text-green-700 border-green-400',
+                    inactive: 'bg-white text-green-500 border-green-200 hover:border-green-300 hover:bg-green-50',
+                    dot: 'bg-green-400', activeDot: 'bg-green-500',
+                    count: notices.filter(n => n.priority === 'medium').length },
+                  { value: 'low', label: 'Low', icon: 'fas fa-arrow-circle-down',
+                    active: 'bg-yellow-50 text-yellow-700 border-yellow-400',
+                    inactive: 'bg-white text-yellow-500 border-yellow-200 hover:border-yellow-300 hover:bg-yellow-50',
+                    dot: 'bg-yellow-400', activeDot: 'bg-yellow-500',
+                    count: notices.filter(n => n.priority === 'low').length },
+                ].map(({ value, label, icon, active, inactive, dot, activeDot, count }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterPriority(filterPriority === value ? null : value)}
+                    className={`relative flex flex-col items-center gap-2 py-3 sm:py-4 px-2 sm:px-3 rounded-2xl border-2 font-semibold transition-all duration-200 ${filterPriority === value ? active : inactive}`}
+                  >
+                    {filterPriority === value && (
+                      <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-white rounded-full border border-current flex items-center justify-center">
+                        <i className="fas fa-check" style={{ fontSize: '8px' }}></i>
+                      </div>
+                    )}
+                    <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${filterPriority === value ? activeDot : dot}`}></span>
+                    <i className={`${icon} text-xl sm:text-2xl`}></i>
+                    <span className="text-xs sm:text-sm font-extrabold tracking-wide">{label}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-white border border-gray-200 text-gray-500">
+                      {count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="mx-4 border-t border-dashed border-gray-200"></div>
+
+          {/* Section 2 — Lost / Found Item */}
+          <div>
+            <button
+              onClick={() => toggleFilterSection('category')}
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${openFilterSections.category ? 'bg-orange-100' : 'bg-gray-100 group-hover:bg-orange-50'}`}>
+                  <i className={`fas fa-tag text-sm transition-colors ${openFilterSections.category ? 'text-orange-500' : 'text-gray-400'}`}></i>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-gray-700">Lost / Found Item</p>
+                  <p className="text-xs text-gray-400">Filter by item type</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {filterCategory && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 capitalize">{filterCategory.replace('-', ' ')}</span>
+                )}
+                <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200 ${openFilterSections.category ? 'rotate-180' : ''}`}></i>
+              </div>
+            </button>
+
+            {openFilterSections.category && (
+              <div className="px-4 pb-4 pt-1 grid grid-cols-2 gap-3 bg-gray-50/50">
+                {[
+                  { value: 'lost-item', label: 'Lost Item', icon: 'fas fa-search', desc: 'Items being searched',
+                    active: 'bg-orange-50 text-orange-700 border-orange-400',
+                    inactive: 'bg-white text-orange-500 border-orange-200 hover:border-orange-300 hover:bg-orange-50',
+                    count: notices.filter(n => n.category === 'lost-item').length },
+                  { value: 'found-item', label: 'Found Item', icon: 'fas fa-hand-holding', desc: 'Items recovered',
+                    active: 'bg-emerald-50 text-emerald-700 border-emerald-400',
+                    inactive: 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50',
+                    count: notices.filter(n => n.category === 'found-item').length },
+                ].map(({ value, label, icon, desc, active, inactive, count }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterCategory(filterCategory === value ? null : value)}
+                    className={`relative flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${filterCategory === value ? active : inactive}`}
+                  >
+                    {filterCategory === value && (
+                      <div className="absolute top-2 right-2 w-4 h-4 bg-white rounded-full border border-current flex items-center justify-center">
+                        <i className="fas fa-check" style={{ fontSize: '8px' }}></i>
+                      </div>
+                    )}
+                    <i className={`${icon} text-xl ${filterCategory === value ? 'animate-bounce' : ''}`}></i>
+                    <div className="text-left">
+                      <p className="font-bold leading-tight">{label}</p>
+                      <p className="text-xs mt-0.5 text-gray-400">{desc}</p>
+                      <span className="inline-block text-xs mt-1 px-2 py-0.5 rounded-full font-bold bg-white border border-gray-200 text-gray-500">
+                        {count} notices
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+            </div>
+          )}
+        </div>
+
         {/* Filter active banner */}
         {filteredNotices !== null && (
           <div className="mt-2 flex items-center gap-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
@@ -283,7 +652,7 @@ export default function NoticeSection() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
             <span>Showing <strong>{filteredNotices.length}</strong> result{filteredNotices.length !== 1 ? 's' : ''} for "<strong>{searchQuery}</strong>"</span>
-            <button onClick={clearSearch} className="ml-auto text-blue-500 hover:text-blue-700 font-medium text-xs">Clear filter</button>
+            <button onClick={() => { clearSearch(); clearFilters(); }} className="ml-auto text-blue-500 hover:text-blue-700 font-medium text-xs">Clear filter</button>
           </div>
         )}
 
@@ -353,13 +722,13 @@ export default function NoticeSection() {
           <i className="fas fa-exclamation-circle text-3xl text-red-400"></i>
           <p className="font-medium">{error}</p>
         </div>
-      ) : (filteredNotices !== null && filteredNotices.length === 0) ? (
+      ) : (getDisplayNotices().length === 0 && (filteredNotices !== null || hasActiveFilters)) ? (
         <div className="bg-white border border-gray-100 shadow-sm p-12 rounded-2xl text-center flex flex-col items-center gap-3">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
             <i className="fas fa-search text-2xl text-gray-300"></i>
           </div>
-          <p className="text-gray-600 font-medium">No notices matched your search.</p>
-          <button onClick={clearSearch} className="text-sm text-blue-600 hover:underline font-medium">Clear search and show all</button>
+          <p className="text-gray-600 font-medium">No notices matched your filters.</p>
+          <button onClick={() => { clearSearch(); clearFilters(); }} className="text-sm text-blue-600 hover:underline font-medium">Clear filters and show all</button>
         </div>
       ) : notices.length === 0 ? (
         <div className="bg-white border border-gray-100 shadow-sm p-12 rounded-2xl text-center flex flex-col items-center gap-3">
@@ -370,116 +739,179 @@ export default function NoticeSection() {
           <p className="text-sm text-gray-400">Check back later for updates from campus administration.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {[...(filteredNotices ?? notices)]
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          {[...getDisplayNotices()]
             .sort((a, b) => {
               const order = { urgent: 0, medium: 1, low: 2 };
               return (order[a.priority] ?? 3) - (order[b.priority] ?? 3);
             })
             .map((notice) => {
             const isUrgent = notice.priority === 'urgent';
+            const isMedium = notice.priority === 'medium';
+            const isLow = notice.priority === 'low';
             return (
             <div
               key={notice._id}
-              className={`bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer transition-all duration-200 group relative ${
+              className={`group flex flex-col rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1.5 relative bg-white ${
                 isUrgent
-                  ? 'border-2 border-red-300 hover:shadow-lg hover:shadow-red-100'
-                  : 'border border-gray-100 hover:shadow-md'
+                  ? 'shadow-lg shadow-red-100/80 ring-2 ring-red-200 hover:shadow-2xl hover:shadow-red-200/60 urgent-card-pulse'
+                  : isMedium
+                  ? 'shadow-md shadow-green-100/60 ring-1 ring-green-200 hover:shadow-xl hover:shadow-green-100/50'
+                  : isLow
+                  ? 'shadow-md shadow-yellow-100/60 ring-1 ring-yellow-200 hover:shadow-xl hover:shadow-yellow-100/50'
+                  : 'shadow-md ring-1 ring-gray-200 hover:shadow-xl'
               }`}
               onClick={() => openNoticeDetails(notice)}
             >
-              {/* Urgent top accent bar */}
-              {isUrgent && <div className="h-1.5 bg-gradient-to-r from-red-500 to-orange-400" />}
+              {/* Thick top gradient accent bar */}
+              {isUrgent && <div className="h-3 bg-gradient-to-r from-red-600 via-rose-500 to-orange-500 animate-pulse flex-shrink-0" />}
+              {isMedium && <div className="h-3 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-400 flex-shrink-0" />}
+              {isLow && <div className="h-3 bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-300 flex-shrink-0" />}
 
-              {/* Edit/Delete actions for owner */}
-              {userOwnsNotice(notice) && (
-                <div className="absolute top-3 right-3 flex gap-2 z-10">
-                  <button
-                    onClick={(e) => handleEditNotice(notice, e)}
-                    className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors shadow-sm"
-                    title="Edit Notice"
-                  >
-                    <i className="fas fa-pen text-xs"></i>
-                  </button>
-                  <button
-                    onClick={(e) => showDeleteConfirmation(notice, e)}
-                    className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm"
-                    title="Delete Notice"
-                  >
-                    <i className="fas fa-trash text-xs"></i>
-                  </button>
+              {/* Header area — "Official Notice" label + category + circular priority seal */}
+              <div className={`px-4 pt-4 pb-3.5 flex items-start justify-between gap-3 ${
+                isUrgent ? 'bg-gradient-to-br from-red-50/60 to-orange-50/20'
+                : isMedium ? 'bg-gradient-to-br from-green-50/60 to-emerald-50/20'
+                : isLow ? 'bg-gradient-to-br from-yellow-50/60 to-amber-50/20'
+                : 'bg-gradient-to-br from-gray-50/60 to-white'
+              }`}>
+                <div className="flex-1 min-w-0">
+                  {/* Official Notice label */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black tracking-[0.15em] uppercase px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-md shadow-sm">
+                      <i className="fas fa-university text-blue-500 text-xs"></i>
+                      Official Notice
+                    </span>
+                  </div>
+                  {/* Category badge — Lost/Found only */}
+                  {notice.category === 'lost-item' && (
+                    <div className="mb-2.5">
+                      <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-bold bg-white text-gray-700 border border-gray-400 shadow-sm">
+                        <i className="fas fa-search text-orange-500 animate-bounce-slow"></i>
+                        Lost Item
+                      </span>
+                    </div>
+                  )}
+                  {notice.category === 'found-item' && (
+                    <div className="mb-2.5">
+                      <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-bold bg-white text-gray-700 border border-gray-400 shadow-sm">
+                        <i className="fas fa-hand-holding text-emerald-500 animate-bounce-slow"></i>
+                        Found Item
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* Notice image */}
+                {/* Circular priority seal — like an official stamp */}
+                {isUrgent && (
+                  <div className="flex-shrink-0 w-[54px] h-[54px] sm:w-[68px] sm:h-[68px] rounded-full border-[3px] border-red-400 bg-gradient-to-br from-red-50 via-rose-50 to-red-100 flex flex-col items-center justify-center shadow-lg shadow-red-200 -mt-0.5 relative">
+                    <div className="absolute inset-[4px] rounded-full border border-red-300 opacity-50"></div>
+                    <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-500 animate-ping flex-shrink-0 mb-0.5 sm:mb-1"></span>
+                    <span className="text-[8px] sm:text-[9px] font-black text-red-600 leading-none tracking-widest uppercase">Urgent</span>
+                  </div>
+                )}
+                {isMedium && (
+                  <div className="flex-shrink-0 w-[54px] h-[54px] sm:w-[68px] sm:h-[68px] rounded-full border-[3px] border-green-400 bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 flex flex-col items-center justify-center shadow-lg shadow-green-200 -mt-0.5 relative">
+                    <div className="absolute inset-[4px] rounded-full border border-green-300 opacity-50"></div>
+                    <i className="fas fa-minus text-green-500 text-sm sm:text-base mb-0.5 sm:mb-1"></i>
+                    <span className="text-[8px] sm:text-[9px] font-black text-green-700 leading-none tracking-widest uppercase">Medium</span>
+                  </div>
+                )}
+                {isLow && (
+                  <div className="flex-shrink-0 w-[54px] h-[54px] sm:w-[68px] sm:h-[68px] rounded-full border-[3px] border-yellow-400 bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 flex flex-col items-center justify-center shadow-lg shadow-yellow-200 -mt-0.5 relative">
+                    <div className="absolute inset-[4px] rounded-full border border-yellow-300 opacity-50"></div>
+                    <i className="fas fa-chevron-down text-yellow-500 text-sm sm:text-base mb-0.5 sm:mb-1"></i>
+                    <span className="text-[8px] sm:text-[9px] font-black text-yellow-700 leading-none tracking-widest uppercase">Low</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Gradient fade divider */}
+              <div className={`mx-4 h-px ${
+                isUrgent ? 'bg-gradient-to-r from-red-200 via-red-100 to-transparent'
+                : isMedium ? 'bg-gradient-to-r from-green-200 via-green-100 to-transparent'
+                : isLow ? 'bg-gradient-to-r from-yellow-200 via-yellow-100 to-transparent'
+                : 'bg-gradient-to-r from-gray-200 via-gray-100 to-transparent'
+              }`} />
+
+              {/* Full-width framed image */}
               {notice.attachments && notice.attachments.length > 0 &&
                 notice.attachments.some(att => isBase64Image(att)) && (
-                <div className="h-44 overflow-hidden relative">
-                  <img
-                    src={notice.attachments.find(att => isBase64Image(att))}
-                    alt="Notice attachment"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  {/* Urgent overlay badge on image */}
-                  {isUrgent && (
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping inline-block"></span>
-                      URGENT
+                <div className="mt-3 flex-shrink-0">
+                  {/* Outer mat — priority-tinted gradient */}
+                  <div className={`p-1 shadow-md ${
+                    isUrgent ? 'bg-gradient-to-br from-red-100 via-rose-100 to-orange-100'
+                    : isMedium ? 'bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100'
+                    : isLow ? 'bg-gradient-to-br from-yellow-100 via-amber-100 to-orange-100'
+                    : 'bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-50'
+                  }`}>
+                    {/* Inner mat — white */}
+                    <div className="bg-white p-1 shadow-inner">
+                      <img
+                        src={notice.attachments.find(att => isBase64Image(att))}
+                        alt="Notice attachment"
+                        className="w-full object-cover"
+                        style={{ height: '260px' }}
+                      />
                     </div>
-                  )}
+                  </div>
+                  {/* Frame caption */}
+                  <div className="flex items-center justify-center gap-2 mt-2 mx-4">
+                    <span className="flex-1 h-px bg-gray-200"></span>
+                    <span className="text-xs text-gray-400 font-semibold tracking-widest uppercase flex items-center gap-1">
+                      <i className="fas fa-camera text-gray-300 text-xs"></i> Photo
+                    </span>
+                    <span className="flex-1 h-px bg-gray-200"></span>
+                  </div>
                 </div>
               )}
 
-              <div className="p-5">
-                {/* Badges */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {isUrgent ? (
-                    <span className="text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 bg-red-100 text-red-700 border border-red-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                      Urgent
-                    </span>
-                  ) : (
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5 ${getPriorityBadgeStyle(notice.priority)}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${getPriorityDotColor(notice.priority)}`}></span>
-                      {notice.priority.charAt(0).toUpperCase() + notice.priority.slice(1)}
-                    </span>
-                  )}
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getCategoryBadgeStyle(notice.category)}`}>
-                    {notice.category.charAt(0).toUpperCase() + notice.category.slice(1).replace(/-/g, ' ')}
-                  </span>
-                </div>
-
-                <h3 className={`font-semibold text-base mb-2 leading-snug ${isUrgent ? 'text-red-900' : 'text-gray-900'}`}>
+              {/* Content body */}
+              <div className="px-4 pt-3 pb-2 flex-1 flex flex-col">
+                <h3 className={`font-extrabold text-sm leading-snug mb-2 ${
+                  isUrgent ? 'text-red-900' : isMedium ? 'text-green-900' : isLow ? 'text-amber-900' : 'text-gray-900'
+                }`}>
                   {notice.title}
                 </h3>
-
-                <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed">
-                  {notice.content.length > 150 ? `${notice.content.substring(0, 150)}...` : notice.content}
+                <p className="text-gray-500 text-xs flex-1 leading-relaxed line-clamp-3">
+                  {notice.content.length > 120 ? `${notice.content.substring(0, 120)}...` : notice.content}
                 </p>
+              </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
-                  <div className="flex items-center gap-1.5">
-                    <i className="fas fa-calendar-alt"></i>
-                    <span>{formatDate(notice.createdAt || new Date())}</span>
-                  </div>
-                  {notice.endDate && (
-                    <div className={`flex items-center gap-1.5 font-medium ${isUrgent ? 'text-red-500' : 'text-gray-400'}`}>
-                      <i className="fas fa-hourglass-half"></i>
-                      <span>Expires {formatDate(notice.endDate)}</span>
-                    </div>
-                  )}
+              {/* Footer strip */}
+              <div className={`px-4 py-2.5 flex items-center justify-between flex-wrap gap-1 text-xs border-t flex-shrink-0 ${
+                isUrgent ? 'border-red-100 bg-red-50/25'
+                : isMedium ? 'border-green-100 bg-green-50/25'
+                : isLow ? 'border-yellow-100 bg-yellow-50/25'
+                : 'border-gray-100 bg-gray-50/20'
+              }`}>
+                <div className="flex items-center gap-1.5 text-gray-400">
+                  <i className="fas fa-calendar-alt text-xs"></i>
+                  <span>{formatDate(notice.createdAt || new Date())}</span>
                 </div>
+                {notice.endDate ? (
+                  <div className={`flex items-center gap-1 font-semibold ${isUrgent ? 'text-red-500' : isMedium ? 'text-green-600' : isLow ? 'text-yellow-600' : 'text-gray-400'}`}>
+                    <i className="fas fa-hourglass-half text-xs"></i>
+                    <span>Exp. {formatDate(notice.endDate)}</span>
+                  </div>
+                ) : (
+                  <span className="text-blue-500 font-semibold flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
+                    View <i className="fas fa-arrow-right text-xs"></i>
+                  </span>
+                )}
               </div>
             </div>
             );
           })}
         </div>
       )}
+      </div>
+      )}
 
       {/* Notice Detail Modal */}
       {showModal && selectedNotice && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[88vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl">
 
             {/* Image header (if available) */}
             {selectedNotice.attachments && selectedNotice.attachments.some(att => isBase64Image(att)) && (
@@ -494,16 +926,29 @@ export default function NoticeSection() {
             )}
 
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between gap-4">
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex items-start justify-between gap-3 sm:gap-4">
               <div className="flex-1">
                 <div className="flex flex-wrap gap-2 mb-2">
                   <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5 ${getPriorityBadgeStyle(selectedNotice.priority)}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${getPriorityDotColor(selectedNotice.priority)}`}></span>
                     {selectedNotice.priority.charAt(0).toUpperCase() + selectedNotice.priority.slice(1)}
                   </span>
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getCategoryBadgeStyle(selectedNotice.category)}`}>
-                    {selectedNotice.category.charAt(0).toUpperCase() + selectedNotice.category.slice(1).replace('-', ' ')}
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 ${getCategoryBadgeStyle(selectedNotice.category)}`}>
+                    <i className={`${getCategoryIcon(selectedNotice.category)} text-xs`}></i>
+                    {getCategoryLabel(selectedNotice.category)}
                   </span>
+                  {selectedNotice.itemType && (
+                    <span className="text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 bg-white text-gray-600 border border-gray-300">
+                      <i className={`${getItemTypeIcon(selectedNotice.itemType)} text-gray-400 text-xs`}></i>
+                      {getItemTypeLabel(selectedNotice.itemType)}
+                    </span>
+                  )}
+                  {selectedNotice.targetAudience && (
+                    <span className="text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 bg-white text-gray-600 border border-gray-300">
+                      <i className="fas fa-users text-gray-400 text-xs"></i>
+                      {getTargetAudienceLabel(selectedNotice.targetAudience)}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">{selectedNotice.title}</h3>
               </div>
@@ -512,17 +957,17 @@ export default function NoticeSection() {
                   <>
                     <button
                       onClick={(e) => { e.preventDefault(); closeModal(); navigate(`/edit-notice/${selectedNotice._id}`, { state: { notice: selectedNotice } }); }}
-                      className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
-                      title="Edit Notice"
+                      className="flex items-center gap-1.5 bg-blue-600 text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <i className="fas fa-pen text-xs"></i>
+                      <span className="hidden sm:inline">Edit</span>
                     </button>
                     <button
                       onClick={(e) => { e.preventDefault(); closeModal(); showDeleteConfirmation(selectedNotice, e); }}
-                      className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                      title="Delete Notice"
+                      className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
                     >
                       <i className="fas fa-trash text-xs"></i>
+                      <span className="hidden sm:inline">Delete</span>
                     </button>
                   </>
                 )}
@@ -535,13 +980,19 @@ export default function NoticeSection() {
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {/* Date row */}
-              <div className="flex items-center justify-between text-xs text-gray-400 mb-5 pb-4 border-b border-gray-100">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-400 mb-5 pb-4 border-b border-gray-100">
                 <div className="flex items-center gap-1.5">
                   <i className="fas fa-calendar-alt"></i>
                   <span>Posted on {formatDate(selectedNotice.createdAt || new Date())}</span>
                 </div>
+                {selectedNotice.startDate && (
+                  <div className="flex items-center gap-1.5">
+                    <i className="fas fa-calendar-check"></i>
+                    <span>Active from {formatDate(selectedNotice.startDate)}</span>
+                  </div>
+                )}
                 {selectedNotice.endDate && (
                   <div className="flex items-center gap-1.5">
                     <i className="fas fa-clock"></i>
@@ -598,6 +1049,29 @@ export default function NoticeSection() {
                           Attachment {index + 1}
                         </a>
                       ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              {(selectedNotice.contactPhone || selectedNotice.contactEmail) && (
+                <div className="mb-5 pb-5 border-b border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <i className="fas fa-address-card"></i> Contact Information
+                  </p>
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                    {selectedNotice.contactPhone && (
+                      <div className="flex items-center gap-1.5">
+                        <i className="fas fa-phone text-gray-400 text-xs"></i>
+                        <span>{selectedNotice.contactPhone}</span>
+                      </div>
+                    )}
+                    {selectedNotice.contactEmail && (
+                      <div className="flex items-center gap-1.5">
+                        <i className="fas fa-envelope text-gray-400 text-xs"></i>
+                        <span>{selectedNotice.contactEmail}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

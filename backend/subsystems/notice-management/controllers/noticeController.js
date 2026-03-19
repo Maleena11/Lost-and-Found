@@ -326,7 +326,10 @@ const getNoticesByAudience = async (req, res) => {
  */
 const deleteExpiredNotices = async (_req, res) => {
   try {
-    const result = await Notice.deleteMany({
+    // Only delete low/medium expired notices — urgent ones are archived, not deleted
+    const result = await Notice.deleteWithArchived({
+      priority: { $in: ['low', 'medium'] },
+      isArchived: { $ne: true },
       endDate: { $exists: true, $lt: new Date() }
     });
 
@@ -384,6 +387,37 @@ const searchNotices = async (req, res) => {
   }
 };
 
+const getArchivedNotices = async (_req, res) => {
+  try {
+    const now = new Date();
+
+    // Step 1: Find any urgent notices that have expired but are not yet archived
+    const urgentExpired = await Notice.findWithArchived({
+      priority: 'urgent',
+      isArchived: { $ne: true },
+      endDate: { $exists: true, $lt: now }
+    });
+
+    // Step 2: Archive them immediately before returning results
+    if (urgentExpired.length > 0) {
+      const urgentIds = urgentExpired.map(n => n._id);
+      await Notice.collection.updateMany(
+        { _id: { $in: urgentIds } },
+        { $set: { isArchived: true, archivedAt: now } }
+      );
+      console.log(`[Archive] Archived ${urgentExpired.length} expired urgent notice(s) on-demand.`);
+    }
+
+    // Step 3: Return all archived notices sorted by archivedAt descending
+    const archived = await Notice.findWithArchived({ isArchived: true });
+    archived.sort((a, b) => new Date(b.archivedAt) - new Date(a.archivedAt));
+
+    res.status(200).json({ success: true, data: archived });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createNotice,
   getNotices,
@@ -394,5 +428,6 @@ module.exports = {
   getNoticesByCategory,
   getNoticesByAudience,
   searchNotices,
-  deleteExpiredNotices
+  deleteExpiredNotices,
+  getArchivedNotices
 };

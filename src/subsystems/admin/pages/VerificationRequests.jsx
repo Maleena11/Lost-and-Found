@@ -10,6 +10,71 @@ const EMPTY_STAGES = {
   stage3: { status: 'pending', notes: '' }
 };
 
+// ── In-modal photo gallery panel ───────────────────────────────────────────
+function PhotoGalleryPanel({ images, activeIdx, setActiveIdx, accentColor, label, onLightboxOpen }) {
+  const ring   = accentColor === 'teal' ? 'ring-teal-400 border-teal-400'   : 'ring-amber-400 border-amber-400';
+  const empty  = accentColor === 'teal' ? 'bg-teal-50/60 border-teal-100'   : 'bg-amber-50/60 border-amber-100';
+
+  if (!images || images.length === 0) {
+    return (
+      <div className={`flex flex-col items-center justify-center h-44 gap-2.5 rounded-xl border ${empty}`}>
+        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100">
+          <i className="fas fa-image text-slate-300 text-lg"></i>
+        </div>
+        <p className="text-xs text-slate-400 font-medium">No photos submitted</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Main photo */}
+      <div
+        className="relative rounded-xl overflow-hidden cursor-zoom-in bg-slate-900 border border-slate-200 mb-2.5 group"
+        style={{ aspectRatio: '4/3' }}
+        onClick={() => onLightboxOpen(images, activeIdx, label)}
+      >
+        <img
+          src={images[activeIdx]}
+          alt={`${label} ${activeIdx + 1}`}
+          className="w-full h-full object-contain select-none"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+          <div className="w-9 h-9 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+            <i className="fas fa-expand text-white text-xs"></i>
+          </div>
+        </div>
+        {images.length > 1 && (
+          <div className="absolute bottom-2 right-2 bg-black/55 text-white text-[10px] font-mono px-2 py-0.5 rounded-full pointer-events-none">
+            {activeIdx + 1} / {images.length}
+          </div>
+        )}
+      </div>
+
+      {/* Thumbnail strip */}
+      {images.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          {images.map((img, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setActiveIdx(i)}
+              className={`shrink-0 w-11 h-11 rounded-lg overflow-hidden border-2 transition-all ring-offset-1 ${
+                i === activeIdx
+                  ? `${ring} ring-1 opacity-100`
+                  : 'border-transparent opacity-45 hover:opacity-75'
+              }`}
+            >
+              <img src={img} alt="" className="w-full h-full object-cover" draggable={false} />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VerificationRequests({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen }) {
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +87,22 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const [saveLoading, setSaveLoading] = useState(false);
 
   const [approvalStages, setApprovalStages] = useState(EMPTY_STAGES);
+
+  // Lightbox
+  const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0, label: '' });
+  const [foundPhotoIdx, setFoundPhotoIdx]       = useState(0);
+  const [claimantPhotoIdx, setClaimantPhotoIdx] = useState(0);
+
+  useEffect(() => {
+    if (!lightbox.open) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape')      setLightbox(p => ({ ...p, open: false }));
+      if (e.key === 'ArrowRight')  setLightbox(p => ({ ...p, index: (p.index + 1) % p.images.length }));
+      if (e.key === 'ArrowLeft')   setLightbox(p => ({ ...p, index: (p.index - 1 + p.images.length) % p.images.length }));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox.open]);
 
   const STAGE_CONFIGS = [
     { key: 'stage1', label: 'Stage 1: Basic Matching', description: 'Verify the claimed item matches the found item description', icon: 'fa-search' },
@@ -91,6 +172,9 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
       stage2: { ...EMPTY_STAGES.stage2, ...(saved.stage2 || {}) },
       stage3: { ...EMPTY_STAGES.stage3, ...(saved.stage3 || {}) },
     });
+    setFoundPhotoIdx(0);
+    setClaimantPhotoIdx(0);
+    setLightbox({ open: false, images: [], index: 0, label: '' });
     setShowModal(true);
     setError('');
     setSuccess('');
@@ -796,32 +880,86 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         </div>
                       )}
 
-                      {selectedRequest.itemId?.images && selectedRequest.itemId.images.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">Photos</p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {selectedRequest.itemId.images.map((image, index) => (
-                              <div
-                                key={index}
-                                className="relative group cursor-pointer"
-                                onClick={() => window.open(image, '_blank')}
-                              >
-                                <img
-                                  src={image}
-                                  alt={`Item ${index + 1}`}
-                                  className="w-full h-20 object-cover rounded-lg border border-slate-200 group-hover:border-slate-400 transition-colors"
-                                />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 rounded-lg transition-all flex items-center justify-center">
-                                  <i className="fas fa-expand text-white opacity-0 group-hover:opacity-100 text-xs transition-opacity drop-shadow"></i>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-xs text-slate-400 mt-1.5">Click to enlarge</p>
-                        </div>
-                      )}
                     </div>
                   </div>
+
+                  {/* ── Photo Comparison ── */}
+                  {(() => {
+                    const foundPhotos    = selectedRequest.itemId?.images     || [];
+                    const claimantPhotos = selectedRequest.claimantImages     || [];
+                    if (foundPhotos.length === 0 && claimantPhotos.length === 0) return null;
+                    const openLb = (imgs, idx, lbl) => setLightbox({ open: true, images: imgs, index: idx, label: lbl });
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        {/* Header */}
+                        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-slate-50/70">
+                          <div className="w-[3px] h-4 bg-violet-500 rounded-full shrink-0"></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Photo Comparison</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">Compare photos side-by-side to verify ownership</p>
+                          </div>
+                          <span className="text-[11px] text-slate-400 bg-white border border-slate-200 px-2.5 py-0.5 rounded-full shrink-0">
+                            {foundPhotos.length + claimantPhotos.length} photo{(foundPhotos.length + claimantPhotos.length) !== 1 ? 's' : ''} total
+                          </span>
+                        </div>
+
+                        {/* Two-column gallery */}
+                        <div className="grid grid-cols-2 divide-x divide-slate-100">
+
+                          {/* Left – Found Item */}
+                          <div className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full bg-teal-400 shrink-0"></div>
+                                <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">Found Item</p>
+                              </div>
+                              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                {foundPhotos.length} photo{foundPhotos.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <PhotoGalleryPanel
+                              images={foundPhotos}
+                              activeIdx={foundPhotoIdx}
+                              setActiveIdx={setFoundPhotoIdx}
+                              accentColor="teal"
+                              label="Found Item"
+                              onLightboxOpen={openLb}
+                            />
+                          </div>
+
+                          {/* Right – Claimant */}
+                          <div className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></div>
+                                <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Claimant's Photos</p>
+                              </div>
+                              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                {claimantPhotos.length} photo{claimantPhotos.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <PhotoGalleryPanel
+                              images={claimantPhotos}
+                              activeIdx={claimantPhotoIdx}
+                              setActiveIdx={setClaimantPhotoIdx}
+                              accentColor="amber"
+                              label="Claimant's Photos"
+                              onLightboxOpen={openLb}
+                            />
+                          </div>
+
+                        </div>
+
+                        {/* Footer hint */}
+                        <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/50 flex items-center gap-2">
+                          <i className="fas fa-expand-alt text-slate-300 text-xs shrink-0"></i>
+                          <p className="text-[11px] text-slate-400">
+                            Click any photo to open full-screen · Use <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">←</kbd> <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">→</kbd> to navigate · <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">Esc</kbd> to close
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Section 2 – Ownership Verification */}
                   <div className="bg-gradient-to-br from-amber-50/70 to-white border border-amber-100 rounded-xl p-5 shadow-sm">
@@ -851,6 +989,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         </div>
                       )}
                     </div>
+
                   </div>
 
                   {/* Processing record – only when processed */}
@@ -1119,6 +1258,92 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 </div>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* ── Lightbox ── */}
+        {lightbox.open && (
+          <div
+            className="fixed inset-0 z-[60] bg-black/92 flex items-center justify-center p-4"
+            onClick={() => setLightbox(p => ({ ...p, open: false }))}
+          >
+            <div
+              className="relative flex flex-col items-center w-full max-w-4xl max-h-[92vh]"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Top bar */}
+              <div className="flex items-center justify-between w-full mb-3 px-1">
+                <div>
+                  <p className="text-white text-sm font-semibold leading-tight">{lightbox.label}</p>
+                  {lightbox.images.length > 1 && (
+                    <p className="text-slate-400 text-xs mt-0.5 font-mono">
+                      {lightbox.index + 1} / {lightbox.images.length}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setLightbox(p => ({ ...p, open: false }))}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                  aria-label="Close"
+                >
+                  <i className="fas fa-times text-sm"></i>
+                </button>
+              </div>
+
+              {/* Image + nav arrows */}
+              <div className="relative flex items-center justify-center w-full">
+                {lightbox.images.length > 1 && (
+                  <button
+                    onClick={() => setLightbox(p => ({ ...p, index: (p.index - 1 + p.images.length) % p.images.length }))}
+                    className="absolute left-0 -translate-x-5 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-colors shadow-lg"
+                    aria-label="Previous"
+                  >
+                    <i className="fas fa-chevron-left text-sm"></i>
+                  </button>
+                )}
+
+                <img
+                  key={lightbox.index}
+                  src={lightbox.images[lightbox.index]}
+                  alt={`${lightbox.label} ${lightbox.index + 1}`}
+                  className="max-w-full max-h-[74vh] object-contain rounded-xl shadow-2xl select-none"
+                  draggable={false}
+                />
+
+                {lightbox.images.length > 1 && (
+                  <button
+                    onClick={() => setLightbox(p => ({ ...p, index: (p.index + 1) % p.images.length }))}
+                    className="absolute right-0 translate-x-5 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-colors shadow-lg"
+                    aria-label="Next"
+                  >
+                    <i className="fas fa-chevron-right text-sm"></i>
+                  </button>
+                )}
+              </div>
+
+              {/* Thumbnail strip */}
+              {lightbox.images.length > 1 && (
+                <div className="flex gap-2 justify-center mt-4 overflow-x-auto max-w-full pb-1">
+                  {lightbox.images.map((img, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setLightbox(p => ({ ...p, index: i }))}
+                      className={`shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                        i === lightbox.index
+                          ? 'border-white opacity-100 ring-1 ring-white/40 ring-offset-1 ring-offset-black/50'
+                          : 'border-transparent opacity-35 hover:opacity-65'
+                      }`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" draggable={false} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Dismiss hint */}
+              <p className="text-slate-600 text-[11px] mt-3">Click outside or press Esc to close</p>
             </div>
           </div>
         )}

@@ -37,6 +37,10 @@ const verificationRequestSchema = new mongoose.Schema({
       type: String
     }
   },
+  claimantImages: {
+    type: [String],
+    default: []
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'processed'],

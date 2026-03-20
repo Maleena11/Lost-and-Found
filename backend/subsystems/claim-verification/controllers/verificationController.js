@@ -4,7 +4,7 @@ const LostFoundItem = require('../../lost-found-reporting/models/LostFoundItem')
 // Create a new verification request
 exports.createVerificationRequest = async (req, res) => {
   try {
-    const { itemId, claimantInfo, verificationDetails } = req.body;
+    const { itemId, claimantInfo, verificationDetails, claimantImages } = req.body;
 
     // Check if the item exists and is a found item
     const item = await LostFoundItem.findById(itemId);
@@ -47,7 +47,8 @@ exports.createVerificationRequest = async (req, res) => {
     const verificationRequest = await VerificationRequest.create({
       itemId,
       claimantInfo,
-      verificationDetails
+      verificationDetails,
+      claimantImages: Array.isArray(claimantImages) ? claimantImages : []
     });
 
     // Populate the item information

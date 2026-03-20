@@ -65,6 +65,41 @@ export default function Verification() {
   });
 
   const [touched, setTouched] = useState({});
+  const [claimantImages, setClaimantImages] = useState([]);
+  const [imageError, setImageError] = useState('');
+
+  const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const MAX_IMAGES = 5;
+
+  const handleImageUpload = (e) => {
+    setImageError('');
+    const files = Array.from(e.target.files);
+    const remaining = MAX_IMAGES - claimantImages.length;
+    if (files.length > remaining) {
+      setImageError(`You can upload at most ${MAX_IMAGES} images. ${claimantImages.length} already added.`);
+    }
+    const valid = files.slice(0, remaining).filter(f => {
+      if (!ACCEPTED_TYPES.includes(f.type)) {
+        setImageError('Only JPG, PNG, and WebP images are supported.');
+        return false;
+      }
+      return true;
+    });
+    valid.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setClaimantImages(prev => [...prev, reader.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+    // Reset input so same file can be re-selected after removal
+    e.target.value = '';
+  };
+
+  const removeImage = (idx) => {
+    setClaimantImages(prev => prev.filter((_, i) => i !== idx));
+    setImageError('');
+  };
 
   useEffect(() => { fetchFoundItems(); }, []);
 
@@ -143,6 +178,7 @@ export default function Verification() {
           ownershipProof: `[Student ID: ${formData.studentId}] ${formData.ownershipProof}`,
           additionalInfo: formData.additionalInfo,
         },
+        claimantImages,
       });
 
       // Generate a local reference code
@@ -154,6 +190,8 @@ export default function Verification() {
         yearOfStudy: '', description: '', ownershipProof: '',
         additionalInfo: '', declaration: false,
       });
+      setClaimantImages([]);
+      setImageError('');
       setSelectedItem(null);
       setTouched({});
       fetchFoundItems();
@@ -645,6 +683,73 @@ export default function Verification() {
                       className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     />
                   </Field>
+
+                  {/* Supporting Photos Upload */}
+                  <div>
+                    <label className="block mb-1.5 text-sm font-medium text-gray-700">
+                      Supporting Photos
+                      <span className="ml-1.5 text-xs text-gray-400 font-normal">(Optional — up to {MAX_IMAGES} images)</span>
+                    </label>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Upload photos that prove you owned this item — e.g. a photo of you with the item, a screenshot showing it in your possession, a receipt, or any other visual evidence.
+                    </p>
+
+                    {/* Preview grid */}
+                    {claimantImages.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
+                        {claimantImages.map((src, idx) => (
+                          <div key={idx} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-square">
+                            <img
+                              src={src}
+                              alt={`Supporting photo ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(idx)}
+                              className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                            >
+                              <i className="fas fa-times text-[9px]" />
+                            </button>
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/30 text-white text-[9px] text-center py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              Photo {idx + 1}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Upload zone */}
+                    {claimantImages.length < MAX_IMAGES && (
+                      <label className="flex flex-col items-center justify-center gap-2 w-full py-6 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-200 shadow-sm">
+                          <i className="fas fa-camera text-blue-500 text-base" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-gray-700">Click to upload photos</p>
+                          <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP · Max {MAX_IMAGES} images</p>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+
+                    {imageError && (
+                      <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle" /> {imageError}
+                      </p>
+                    )}
+                    {claimantImages.length >= MAX_IMAGES && (
+                      <p className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                        <i className="fas fa-info-circle" /> Maximum of {MAX_IMAGES} photos reached. Remove one to add another.
+                      </p>
+                    )}
+                  </div>
 
                   {/* What to bring notice */}
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">

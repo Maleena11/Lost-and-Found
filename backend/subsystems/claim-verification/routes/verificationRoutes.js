@@ -5,6 +5,7 @@ const {
   getAllVerificationRequests,
   getVerificationRequestById,
   updateVerificationRequestStatus,
+  updateApprovalStages,
   deleteVerificationRequest,
   getVerificationRequestsByItem
 } = require('../controllers/verificationController');
@@ -20,6 +21,9 @@ router.get('/:id', getVerificationRequestById);
 
 // Update verification request status (admin)
 router.patch('/:id/status', updateVerificationRequestStatus);
+
+// Save approval stage progress (admin)
+router.patch('/:id/stages', updateApprovalStages);
 
 // Delete verification request
 router.delete('/:id', deleteVerificationRequest);

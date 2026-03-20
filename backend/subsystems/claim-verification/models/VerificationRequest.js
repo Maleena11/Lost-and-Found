@@ -54,6 +54,20 @@ const verificationRequestSchema = new mongoose.Schema({
   },
   notes: {
     type: String // Admin notes
+  },
+  approvalStages: {
+    stage1: {
+      status: { type: String, enum: ['pending', 'passed', 'failed'], default: 'pending' },
+      notes: { type: String, default: '' }
+    },
+    stage2: {
+      status: { type: String, enum: ['pending', 'passed', 'failed'], default: 'pending' },
+      notes: { type: String, default: '' }
+    },
+    stage3: {
+      status: { type: String, enum: ['pending', 'passed', 'failed'], default: 'pending' },
+      notes: { type: String, default: '' }
+    }
   }
 });
 

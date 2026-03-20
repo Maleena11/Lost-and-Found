@@ -166,6 +166,40 @@ exports.updateVerificationRequestStatus = async (req, res) => {
   }
 };
 
+// Save approval stage progress without finalizing (for admin)
+exports.updateApprovalStages = async (req, res) => {
+  try {
+    const { approvalStages, notes } = req.body;
+
+    // Verify the request exists and is still pending before updating
+    const existing = await VerificationRequest.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Verification request not found' });
+    }
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Cannot update stages of a non-pending request' });
+    }
+
+    // Build the $set payload — using findByIdAndUpdate avoids Mongoose's
+    // nested-object dirty-tracking problem that causes .save() to silently
+    // skip writing nested subdocuments back to MongoDB.
+    const updateFields = {};
+    if (approvalStages) updateFields.approvalStages = approvalStages;
+    if (notes !== undefined) updateFields.notes = notes;
+
+    const updated = await VerificationRequest.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).populate('itemId');
+
+    res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Update approval stages error:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
 // Delete verification request
 exports.deleteVerificationRequest = async (req, res) => {
   try {

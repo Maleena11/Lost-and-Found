@@ -36,7 +36,7 @@ export default function Footer() {
               <a href="#" className="hover:text-amber-400 transition">Home</a>
             </li>
             <li>
-              <a href="#" className="hover:text-amber-400 transition">Report Item</a>
+              <a href="#" className="hover:text-amber-400 transition">Report Items</a>
             </li>
             <li>
               <a href="#" className="hover:text-amber-400 transition">Notice</a>

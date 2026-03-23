@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ProtectedRoute from "./shared/components/ProtectedRoute";
 import ReportItem from "./subsystems/lost-found-reporting/pages/ReportItem";
 import Contact from "./shared/components/contact";
 import Notice from "./subsystems/notice-management/components/Notice";
@@ -36,13 +39,19 @@ export default function App() {
   return (
     <>
       <Routes>
-        {/* Public Routes */}
+        {/* Auth Routes (public) */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Home — public */}
         <Route path="/" element={<Home />} />
-        <Route path="/report-item" element={<ReportItem />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/notice" element={<Notice />} />
-        <Route path="/verification" element={<Verification />} />
-        
+
+        {/* Protected Routes — must be logged in */}
+        <Route path="/report-item" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />
+        <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
+        <Route path="/notice" element={<ProtectedRoute><Notice /></ProtectedRoute>} />
+        <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
+
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<Dashboard />} />
@@ -51,12 +60,12 @@ export default function App() {
         <Route path="/admin/dashboard/settings" element={<Settings />} />
         <Route path="/admin/dashboard/notices" element={<AdminNotices />} />
         <Route path="/admin/dashboard/verification" element={<VerificationRequests />} />
-        {/* Other Routes */}
-        <Route path="/notification-settings" element={<NotificationSettings />} />
-        <Route path="/edit-item/:id" element={<EditItem />} />
-        <Route path="/create-notice" element={<CreateNotice />} />
-        <Route path="/edit-notice/:id" element={<EditNotice />} />
-        <Route path="/chat" element={<ChatBotWidget />} />
+        {/* Other Protected Routes */}
+        <Route path="/notification-settings" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+        <Route path="/edit-item/:id" element={<ProtectedRoute><EditItem /></ProtectedRoute>} />
+        <Route path="/create-notice" element={<ProtectedRoute><CreateNotice /></ProtectedRoute>} />
+        <Route path="/edit-notice/:id" element={<ProtectedRoute><EditNotice /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><ChatBotWidget /></ProtectedRoute>} />
          <Route
           path="/"
           element={

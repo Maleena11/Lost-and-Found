@@ -1,4 +1,38 @@
 const UserModel = require("../models/users");
+const bcrypt = require("bcrypt");
+
+// User login
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user._id,
+        name: user.fullname,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -29,12 +63,15 @@ const createUser = async (req, res) => {
   try {
     console.log("Received user data: ", req.body); // Debug log
     
+    const rawPassword = req.body.password || "defaultPassword123";
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
     // Map frontend fields to backend fields
     const userData = {
       fullname: req.body.name || req.body.fullname,
       email: req.body.email,
-      password: req.body.password || "defaultPassword123", // You might want to generate a random password
-      phonenumber: req.body.phonenumber,
+      password: hashedPassword,
+      phonenumber: req.body.phone || req.body.phonenumber,
       street: req.body.street,
       city: req.body.city,
       role: req.body.role || "User",
@@ -172,5 +209,6 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
-  getUserById
+  getUserById,
+  loginUser
 };

@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import AuthModal from "./AuthModal";
+import { useAuth } from "../utils/AuthContext";
 
 export default function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [active, setActive] = useState("Home");
   const [notifications, setNotifications] = useState([]);
   const [bellOpen, setBellOpen] = useState(false);
@@ -164,6 +167,39 @@ export default function Header() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </Link>
+
+            {/* Auth buttons */}
+            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-blue-500">
+              {user ? (
+                <>
+                  <span className="text-sm text-blue-100 hidden sm:block">
+                    <i className="fas fa-user-circle mr-1" />
+                    {user.name || user.email}
+                  </span>
+                  <button
+                    onClick={() => { logout(); navigate("/login"); }}
+                    className="text-sm font-semibold bg-white text-blue-700 hover:bg-blue-50 transition px-4 py-1.5 rounded-lg shadow-sm"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="text-sm font-medium text-white hover:text-blue-100 transition px-3 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-10"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="text-sm font-semibold bg-white text-blue-700 hover:bg-blue-50 transition px-4 py-1.5 rounded-lg shadow-sm"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
+            </div>
           </nav>
         </div>
       </header>

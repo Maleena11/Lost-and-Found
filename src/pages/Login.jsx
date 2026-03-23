@@ -7,9 +7,10 @@ const initialForm = { email: "", password: "" };
 
 const validate = (form) => {
   const errors = {};
-  if (!form.email.trim()) {
-    errors.email = "Email is required.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+  const val = form.email.trim();
+  if (!val) {
+    errors.email = "Email or username is required.";
+  } else if (val.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
     errors.email = "Enter a valid email address.";
   }
   if (!form.password) {
@@ -66,7 +67,11 @@ export default function Login() {
         password: form.password,
       });
       if (res.status === 200) {
-        login(res.data.user || { email: form.email });
+        const userData = res.data.user || { email: form.email };
+        login(userData);
+        if (userData.role === "Admin") {
+          localStorage.setItem("unifind_admin", JSON.stringify({ username: userData.name, id: userData.id }));
+        }
         setSuccessMsg("Login successful! Redirecting…");
         setTimeout(() => navigate(from, { replace: true }), 1200);
       }
@@ -135,19 +140,19 @@ export default function Login() {
               {/* Email */}
               <div>
                 <label className="block mb-1.5 text-sm font-medium text-gray-700">
-                  Email Address
+                  Email or Username
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
                     <i className="fas fa-envelope text-sm" />
                   </span>
                   <input
-                    type="email"
+                    type="text"
                     name="email"
                     value={form.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="you@university.edu"
+                    placeholder="you@university.edu or username"
                     autoComplete="email"
                     className={fieldClass("email")}
                   />

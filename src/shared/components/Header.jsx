@@ -172,10 +172,14 @@ export default function Header() {
             <div className="flex items-center gap-2 ml-2 pl-2 border-l border-blue-500">
               {user ? (
                 <>
-                  <span className="text-sm text-blue-100 hidden sm:block">
+                  <Link
+                    to="/account"
+                    className="text-sm text-blue-100 hover:text-white transition hidden sm:flex items-center gap-1"
+                    title="My Account"
+                  >
                     <i className="fas fa-user-circle mr-1" />
                     {user.name || user.email}
-                  </span>
+                  </Link>
                   <button
                     onClick={() => { logout(); navigate("/login"); }}
                     className="text-sm font-semibold bg-white text-blue-700 hover:bg-blue-50 transition px-4 py-1.5 rounded-lg shadow-sm"

@@ -7,7 +7,8 @@ const {
   updateVerificationRequestStatus,
   updateApprovalStages,
   deleteVerificationRequest,
-  getVerificationRequestsByItem
+  getVerificationRequestsByItem,
+  getVerificationRequestsByEmail
 } = require('../controllers/verificationController');
 
 // Create new verification request
@@ -30,5 +31,8 @@ router.delete('/:id', deleteVerificationRequest);
 
 // Get verification requests by item ID
 router.get('/item/:itemId', getVerificationRequestsByItem);
+
+// Get verification requests by claimant email (user account page)
+router.get('/user/:email', getVerificationRequestsByEmail);
 
 module.exports = router;

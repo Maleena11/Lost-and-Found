@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./shared/components/ProtectedRoute";
+import AdminRoute from "./shared/components/AdminRoute";
 import ReportItem from "./subsystems/lost-found-reporting/pages/ReportItem";
 import Contact from "./shared/components/contact";
 import Notice from "./subsystems/notice-management/components/Notice";
@@ -54,17 +55,17 @@ export default function App() {
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<Dashboard />} />
-        <Route path="/admin/dashboard/allitems" element={<Items />} />
-        <Route path="/admin/dashboard/users" element={<Users />} />
-        <Route path="/admin/dashboard/settings" element={<Settings />} />
-        <Route path="/admin/dashboard/notices" element={<AdminNotices />} />
-        <Route path="/admin/dashboard/verification" element={<VerificationRequests />} />
+        <Route path="/admin/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
+        <Route path="/admin/dashboard/allitems" element={<AdminRoute><Items /></AdminRoute>} />
+        <Route path="/admin/dashboard/users" element={<AdminRoute><Users /></AdminRoute>} />
+        <Route path="/admin/dashboard/settings" element={<AdminRoute><Settings /></AdminRoute>} />
+        <Route path="/admin/dashboard/notices" element={<AdminRoute><AdminNotices /></AdminRoute>} />
+        <Route path="/admin/dashboard/verification" element={<AdminRoute><VerificationRequests /></AdminRoute>} />
         {/* Other Protected Routes */}
         <Route path="/notification-settings" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
         <Route path="/edit-item/:id" element={<ProtectedRoute><EditItem /></ProtectedRoute>} />
-        <Route path="/create-notice" element={<ProtectedRoute><CreateNotice /></ProtectedRoute>} />
-        <Route path="/edit-notice/:id" element={<ProtectedRoute><EditNotice /></ProtectedRoute>} />
+        <Route path="/create-notice" element={<AdminRoute><CreateNotice /></AdminRoute>} />
+        <Route path="/edit-notice/:id" element={<AdminRoute><EditNotice /></AdminRoute>} />
         <Route path="/chat" element={<ProtectedRoute><ChatBotWidget /></ProtectedRoute>} />
          <Route
           path="/"
@@ -80,45 +81,53 @@ export default function App() {
         <Route
           path="/items"
           element={
-            <AllItems
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-            />
+            <AdminRoute>
+              <AllItems
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+              />
+            </AdminRoute>
           }
         />
         <Route
           path="/report"
           element={
-            <Report
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-            />
+            <AdminRoute>
+              <Report
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+              />
+            </AdminRoute>
           }
         />
         <Route
           path="/users"
           element={
-            <Users
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-            />
+            <AdminRoute>
+              <Users
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+              />
+            </AdminRoute>
           }
         />
         <Route
           path="/settings"
           element={
-            <Settings
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-            />
+            <AdminRoute>
+              <Settings
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+              />
+            </AdminRoute>
           }
         />
 

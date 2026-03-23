@@ -6,8 +6,6 @@ import { getTempUser } from "../../../shared/utils/tempUserAuth";
 export default function NoticeSection() {
   const navigate = useNavigate();
   const [notices, setNotices] = useState([]);
-  const [archivedNotices, setArchivedNotices] = useState([]);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'archived'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedNotice, setSelectedNotice] = useState(null);
@@ -52,7 +50,6 @@ export default function NoticeSection() {
     const user = getTempUser();
     setTempUser(user);
     fetchNotices();
-    fetchArchivedNotices();
   }, []);
 
   const fetchNotices = async () => {
@@ -66,15 +63,6 @@ export default function NoticeSection() {
       setError("Failed to load notices. Please try again later.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchArchivedNotices = async () => {
-    try {
-      const response = await axios.get('http://localhost:3001/api/notices/archived');
-      setArchivedNotices(response.data.data || []);
-    } catch (err) {
-      console.error("Error fetching archived notices:", err);
     }
   };
 
@@ -346,107 +334,9 @@ export default function NoticeSection() {
             <p className="text-xs sm:text-sm text-blue-100 mt-0.5">Official announcements from campus administration</p>
           </div>
         </div>
-        <Link
-          to="/create-notice"
-          className="inline-flex items-center justify-center gap-2 bg-white text-blue-700 hover:bg-blue-50 px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-md w-full sm:w-auto"
-        >
-          <i className="fas fa-plus text-xs"></i>
-          Create Notice
-        </Link>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-5">
-        <button
-          onClick={() => setActiveTab('active')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${activeTab === 'active' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'}`}
-        >
-          Active Notices
-          {notices.length > 0 && <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">{notices.length}</span>}
-        </button>
-        <button
-          onClick={() => { setActiveTab('archived'); fetchArchivedNotices(); }}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'archived' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'}`}
-        >
-          <i className="fas fa-archive text-xs"></i>
-          Archived
-          {archivedNotices.length > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === 'archived' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{archivedNotices.length}</span>}
-        </button>
-      </div>
-
-      {/* Smart Search Bar — only on active tab */}
-      {activeTab === 'archived' ? (
-        /* Archive Tab Content */
-        <div>
-          {archivedNotices.length === 0 ? (
-            <div className="bg-white border border-gray-100 shadow-sm p-12 rounded-2xl text-center flex flex-col items-center gap-3">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
-                <i className="fas fa-archive text-2xl text-blue-300"></i>
-              </div>
-              <p className="text-gray-600 font-medium">No archived notices yet.</p>
-              <p className="text-sm text-gray-400">Urgent notices that reach their deadline will appear here.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {archivedNotices.map((notice) => (
-                <div
-                  key={notice._id}
-                  className="bg-gray-50 rounded-2xl border-2 border-gray-300 ring-1 ring-gray-200 overflow-hidden hover:shadow-md hover:border-gray-400 transition-all duration-200"
-                >
-                  <div className="h-1.5 bg-gradient-to-r from-blue-400 to-gray-400" />
-                  <div className="p-5">
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
-                        <i className="fas fa-archive text-xs"></i> Archived
-                      </span>
-                      <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-100 text-red-700 border border-red-200">
-                        Urgent
-                      </span>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 ${getCategoryBadgeStyle(notice.category)}`}>
-                        <i className={`${getCategoryIcon(notice.category)} text-xs`}></i>
-                        {getCategoryLabel(notice.category)}
-                      </span>
-                    </div>
-                    <h3
-                      className="font-semibold text-base mb-2 leading-snug text-gray-500 line-through cursor-pointer hover:text-gray-700 transition-colors"
-                      onClick={() => openNoticeDetails(notice)}
-                    >
-                      {notice.title}
-                    </h3>
-                    <p className="text-gray-400 text-sm mb-4 line-clamp-2 leading-relaxed">
-                      {notice.content.length > 150 ? `${notice.content.substring(0, 150)}...` : notice.content}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-100">
-                      <div className="flex items-center gap-1.5">
-                        <i className="fas fa-calendar-alt"></i>
-                        <span>Posted {formatDate(notice.createdAt || new Date())}</span>
-                      </div>
-                      {notice.archivedAt && (
-                        <div className="flex items-center gap-1.5 text-blue-400 font-medium">
-                          <i className="fas fa-archive"></i>
-                          <span>Archived {formatDate(notice.archivedAt)}</span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Repost button */}
-                    <div className="mt-4 flex justify-center">
-                      <button
-                        onClick={() => navigate('/create-notice', { state: { repost: notice } })}
-                        className="flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300 text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors shadow-sm"
-                      >
-                        <i className="fas fa-redo text-xs"></i>
-                        Repost to Notice Board
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      {activeTab === 'active' && (
+      {/* Smart Search Bar */}
       <div>
         {/* Smart Search Bar */}
         <div className="relative mb-6" ref={searchRef}>
@@ -906,7 +796,6 @@ export default function NoticeSection() {
         </div>
       )}
       </div>
-      )}
 
       {/* Notice Detail Modal */}
       {showModal && selectedNotice && (
@@ -953,24 +842,6 @@ export default function NoticeSection() {
                 <h3 className="text-xl font-bold text-gray-900">{selectedNotice.title}</h3>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {userOwnsNotice(selectedNotice) && (
-                  <>
-                    <button
-                      onClick={(e) => { e.preventDefault(); closeModal(); navigate(`/edit-notice/${selectedNotice._id}`, { state: { notice: selectedNotice } }); }}
-                      className="flex items-center gap-1.5 bg-blue-600 text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <i className="fas fa-pen text-xs"></i>
-                      <span className="hidden sm:inline">Edit</span>
-                    </button>
-                    <button
-                      onClick={(e) => { e.preventDefault(); closeModal(); showDeleteConfirmation(selectedNotice, e); }}
-                      className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      <i className="fas fa-trash text-xs"></i>
-                      <span className="hidden sm:inline">Delete</span>
-                    </button>
-                  </>
-                )}
                 <button
                   onClick={closeModal}
                   className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
@@ -1090,43 +961,6 @@ export default function NoticeSection() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {confirmDelete && noticeToDelete && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-trash text-red-500"></i>
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Delete Notice</h3>
-            </div>
-            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-              Are you sure you want to delete <span className="font-semibold text-gray-800">"{noticeToDelete.title}"</span>?
-              This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={cancelDelete}
-                disabled={deleteLoading}
-                className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteNotice}
-                disabled={deleteLoading}
-                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {deleteLoading ? (
-                  <><i className="fas fa-spinner fa-spin text-xs"></i> Deleting...</>
-                ) : (
-                  <><i className="fas fa-trash text-xs"></i> Delete Notice</>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from './Sidebar';
 import TopBar from '../components/TopBar';
@@ -8,6 +8,7 @@ import AdminNoticeEditModal from '../components/AdminNoticeEditModal';
 import NoticePDFGenerator from '../../notice-management/components/NoticePDFGenerator';
 
 export default function AdminNotices() {
+  const navigate = useNavigate();
   const [editingNotice, setEditingNotice]     = useState(null);
   const [showEditModal, setShowEditModal]     = useState(false);
   const [notices, setNotices]                 = useState([]);
@@ -22,6 +23,9 @@ export default function AdminNotices() {
   const [searchTerm, setSearchTerm]           = useState('');
   const [cleanupStatus, setCleanupStatus]     = useState(null);
   const [cleanupLoading, setCleanupLoading]   = useState(false);
+  const [archivedNotices, setArchivedNotices] = useState([]);
+  const [showArchived, setShowArchived]       = useState(false);
+  const [archivedLoading, setArchivedLoading] = useState(false);
 
   useEffect(() => { fetchNotices(); }, []);
 
@@ -79,6 +83,23 @@ export default function AdminNotices() {
     setNotices(notices.map(n => n._id === updatedNotice._id ? updatedNotice : n));
   };
 
+  const fetchArchivedNotices = async () => {
+    setArchivedLoading(true);
+    try {
+      const response = await axios.get('http://localhost:3001/api/notices/archived');
+      setArchivedNotices(response.data.data || []);
+    } catch (err) {
+      console.error("Error fetching archived notices:", err);
+    } finally {
+      setArchivedLoading(false);
+    }
+  };
+
+  const toggleArchived = () => {
+    if (!showArchived) fetchArchivedNotices();
+    setShowArchived(prev => !prev);
+  };
+
   const handleCleanupExpired = async () => {
     setCleanupLoading(true);
     setCleanupStatus(null);
@@ -131,6 +152,12 @@ export default function AdminNotices() {
       default:       return 'border-l-4 border-l-gray-200';
     }
   };
+
+  const isBase64Image = (str) => str && (
+    str.startsWith('data:image/jpeg') || str.startsWith('data:image/png') ||
+    str.startsWith('data:image/gif')  || str.startsWith('data:image/webp') ||
+    str.startsWith('data:image/svg')
+  );
 
   const urgentCount = notices.filter(n => n.priority === 'urgent').length;
   const mediumCount = notices.filter(n => n.priority === 'medium').length;
@@ -196,6 +223,19 @@ export default function AdminNotices() {
                 )}
               </button>
               <NoticePDFGenerator notices={filteredNotices} filterSummary={getFilterSummary()} />
+              <button
+                onClick={toggleArchived}
+                className={`relative flex items-center gap-2.5 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 border shadow-sm hover:shadow-md overflow-hidden group ${showArchived ? 'bg-white/30 border-white/40' : 'bg-white/15 hover:bg-white/25 border-white/25'}`}
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
+                <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
+                  <i className="fas fa-archive text-sm"></i>
+                </div>
+                <span className="flex flex-col items-start leading-none">
+                  <span className="text-xs font-bold tracking-wide">Archived</span>
+                  <span className="text-[10px] text-white/60 font-normal">{archivedNotices.length > 0 ? `${archivedNotices.length} records` : 'View history'}</span>
+                </span>
+              </button>
               <Link
                 to="/create-notice"
                 className="flex items-center gap-2 bg-white text-blue-700 hover:bg-blue-50 text-sm font-bold px-4 py-2 rounded-xl transition-colors shadow-md"
@@ -238,9 +278,97 @@ export default function AdminNotices() {
             ))}
           </div>
 
+          {/* Archived Notices Panel */}
+          {showArchived && (
+            <div className="mb-6">
+              <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-archive text-blue-500 text-xs"></i>
+                  </div>
+                  <span className="text-sm font-bold text-gray-700">Archived Notices</span>
+                  {archivedNotices.length > 0 && (
+                    <span className="ml-1 text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">{archivedNotices.length}</span>
+                  )}
+                  <button onClick={() => setShowArchived(false)} className="ml-auto w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors">
+                    <i className="fas fa-times text-gray-500 text-xs"></i>
+                  </button>
+                </div>
+                <div className="p-4">
+                  {archivedLoading ? (
+                    <div className="flex items-center justify-center py-10 gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-400"></div>
+                      <span className="text-sm text-gray-400">Loading archived notices...</span>
+                    </div>
+                  ) : archivedNotices.length === 0 ? (
+                    <div className="bg-white border border-gray-100 shadow-sm p-10 rounded-2xl text-center flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
+                        <i className="fas fa-archive text-2xl text-blue-300"></i>
+                      </div>
+                      <p className="text-gray-600 font-medium">No archived notices yet.</p>
+                      <p className="text-sm text-gray-400">Urgent notices that reach their deadline will appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {archivedNotices.map((notice) => {
+                        const cc = getCategoryConfig(notice.category);
+                        return (
+                          <div key={notice._id} className="bg-white rounded-2xl border-2 border-gray-300 ring-1 ring-gray-200 overflow-hidden hover:shadow-md hover:border-gray-400 transition-all duration-200">
+                            <div className="h-1.5 bg-gradient-to-r from-blue-400 to-gray-400" />
+                            <div className="p-5">
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                  <i className="fas fa-archive text-xs"></i> Archived
+                                </span>
+                                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-100 text-red-700 border border-red-200">
+                                  Urgent
+                                </span>
+                                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 ${cc.bg}`}>
+                                  <i className={`${cc.icon} text-xs`}></i>
+                                  {cc.label}
+                                </span>
+                              </div>
+                              <h3 className="font-semibold text-base mb-2 leading-snug text-gray-500 line-through">
+                                {notice.title}
+                              </h3>
+                              <p className="text-gray-400 text-sm mb-4 line-clamp-2 leading-relaxed">
+                                {notice.content.length > 150 ? `${notice.content.substring(0, 150)}...` : notice.content}
+                              </p>
+                              <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-100">
+                                <div className="flex items-center gap-1.5">
+                                  <i className="fas fa-calendar-alt"></i>
+                                  <span>Posted {formatDate(notice.createdAt || new Date())}</span>
+                                </div>
+                                {notice.archivedAt && (
+                                  <div className="flex items-center gap-1.5 text-blue-400 font-medium">
+                                    <i className="fas fa-archive"></i>
+                                    <span>Archived {formatDate(notice.archivedAt)}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-4 flex justify-center">
+                                <button
+                                  onClick={() => navigate('/create-notice', { state: { repost: notice } })}
+                                  className="flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300 text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors shadow-sm"
+                                >
+                                  <i className="fas fa-redo text-xs"></i>
+                                  Repost to Notice Board
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Filter & Search Panel */}
-          <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
-            <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center gap-2">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm mb-6 overflow-hidden">
+            <div className="px-4 py-3 bg-white border-b border-gray-100 flex items-center gap-2">
               <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
                 <i className="fas fa-filter text-blue-500 text-xs"></i>
               </div>
@@ -254,7 +382,7 @@ export default function AdminNotices() {
                 </button>
               )}
             </div>
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50/80">
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white">
               {/* Search */}
               <div className="sm:col-span-1">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Search</label>
@@ -265,7 +393,7 @@ export default function AdminNotices() {
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     placeholder="Title or content..."
-                    className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:bg-white transition-colors"
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-colors"
                   />
                 </div>
               </div>
@@ -277,7 +405,7 @@ export default function AdminNotices() {
                   <select
                     value={filterCategory}
                     onChange={e => setFilterCategory(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:bg-white appearance-none transition-colors"
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 appearance-none transition-colors"
                   >
                     <option value="all">All Categories</option>
                     <option value="lost-item">Lost Item Notice</option>
@@ -295,7 +423,7 @@ export default function AdminNotices() {
                   <select
                     value={filterPriority}
                     onChange={e => setFilterPriority(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:bg-white appearance-none transition-colors"
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 appearance-none transition-colors"
                   >
                     <option value="all">All Priorities</option>
                     <option value="urgent">Urgent</option>
@@ -338,9 +466,9 @@ export default function AdminNotices() {
               </button>
             </div>
           ) : (
-            <div className="bg-white border-2 border-gray-300 rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
               {/* Table header */}
-              <div className="px-5 py-3 bg-gray-100 border-b-2 border-gray-300 flex items-center justify-between">
+              <div className="px-5 py-3 bg-white border-b border-gray-100 flex items-center justify-between">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                   <i className="fas fa-list text-gray-400"></i> All Notices
                 </p>
@@ -352,12 +480,12 @@ export default function AdminNotices() {
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 border-b-2 border-gray-300">
+                    <tr className="bg-white border-b border-gray-100">
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Notice</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item Image</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Priority</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date Range</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Posted By</th>
                       <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
@@ -391,6 +519,21 @@ export default function AdminNotices() {
                               </span>
                             </td>
 
+                            {/* Item Image */}
+                            <td className="px-5 py-4">
+                              {notice.attachments && notice.attachments.some(a => isBase64Image(a)) ? (
+                                <img
+                                  src={notice.attachments.find(a => isBase64Image(a))}
+                                  alt="Item"
+                                  className="w-14 h-14 rounded-full object-cover border-2 border-gray-200 shadow-sm"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center flex-shrink-0">
+                                  <i className="fas fa-image text-gray-300 text-sm"></i>
+                                </div>
+                              )}
+                            </td>
+
                             {/* Priority badge */}
                             <td className="px-5 py-4">
                               <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${pc.bg}`}>
@@ -401,7 +544,7 @@ export default function AdminNotices() {
 
                             {/* Date range */}
                             <td className="px-5 py-4">
-                              <div className="flex flex-col gap-0.5">
+                              <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
                                   <i className="fas fa-calendar-alt text-gray-300 text-xs"></i>
                                   <span>{formatDate(notice.startDate)}</span>
@@ -412,18 +555,6 @@ export default function AdminNotices() {
                                     <span>Exp. {formatDate(notice.endDate)}</span>
                                   </div>
                                 )}
-                              </div>
-                            </td>
-
-                            {/* Posted by */}
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <i className="fas fa-user text-blue-500 text-xs"></i>
-                                </div>
-                                <span className="text-xs text-gray-500 font-medium truncate max-w-[80px]">
-                                  {notice.userId || notice.postedBy || 'Unknown'}
-                                </span>
                               </div>
                             </td>
 

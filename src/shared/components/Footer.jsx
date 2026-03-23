@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 py-10">
@@ -33,25 +35,25 @@ export default function Footer() {
           <h3 className="text-xl font-bold text-white mb-4">Quick Links</h3>
           <ul className="space-y-2 text-sm">
             <li>
-              <a href="#" className="hover:text-amber-400 transition">Home</a>
+              <Link to="/" className="hover:text-amber-400 transition">Home</Link>
             </li>
             <li>
-              <a href="#" className="hover:text-amber-400 transition">Report Items</a>
+              <Link to="/report-item" className="hover:text-amber-400 transition">Report Items</Link>
             </li>
             <li>
-              <a href="#" className="hover:text-amber-400 transition">Notice</a>
+              <Link to="/notice" className="hover:text-amber-400 transition">Notice</Link>
             </li>
             <li>
-              <a href="#" className="hover:text-amber-400 transition">Verification</a>
+              <Link to="/verification" className="hover:text-amber-400 transition">Verification</Link>
             </li>
             <li>
-              <a href="#" className="hover:text-amber-400 transition">Contact</a>
+              <Link to="/contact" className="hover:text-amber-400 transition">Contact</Link>
             </li>
             <li>
-              <a href="http://localhost:5173/admin/login" className="hover:text-amber-400 transition">Admin Login</a>
+              <Link to="/admin/login" className="hover:text-amber-400 transition">Admin Login</Link>
             </li>
             <li>
-              <a href="http://localhost:5173/admin/dashboard" className="hover:text-amber-400 transition">Admin Dashboard</a>
+              <Link to="/admin/dashboard" className="hover:text-amber-400 transition">Admin Dashboard</Link>
             </li>
           </ul>
         </div>

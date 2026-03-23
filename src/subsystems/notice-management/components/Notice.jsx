@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
@@ -7,10 +7,14 @@ import { getTempUser, isItemOwner } from "../../../shared/utils/tempUserAuth";
 import NoticeSection from "./NoticeSection";
 
 export default function Notice() {
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("all"); // "all", "lost", or "found"
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get("tab");
+    return tab === "found" || tab === "lost" ? tab : "all";
+  });
   const [selectedItem, setSelectedItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [tempUser, setTempUser] = useState(null);

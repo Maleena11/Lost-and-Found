@@ -114,9 +114,6 @@ const AboutUs = () => {
             <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
               Contact Us
             </button>
-            <button className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors">
-              Get Started
-            </button>
           </div>
         </div>
       </div>

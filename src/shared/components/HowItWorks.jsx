@@ -30,10 +30,6 @@ export default function HowItWorks() {
     }
   ];
 
-  const handleGetStarted = () => {
-    window.location.href = "http://localhost:5173/report-item";
-  };
-
   return (
     <section className="bg-white py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -101,12 +97,6 @@ export default function HowItWorks() {
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
               Don't let lost items stay lost. Our proven process has helped thousands of students recover their belongings.
             </p>
-            <button
-              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg"
-              onClick={handleGetStarted}
-            >
-              Get Started Now
-            </button>
           </div>
         </div>
       </div>

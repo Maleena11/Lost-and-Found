@@ -253,6 +253,17 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
             </div>
           )}
 
+          {/* Page Header Banner */}
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 mx-4 mt-4 rounded-2xl px-5 py-5 shadow-lg shadow-blue-200 flex items-center gap-4 flex-shrink-0">
+            <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+              <i className="fas fa-cog text-white text-lg"></i>
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">System Settings</h2>
+              <p className="text-xs text-blue-100 mt-0.5">Configure and manage system-wide settings</p>
+            </div>
+          </div>
+
           {/* ── Two-column layout ── */}
           <div className="flex flex-1 overflow-hidden">
 

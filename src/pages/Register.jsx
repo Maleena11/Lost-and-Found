@@ -13,8 +13,8 @@ const initialForm = {
   agreeTerms: false,
 };
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRegex = /^[0-9+\-\s()]{7,15}$/;
+const sliitEmailRegex = /^it\d{8}@my\.sliit\.lk$/;
+const phoneRegex = /^0\d{9}$/;
 
 const validate = (form) => {
   const errors = {};
@@ -29,14 +29,14 @@ const validate = (form) => {
 
   if (!form.email.trim()) {
     errors.email = "Email is required.";
-  } else if (!emailRegex.test(form.email)) {
-    errors.email = "Enter a valid email address.";
+  } else if (!sliitEmailRegex.test(form.email.trim())) {
+    errors.email = "Enter a valid SLIIT email (e.g. it23624859@my.sliit.lk).";
   }
 
   if (!form.phone.trim()) {
     errors.phone = "Phone number is required.";
   } else if (!phoneRegex.test(form.phone.trim())) {
-    errors.phone = "Enter a valid phone number (7–15 digits).";
+    errors.phone = "Phone number must be 10 digits starting with 0 (e.g. 0712365852).";
   }
 
   if (!form.street.trim()) {
@@ -262,7 +262,7 @@ export default function Register() {
                         value={form.name}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        placeholder="John Doe"
+                        placeholder="Nimali Perera"
                         autoComplete="name"
                         className={fieldClass("name")}
                       />
@@ -286,7 +286,7 @@ export default function Register() {
                         value={form.email}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        placeholder="you@university.edu"
+                        placeholder="it23624859@my.sliit.lk"
                         autoComplete="email"
                         className={fieldClass("email")}
                       />
@@ -319,7 +319,7 @@ export default function Register() {
                         value={form.phone}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        placeholder="+94 71 234 5678"
+                        placeholder="0712365852"
                         autoComplete="tel"
                         className={fieldClass("phone")}
                       />

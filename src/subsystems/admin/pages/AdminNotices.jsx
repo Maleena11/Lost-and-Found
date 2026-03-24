@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from './Sidebar';
 import TopBar from '../components/TopBar';
@@ -8,6 +8,9 @@ import AdminNoticeEditModal from '../components/AdminNoticeEditModal';
 import NoticePDFGenerator from '../../notice-management/components/NoticePDFGenerator';
 
 export default function AdminNotices() {
+  const location = useLocation();
+  const isExpiredFilter = new URLSearchParams(location.search).get('filter') === 'expired';
+
   const [editingNotice, setEditingNotice]     = useState(null);
   const [showEditModal, setShowEditModal]     = useState(false);
   const [notices, setNotices]                 = useState([]);
@@ -53,7 +56,13 @@ export default function AdminNotices() {
     }
   };
 
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   const filteredNotices = notices.filter(notice => {
+    if (isExpiredFilter) {
+      if (!notice.endDate) return false;
+      const [y, m, d] = notice.endDate.toString().substring(0, 10).split('-').map(Number);
+      if (new Date(y, m - 1, d) >= today) return false;
+    }
     if (filterCategory !== 'all' && notice.category !== filterCategory) return false;
     if (filterPriority !== 'all' && notice.priority !== filterPriority) return false;
     if (searchTerm) {
@@ -205,6 +214,17 @@ export default function AdminNotices() {
               </Link>
             </div>
           </div>
+
+          {/* Expired filter indicator */}
+          {isExpiredFilter && (
+            <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
+              <i className="fas fa-calendar-times text-rose-500"></i>
+              Showing expired notices only — notices whose end date has passed.
+              <Link to="/admin/dashboard/notices" className="ml-auto text-xs text-rose-600 hover:text-rose-800 underline font-semibold">
+                View all notices
+              </Link>
+            </div>
+          )}
 
           {/* Cleanup status toast */}
           {cleanupStatus && (

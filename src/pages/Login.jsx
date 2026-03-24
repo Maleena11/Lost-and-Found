@@ -5,12 +5,14 @@ import { useAuth } from "../shared/utils/AuthContext";
 
 const initialForm = { email: "", password: "" };
 
+const sliitEmailRegex = /^it\d{8}@my\.sliit\.lk$/;
+
 const validate = (form) => {
   const errors = {};
   if (!form.email.trim()) {
     errors.email = "Email is required.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = "Enter a valid email address.";
+  } else if (!sliitEmailRegex.test(form.email.trim())) {
+    errors.email = "Enter a valid SLIIT email (e.g. it23624859@my.sliit.lk).";
   }
   if (!form.password) {
     errors.password = "Password is required.";
@@ -147,7 +149,7 @@ export default function Login() {
                     value={form.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="you@university.edu"
+                    placeholder="it23624859@my.sliit.lk"
                     autoComplete="email"
                     className={fieldClass("email")}
                   />

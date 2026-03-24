@@ -376,7 +376,7 @@ export default function Dashboard() {
                 { label: 'Report New Item',      icon: 'fa-plus',           path: '/report-item',                  bg: 'bg-blue-600 hover:bg-blue-700',     },
                 { label: 'Review Verifications', icon: 'fa-check-circle',   path: '/admin/dashboard/verification', bg: 'bg-amber-500 hover:bg-amber-600',   },
                 { label: 'Post Notice',          icon: 'fa-bullhorn',       path: '/admin/dashboard/notices',      bg: 'bg-purple-600 hover:bg-purple-700', },
-                { label: 'View Expired Items',   icon: 'fa-calendar-times', path: '/admin/dashboard/allitems',     bg: 'bg-rose-500 hover:bg-rose-600',     },
+                { label: 'View Expired Notices', icon: 'fa-calendar-times', path: '/admin/dashboard/notices?filter=expired', bg: 'bg-rose-500 hover:bg-rose-600',     },
                 { label: 'Manage Users',         icon: 'fa-users',          path: '/admin/dashboard/users',        bg: 'bg-slate-700 hover:bg-slate-800',   },
               ].map(({ label, icon, path, bg }) => (
                 <button

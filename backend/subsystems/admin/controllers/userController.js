@@ -1,4 +1,5 @@
 const UserModel = require("../models/users");
+const Admin = require("../models/admin");
 const bcrypt = require("bcrypt");
 
 // User login
@@ -9,26 +10,45 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ error: "Email and password are required." });
     }
 
+    // First try regular user by email
     const user = await UserModel.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-
-    res.status(200).json({
-      message: "Login successful",
-      user: {
-        id: user._id,
-        name: user.fullname,
-        email: user.email,
-        role: user.role,
-        status: user.status
+    if (user) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Invalid email or password." });
       }
-    });
+      return res.status(200).json({
+        message: "Login successful",
+        user: {
+          id: user._id,
+          name: user.fullname,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        }
+      });
+    }
+
+    // Fallback: try admin by username
+    const admin = await Admin.findOne({ username: email });
+    if (admin) {
+      const isMatch = await bcrypt.compare(password, admin.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Invalid email or password." });
+      }
+      return res.status(200).json({
+        message: "Login successful",
+        user: {
+          id: admin._id,
+          name: admin.username,
+          email: admin.username,
+          role: "Admin",
+          status: "Active"
+        }
+      });
+    }
+
+    return res.status(401).json({ error: "Invalid email or password." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

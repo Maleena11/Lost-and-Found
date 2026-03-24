@@ -35,12 +35,12 @@ export default function ReportItem() {
     const user = getTempUser();
     setTempUser(user);
 
-    // Pre-fill contact info with temp user data... 
+    // Pre-fill contact info with temp user data...
     setFormData(prev => ({
       ...prev,
       contactInfo: {
-        name: user.name || "",
-        email: user.email || "",
+        name: (user.name && user.name !== "Temporary User") ? user.name : "",
+        email: (user.email && user.email !== "temp@example.com") ? user.email : "",
         phone: prev.contactInfo.phone
       }
     }));
@@ -124,9 +124,9 @@ export default function ReportItem() {
         dateTime: "",
         images: [],
         contactInfo: {
-          name: tempUser.name || "",
+          name: (tempUser.name && tempUser.name !== "Temporary User") ? tempUser.name : "",
           phone: formData.contactInfo.phone,
-          email: tempUser.email || "",
+          email: (tempUser.email && tempUser.email !== "temp@example.com") ? tempUser.email : "",
         }
       });
     } catch (error) {
@@ -242,8 +242,10 @@ export default function ReportItem() {
                     name="itemName"
                     value={formData.itemName}
                     onChange={(e) => {
+                      const val = e.target.value;
+                      const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
                       const regex = /^[a-zA-Z0-9 ]*$/;
-                      if (regex.test(e.target.value)) handleChange(e);
+                      if (regex.test(capitalized)) setFormData({ ...formData, itemName: capitalized });
                     }}
                     required
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -302,15 +304,28 @@ export default function ReportItem() {
                     <label className="block mb-1.5 text-sm font-medium text-gray-700">
                       Campus Location <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="location"
                       value={formData.location}
                       onChange={handleChange}
                       required
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="e.g. Library, Block A, Canteen, Lab"
-                    />
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Select location</option>
+                      <option value="Main Library">Main Library</option>
+                      <option value="Block A">Block A</option>
+                      <option value="Block B">Block B</option>
+                      <option value="Block C">Block C</option>
+                      <option value="Lab Block">Lab Block</option>
+                      <option value="Lecture Hall Complex">Lecture Hall Complex</option>
+                      <option value="Canteen / Cafeteria">Canteen / Cafeteria</option>
+                      <option value="Sports Complex">Sports Complex</option>
+                      <option value="Admin Building">Admin Building</option>
+                      <option value="Auditorium">Auditorium</option>
+                      <option value="Student Center">Student Center</option>
+                      <option value="Parking Area">Parking Area</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block mb-1.5 text-sm font-medium text-gray-700">
@@ -400,38 +415,12 @@ export default function ReportItem() {
                   </select>
                 </div>
 
-                {/* Building */}
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Campus Building / Area</label>
-                  <select
-                    name="building"
-                    value={formData.building}
-                    onChange={handleChange}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                  >
-                    <option value="">Select building (optional)</option>
-                    <option value="Main Library">Main Library</option>
-                    <option value="Block A">Block A</option>
-                    <option value="Block B">Block B</option>
-                    <option value="Block C">Block C</option>
-                    <option value="Lab Block">Lab Block</option>
-                    <option value="Lecture Hall Complex">Lecture Hall Complex</option>
-                    <option value="Canteen / Cafeteria">Canteen / Cafeteria</option>
-                    <option value="Sports Complex">Sports Complex</option>
-                    <option value="Admin Building">Admin Building</option>
-                    <option value="Auditorium">Auditorium</option>
-                    <option value="Student Center">Student Center</option>
-                    <option value="Parking Area">Parking Area</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
                 {/* Year Group */}
                 <div>
                   <label className="block mb-1.5 text-sm font-medium text-gray-700">Year Group</label>
                   <select
-                    name="yearGroup"
-                    value={formData.yearGroup}
+                    name="building"
+                    value={formData.building}
                     onChange={handleChange}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                   >
@@ -442,6 +431,21 @@ export default function ReportItem() {
                     <option value="Year 4">Year 4</option>
                     <option value="Postgraduate">Postgraduate</option>
                     <option value="Staff">Staff / Faculty</option>
+                  </select>
+                </div>
+
+                {/* Semester */}
+                <div>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Semester</label>
+                  <select
+                    name="yearGroup"
+                    value={formData.yearGroup}
+                    onChange={handleChange}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">Select semester (optional)</option>
+                    <option value="Semester 1">Semester 1</option>
+                    <option value="Semester 2">Semester 2</option>
                   </select>
                 </div>
               </div>
@@ -467,8 +471,9 @@ export default function ReportItem() {
                     name="contactInfo.name"
                     value={formData.contactInfo.name}
                     onChange={(e) => {
-                      const regex = /^[a-zA-Z0-9!@#$%^&*()_+={}\[\]:;"'<>.,?/-]*$/;
-                      if (regex.test(e.target.value)) handleChange(e);
+                      const titled = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
+                      const regex = /^[a-zA-Z0-9 !@#$%^&*()_+={}\[\]:;"'<>.,?/-]*$/;
+                      if (regex.test(titled)) handleChange({ target: { name: e.target.name, value: titled } });
                     }}
                     placeholder="Your full name"
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const OurServices = () => {
+  const navigate = useNavigate();
   const services = [
     {
       id: 1,
@@ -101,7 +103,10 @@ return (
                         >
                             Report Lost Item
                         </a>
-                        <button className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors">
+                        <button
+                            onClick={() => navigate('/notice?tab=found')}
+                            className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors"
+                        >
                             Search Found Items
                         </button>
                     </div>

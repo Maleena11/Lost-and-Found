@@ -226,6 +226,25 @@ exports.deleteVerificationRequest = async (req, res) => {
   }
 };
 
+// Get verification requests by claimant email (for user account page)
+exports.getVerificationRequestsByEmail = async (req, res) => {
+  try {
+    const requests = await VerificationRequest.find({
+      'claimantInfo.email': req.params.email.toLowerCase()
+    })
+      .populate('itemId')
+      .sort({ submittedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: requests.length,
+      data: requests
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
 // Get verification requests by item ID
 exports.getVerificationRequestsByItem = async (req, res) => {
   try {

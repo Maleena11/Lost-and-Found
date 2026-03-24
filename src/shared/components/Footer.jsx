@@ -10,7 +10,7 @@ export default function Footer() {
           </h3>
           <p className="text-sm mb-6">
             Helping reunite lost items with their owners across the university
-            campus since 2010.
+            campus since 2026.
           </p>
           <div className="flex space-x-4 text-lg">
             <a href="#" className="hover:text-amber-400 transition">
@@ -49,9 +49,6 @@ export default function Footer() {
             </li>
             <li>
               <a href="http://localhost:5173/admin/login" className="hover:text-amber-400 transition">Admin Login</a>
-            </li>
-            <li>
-              <a href="http://localhost:5173/admin/dashboard" className="hover:text-amber-400 transition">Admin Dashboard</a>
             </li>
           </ul>
         </div>

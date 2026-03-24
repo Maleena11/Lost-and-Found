@@ -9,10 +9,18 @@ const sliitEmailRegex = /^it\d{8}@my\.sliit\.lk$/;
 
 const validate = (form) => {
   const errors = {};
+<<<<<<< HEAD
   if (!form.email.trim()) {
     errors.email = "Email is required.";
   } else if (!sliitEmailRegex.test(form.email.trim())) {
     errors.email = "Enter a valid SLIIT email (e.g. it23624859@my.sliit.lk).";
+=======
+  const val = form.email.trim();
+  if (!val) {
+    errors.email = "Email or username is required.";
+  } else if (val.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+    errors.email = "Enter a valid email address.";
+>>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
   }
   if (!form.password) {
     errors.password = "Password is required.";
@@ -68,7 +76,11 @@ export default function Login() {
         password: form.password,
       });
       if (res.status === 200) {
-        login(res.data.user || { email: form.email });
+        const userData = res.data.user || { email: form.email };
+        login(userData);
+        if (userData.role === "Admin") {
+          localStorage.setItem("unifind_admin", JSON.stringify({ username: userData.name, id: userData.id }));
+        }
         setSuccessMsg("Login successful! Redirecting…");
         setTimeout(() => navigate(from, { replace: true }), 1200);
       }
@@ -137,19 +149,23 @@ export default function Login() {
               {/* Email */}
               <div>
                 <label className="block mb-1.5 text-sm font-medium text-gray-700">
-                  Email Address
+                  Email or Username
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
                     <i className="fas fa-envelope text-sm" />
                   </span>
                   <input
-                    type="email"
+                    type="text"
                     name="email"
                     value={form.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
+<<<<<<< HEAD
                     placeholder="it23624859@my.sliit.lk"
+=======
+                    placeholder="you@university.edu or username"
+>>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
                     autoComplete="email"
                     className={fieldClass("email")}
                   />

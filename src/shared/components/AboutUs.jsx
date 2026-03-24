@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const AboutUs = () => {
+  const navigate = useNavigate();
   const stats = [
     { number: "50,000+", label: "Items Recovered", icon: "fas fa-undo" },
     { number: "95%", label: "Success Rate", icon: "fas fa-chart-line" },
@@ -111,11 +113,8 @@ const AboutUs = () => {
             to make campus life better for everyone.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <button onClick={() => navigate('/contact')} className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
               Contact Us
-            </button>
-            <button className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors">
-              Get Started
             </button>
           </div>
         </div>

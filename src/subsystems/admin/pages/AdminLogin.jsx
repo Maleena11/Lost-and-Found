@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../../shared/utils/AuthContext";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -10,6 +11,7 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,6 +26,9 @@ export default function AdminLogin() {
     try {
       const res = await axios.post("http://localhost:3001/login/login", { username, password });
       if (res.status === 200) {
+        const adminData = { username, id: res.data.admin?.id, role: "Admin" };
+        localStorage.setItem("unifind_admin", JSON.stringify(adminData));
+        login(adminData); // lets admin pass ProtectedRoute on user-side pages too
         navigate("/admin/dashboard");
       }
     } catch (err) {

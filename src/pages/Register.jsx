@@ -13,8 +13,13 @@ const initialForm = {
   agreeTerms: false,
 };
 
+<<<<<<< HEAD
 const sliitEmailRegex = /^it\d{8}@my\.sliit\.lk$/;
 const phoneRegex = /^0\d{9}$/;
+=======
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRegex = /^\d{10}$/;
+>>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
 
 const validate = (form) => {
   const errors = {};
@@ -36,7 +41,11 @@ const validate = (form) => {
   if (!form.phone.trim()) {
     errors.phone = "Phone number is required.";
   } else if (!phoneRegex.test(form.phone.trim())) {
+<<<<<<< HEAD
     errors.phone = "Phone number must be 10 digits starting with 0 (e.g. 0712365852).";
+=======
+    errors.phone = "Please enter a valid 10-digit phone number.";
+>>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
   }
 
   if (!form.street.trim()) {

@@ -2,15 +2,22 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getTempUser } from '../../../shared/utils/tempUserAuth';
 
+const URGENT_ITEMS = ['student-id', 'laptop', 'mobile-phone', 'atm-card', 'license'];
+
 export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
-    title: '', content: '', category: 'general', priority: 'medium',
-    startDate: '', endDate: '', targetAudience: 'all-users', attachments: []
+    title: '', content: '', category: 'general', itemType: '', priority: 'medium',
+    startDate: '', endDate: '', targetAudience: 'all-users', attachments: [],
+    contactPhone: '', contactEmail: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError]               = useState(null);
+  const [errors, setErrors]             = useState({ contactPhone: '', contactEmail: '' });
   const [tempUser, setTempUser]         = useState(null);
   const [dateError, setDateError]       = useState(null);
+
+  const phoneInputRegex = /^\d*$/;
+  const emailValidRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useEffect(() => {
     if (notice) {
@@ -18,14 +25,18 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
         title:          notice.title || '',
         content:        notice.content || '',
         category:       notice.category || 'general',
+        itemType:       notice.itemType || '',
         priority:       notice.priority || 'medium',
         startDate:      notice.startDate ? new Date(notice.startDate).toISOString().split('T')[0] : '',
         endDate:        notice.endDate   ? new Date(notice.endDate).toISOString().split('T')[0]   : '',
         targetAudience: notice.targetAudience || 'all-users',
-        attachments:    notice.attachments || []
+        attachments:    notice.attachments || [],
+        contactPhone:   notice.contactPhone || '',
+        contactEmail:   notice.contactEmail || ''
       });
       setError(null);
       setDateError(null);
+      setErrors({ contactPhone: '', contactEmail: '' });
     }
     const user = getTempUser();
     setTempUser(user);
@@ -34,16 +45,35 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
   const handleChange = (e) => {
     const { name, value } = e.target;
     let newFormData = { ...formData, [name]: value };
-    if (name === 'startDate') {
-      const today = new Date(); today.setHours(0,0,0,0);
-      if (new Date(value) < today) { setDateError("Start date cannot be before today."); return; }
-      if (newFormData.endDate && new Date(newFormData.endDate) < new Date(value)) { setDateError("End date cannot be before start date."); return; }
+
+    if (name === 'contactPhone') {
+      if (!phoneInputRegex.test(value)) return;
+      setErrors(prev => ({ ...prev, contactPhone: value.length !== 10 ? 'Phone number must be exactly 10 digits' : '' }));
+    }
+    if (name === 'contactEmail') {
+      setErrors(prev => ({ ...prev, contactEmail: '' }));
+    }
+    if (name === 'startDate' && newFormData.endDate) {
+      if (new Date(newFormData.endDate) < new Date(value)) { setDateError("End date cannot be before start date."); return; }
     }
     if (name === 'endDate' && newFormData.startDate) {
       if (new Date(value) < new Date(newFormData.startDate)) { setDateError("End date cannot be before start date."); return; }
     }
+    if (name === 'itemType' && URGENT_ITEMS.includes(value)) {
+      newFormData.priority = 'urgent';
+    }
     setFormData(newFormData);
     setDateError(null);
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    if (name === 'contactPhone' && value.length !== 10) {
+      setErrors(prev => ({ ...prev, contactPhone: 'Phone number must be exactly 10 digits' }));
+    }
+    if (name === 'contactEmail' && value && !emailValidRegex.test(value)) {
+      setErrors(prev => ({ ...prev, contactEmail: 'Enter a valid email address (e.g. user@example.com)' }));
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -65,6 +95,10 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    const newErrors = { contactPhone: '', contactEmail: '' };
+    if (formData.contactPhone && formData.contactPhone.length !== 10) newErrors.contactPhone = 'Phone number must be exactly 10 digits';
+    if (formData.contactEmail && !emailValidRegex.test(formData.contactEmail)) newErrors.contactEmail = 'Enter a valid email address (e.g. user@example.com)';
+    if (newErrors.contactPhone || newErrors.contactEmail) { setErrors(newErrors); setIsSubmitting(false); return; }
     try {
       if (!tempUser) throw new Error("User information not available");
       const response = await axios.put(`http://localhost:3001/api/notices/${notice._id}`, {
@@ -191,6 +225,42 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
               </div>
             </div>
 
+            {/* Item Type */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                Item Type <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
+                <i className="fas fa-box absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <select
+                  name="itemType"
+                  value={formData.itemType}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 appearance-none bg-white transition-colors"
+                >
+                  <option value="">— Select item type —</option>
+                  <option value="student-id">Student ID Card</option>
+                  <option value="laptop">Laptop / Tablet</option>
+                  <option value="mobile-phone">Mobile Phone</option>
+                  <option value="atm-card">ATM / Bank Card</option>
+                  <option value="license">Driving License / NIC</option>
+                  <option value="wallet">Wallet / Purse</option>
+                  <option value="keys">Keys</option>
+                  <option value="books">Books / Lecture Notes</option>
+                  <option value="stationery">Stationery / USB Drive</option>
+                  <option value="clothing">Clothing / Bag</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              {URGENT_ITEMS.includes(formData.itemType) && (
+                <p className="mt-1.5 text-xs text-red-600 font-medium flex items-center gap-1">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  High-priority item — priority has been set to <strong>Urgent</strong> automatically.
+                </p>
+              )}
+            </div>
+
             {/* Target Audience */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Target Audience</label>
@@ -225,7 +295,7 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
                     name="startDate"
                     value={formData.startDate}
                     onChange={handleChange}
-                    min={new Date().toISOString().split('T')[0]}
+                    min="2026-01-01"
                     required
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-colors"
                   />
@@ -240,7 +310,7 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
                     name="endDate"
                     value={formData.endDate}
                     onChange={handleChange}
-                    min={formData.startDate}
+                    min="2026-01-01"
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-colors"
                   />
                 </div>
@@ -301,6 +371,45 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
                 accept="image/*"
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
+            </div>
+
+            {/* Contact Phone */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Contact Phone</label>
+              <div className="relative">
+                <i className="fas fa-phone absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input
+                  type="tel"
+                  name="contactPhone"
+                  value={formData.contactPhone}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  maxLength="10"
+                  inputMode="numeric"
+                  placeholder="e.g. 0771234567"
+                  className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors ${errors.contactPhone ? 'border-red-300' : 'border-gray-200'}`}
+                />
+              </div>
+              {errors.contactPhone && <p className="mt-1 text-xs text-red-600">{errors.contactPhone}</p>}
+            </div>
+
+            {/* Contact Email */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Contact Email</label>
+              <div className="relative">
+                <i className="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input
+                  type="email"
+                  name="contactEmail"
+                  value={formData.contactEmail}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  maxLength="100"
+                  placeholder="e.g. user@example.com"
+                  className={`w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors ${errors.contactEmail ? 'border-red-300' : 'border-gray-200'}`}
+                />
+              </div>
+              {errors.contactEmail && <p className="mt-1 text-xs text-red-600">{errors.contactEmail}</p>}
             </div>
 
             {/* Action Buttons */}

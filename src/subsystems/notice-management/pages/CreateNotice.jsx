@@ -103,6 +103,10 @@ export default function CreateNotice() {
     }
   };
 
+  const removeAttachment = (idx) => {
+    setFormData(prev => ({ ...prev, attachments: prev.attachments.filter((_, i) => i !== idx) }));
+  };
+
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
     
@@ -359,7 +363,7 @@ export default function CreateNotice() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  {...(!repostNotice && { min: getTodayString() })}
+                  min="2026-01-01"
                   required
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 />
@@ -373,7 +377,7 @@ export default function CreateNotice() {
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleChange}
-                  {...(formData.startDate && { min: formData.startDate })}
+                  min="2026-01-01"
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 />
               </div>
@@ -397,12 +401,20 @@ export default function CreateNotice() {
               {formData.attachments.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {formData.attachments.map((src, idx) => (
-                    <img
-                      key={idx}
-                      src={src}
-                      alt={`preview ${idx + 1}`}
-                      className="h-16 w-16 object-cover rounded-lg border border-gray-200"
-                    />
+                    <div key={idx} className="relative group">
+                      <img
+                        src={src}
+                        alt={`preview ${idx + 1}`}
+                        className="h-16 w-16 object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(idx)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-300 hover:bg-gray-400 text-gray-600 rounded-full flex items-center justify-center shadow transition-colors"
+                      >
+                        <i className="fas fa-times text-[9px]"></i>
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}

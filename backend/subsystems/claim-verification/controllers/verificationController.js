@@ -1,5 +1,6 @@
 const VerificationRequest = require('../models/VerificationRequest');
 const LostFoundItem = require('../../lost-found-reporting/models/LostFoundItem');
+const { sendClaimConfirmation } = require('../../../utils/emailService');
 
 // Create a new verification request
 exports.createVerificationRequest = async (req, res) => {
@@ -53,6 +54,15 @@ exports.createVerificationRequest = async (req, res) => {
 
     // Populate the item information
     await verificationRequest.populate('itemId');
+
+    // Send confirmation email to claimant (non-blocking — failure won't reject the submission)
+    const claimRef = `CLM-${verificationRequest._id.toString().slice(-6).toUpperCase()}`;
+    sendClaimConfirmation(claimantInfo.email, {
+      claimantName: claimantInfo.name,
+      claimRef,
+      itemName: verificationRequest.itemId?.itemName || 'Your item',
+      submittedAt: verificationRequest.submittedAt || new Date(),
+    }).catch(err => console.error('[Email] Failed to send claim confirmation:', err.message));
 
     res.status(201).json({
       success: true,

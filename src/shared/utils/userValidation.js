@@ -16,15 +16,24 @@ export const validateUserForm = (userData, isNewUser = true) => {
   if (!userData.email.trim()) {
     errors.email = "Email is required";
   } else if (!isValidEmail(userData.email)) {
-    errors.email = "Please enter a valid email address";
+    errors.email = "Enter a valid SLIIT email (e.g. it23624859@my.sliit.lk)";
+  }
+
+  // Phone validation
+  if (userData.phone !== undefined) {
+    if (!userData.phone || !userData.phone.trim()) {
+      errors.phone = "Phone number is required";
+    } else if (!/^0\d{9}$/.test(userData.phone.trim())) {
+      errors.phone = "Phone must be 10 digits starting with 0 (e.g. 0712365852)";
+    }
   }
 
   // Password validation (only for new users)
   if (isNewUser) {
     if (!userData.password) {
       errors.password = "Password is required";
-    } else if (userData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters long";
+    } else if (userData.password.length < 8) {
+      errors.password = "Password must be at least 8 characters long";
     } else if (userData.password.length > 100) {
       errors.password = "Password must be less than 100 characters";
     }
@@ -69,7 +78,7 @@ export const getFieldClassName = (fieldName, touched, errors) => {
 };
 
 const isValidEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^it\d{8}@my\.sliit\.lk$/;
   return emailRegex.test(email);
 };
 

@@ -87,7 +87,7 @@ function SkeletonRow() {
   return (
     <tr className="animate-pulse">
       <td className="pl-4 pr-2 py-4"><div className="w-4 h-4 bg-gray-200 rounded" /></td>
-      {[...Array(6)].map((_, i) => (
+      {[...Array(7)].map((_, i) => (
         <td key={i} className="px-6 py-4">
           <div className="h-4 bg-gray-200 rounded w-3/4" />
         </td>
@@ -125,7 +125,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
   // ── Add User Form ──
   const [showAddForm, setShowAddForm]   = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", confirmPassword: "", role: "", status: "" });
+  const [newUser, setNewUser] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "", role: "", status: "" });
   const [newUserErrors, setNewUserErrors]   = useState({});
   const [newUserTouched, setNewUserTouched] = useState({});
   const [isFormValid, setIsFormValid]       = useState(false);
@@ -133,7 +133,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
   // ── Edit Modal ──
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser]     = useState(null);
-  const [editUser, setEditUser] = useState({ name: "", email: "", role: "User", status: "Active" });
+  const [editUser, setEditUser] = useState({ name: "", email: "", phone: "", role: "User", status: "Active" });
   const [editUserErrors, setEditUserErrors]   = useState({});
   const [editUserTouched, setEditUserTouched] = useState({});
   const [isEditFormValid, setIsEditFormValid] = useState(false);
@@ -224,13 +224,13 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
   const handleAddUser = async e => {
     e.preventDefault();
-    setNewUserTouched({ name: true, email: true, password: true, confirmPassword: true, role: true, status: true });
+    setNewUserTouched({ name: true, email: true, phone: true, password: true, confirmPassword: true, role: true, status: true });
     if (!isFormValid) { addToast("Please fix validation errors before submitting.", "error"); return; }
     setIsSubmitting(true);
     try {
       const { data } = await axios.post("http://localhost:3001/api/users", newUser);
       setUsers(prev => [...prev, data]);
-      setNewUser({ name: "", email: "", password: "", confirmPassword: "", role: "", status: "" });
+      setNewUser({ name: "", email: "", phone: "", password: "", confirmPassword: "", role: "", status: "" });
       setNewUserTouched({});
       setShowAddForm(false);
       addToast("User created successfully!", "success");
@@ -245,7 +245,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
     const user = users.find(u => (u._id || u.id) === id);
     if (!user) return;
     setEditingUser(user);
-    setEditUser({ name: user.name, email: user.email, role: user.role, status: user.status });
+    setEditUser({ name: user.name, email: user.email, phone: user.phonenumber || "", role: user.role, status: user.status });
     setEditUserTouched({});
     setShowEditModal(true);
   };
@@ -259,7 +259,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
   const handleUpdateUser = async e => {
     e.preventDefault();
-    setEditUserTouched({ name: true, email: true, role: true, status: true });
+    setEditUserTouched({ name: true, email: true, phone: true, role: true, status: true });
     if (!isEditFormValid) { addToast("Please fix validation errors before updating.", "error"); return; }
     // Gate: promoting to Admin requires confirmation
     if (editingUser.role !== "Admin" && editUser.role === "Admin") {
@@ -453,6 +453,17 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
         <Toast toasts={toasts} removeToast={removeToast} />
 
         <main className="flex-1 p-6 space-y-6">
+
+          {/* Page Header Banner */}
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl px-5 py-5 mb-6 shadow-lg shadow-blue-200 flex items-center gap-4">
+            <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+              <i className="fas fa-users text-white text-lg"></i>
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold text-white tracking-tight">User Management</h2>
+              <p className="text-xs text-blue-100 mt-0.5">Manage all university users from one place</p>
+            </div>
+          </div>
 
           {/* ── Stats Cards ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -692,6 +703,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
@@ -703,7 +715,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                     [...Array(5)].map((_, i) => <SkeletonRow key={i} />)
                   ) : pagedUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="px-6 py-16 text-center">
+                      <td colSpan="8" className="px-6 py-16 text-center">
                         <svg className="mx-auto w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
@@ -740,6 +752,9 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
                         {/* Email */}
                         <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+
+                        {/* Phone */}
+                        <td className="px-6 py-4 text-sm text-gray-600">{user.phonenumber || "—"}</td>
 
                         {/* Role */}
                         <td className="px-6 py-4">
@@ -941,6 +956,10 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 <span className="text-sm text-gray-700">{viewingUser.email}</span>
               </div>
               <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
+                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Phone</span>
+                <span className="text-sm text-gray-700">{viewingUser.phonenumber || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Role</span>
                 <span className="text-sm text-gray-700">{viewingUser.role}</span>
               </div>
@@ -1023,7 +1042,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name <span className="text-red-500">*</span></label>
                   <input type="text" name="name" value={newUser.name} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
-                    placeholder="e.g. Jane Smith"
+                    placeholder="Nimali Perera"
                     className={getFieldClassName("name", newUserTouched, newUserErrors)} />
                   {showFieldError("name", newUserTouched, newUserErrors) && (
                     <p className="mt-1 text-xs text-red-600">{newUserErrors.name}</p>
@@ -1048,7 +1067,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address <span className="text-red-500">*</span></label>
                   <input type="email" name="email" value={newUser.email} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
-                    placeholder="jane@example.com"
+                    placeholder="it23624859@my.sliit.lk"
                     className={getFieldClassName("email", newUserTouched, newUserErrors)} />
                   {showFieldError("email", newUserTouched, newUserErrors) && (
                     <p className="mt-1 text-xs text-red-600">{newUserErrors.email}</p>
@@ -1068,12 +1087,23 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 </div>
               </div>
 
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+                <input type="tel" name="phone" value={newUser.phone} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
+                  placeholder="0712365852"
+                  className={getFieldClassName("phone", newUserTouched, newUserErrors)} />
+                {showFieldError("phone", newUserTouched, newUserErrors) && (
+                  <p className="mt-1 text-xs text-red-600">{newUserErrors.phone}</p>
+                )}
+              </div>
+
               {/* Password */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Password <span className="text-red-500">*</span></label>
                   <input type="password" name="password" value={newUser.password} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
-                    placeholder="Min. 6 characters"
+                    placeholder="Min. 8 characters"
                     className={getFieldClassName("password", newUserTouched, newUserErrors)} />
                   {showFieldError("password", newUserTouched, newUserErrors) && (
                     <p className="mt-1 text-xs text-red-600">{newUserErrors.password}</p>
@@ -1092,7 +1122,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
               {/* Footer actions */}
               <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-                <button type="button" onClick={() => { setShowAddForm(false); setNewUser({ name: "", email: "", password: "", confirmPassword: "", role: "", status: "" }); setNewUserTouched({}); }}
+                <button type="button" onClick={() => { setShowAddForm(false); setNewUser({ name: "", email: "", phone: "", password: "", confirmPassword: "", role: "", status: "" }); setNewUserTouched({}); }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
                   Cancel
                 </button>
@@ -1222,11 +1252,20 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address <span className="text-red-500">*</span></label>
-                <input type="email" name="email" value={editUser.email} onChange={handleEditUserChange} onBlur={handleEditUserBlur}
-                  className={getFieldClassName("email", editUserTouched, editUserErrors)} />
-                {showFieldError("email", editUserTouched, editUserErrors) && (
-                  <p className="mt-1 text-xs text-red-600">{editUserErrors.email}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                <input type="email" name="email" value={editUser.email} readOnly
+                  className="w-full p-2 border border-gray-200 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed" />
+                <p className="mt-1 text-xs text-gray-400">Email address cannot be changed.</p>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+                <input type="tel" name="phone" value={editUser.phone} onChange={handleEditUserChange} onBlur={handleEditUserBlur}
+                  placeholder="0712365852"
+                  className={getFieldClassName("phone", editUserTouched, editUserErrors)} />
+                {showFieldError("phone", editUserTouched, editUserErrors) && (
+                  <p className="mt-1 text-xs text-red-600">{editUserErrors.phone}</p>
                 )}
               </div>
 

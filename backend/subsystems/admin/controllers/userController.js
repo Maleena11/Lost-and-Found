@@ -66,6 +66,7 @@ const getAllUsers = async (req, res) => {
       name: user.fullname,
       fullname: user.fullname,
       email: user.email,
+      phonenumber: user.phonenumber,
       role: user.role,
       status: user.status,
       createdAt: user.createdAt,
@@ -139,6 +140,7 @@ const updateUser = async (req, res) => {
     const updateData = {
       fullname: req.body.name || req.body.fullname,
       email: req.body.email,
+      phonenumber: req.body.phone || req.body.phonenumber,
       role: req.body.role,
       status: req.body.status
     };
@@ -172,12 +174,13 @@ const updateUser = async (req, res) => {
       name: updatedUser.fullname,
       fullname: updatedUser.fullname,
       email: updatedUser.email,
+      phonenumber: updatedUser.phonenumber,
       role: updatedUser.role,
       status: updatedUser.status,
       createdAt: updatedUser.createdAt,
       updatedAt: updatedUser.updatedAt
     };
-    
+
     res.json(responseUser);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -212,12 +215,13 @@ const getUserById = async (req, res) => {
       name: user.fullname,
       fullname: user.fullname,
       email: user.email,
+      phonenumber: user.phonenumber,
       role: user.role,
       status: user.status,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
-    
+
     res.json(responseUser);
   } catch (err) {
     res.status(500).json({ error: err.message });

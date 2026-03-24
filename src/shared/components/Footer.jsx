@@ -12,7 +12,7 @@ export default function Footer() {
           </h3>
           <p className="text-sm mb-6">
             Helping reunite lost items with their owners across the university
-            campus since 2010.
+            campus since 2026.
           </p>
           <div className="flex space-x-4 text-lg">
             <a href="#" className="hover:text-amber-400 transition">
@@ -52,9 +52,12 @@ export default function Footer() {
             <li>
               <Link to="/admin/login" className="hover:text-amber-400 transition">Admin Login</Link>
             </li>
+ admin-dashboard
+
             <li>
               <Link to="/admin/dashboard" className="hover:text-amber-400 transition">Admin Dashboard</Link>
             </li>
+main
           </ul>
         </div>
 

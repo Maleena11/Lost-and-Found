@@ -4,9 +4,9 @@ import BackgroundCarousel from "./BackgroundCarousel";
 export default function Hero() {
   // Background images for the carousel
   const backgroundImages = [
-    '/university.jpg',
-    '/campus.jpg',
-    '/lostpic.jpg'
+    '/pic4.jpg',
+    '/pic5.webp',
+    '/pic1.webp'
   ];
 
   return (

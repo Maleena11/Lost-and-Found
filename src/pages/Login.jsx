@@ -9,18 +9,10 @@ const sliitEmailRegex = /^it\d{8}@my\.sliit\.lk$/;
 
 const validate = (form) => {
   const errors = {};
-<<<<<<< HEAD
   if (!form.email.trim()) {
     errors.email = "Email is required.";
   } else if (!sliitEmailRegex.test(form.email.trim())) {
     errors.email = "Enter a valid SLIIT email (e.g. it23624859@my.sliit.lk).";
-=======
-  const val = form.email.trim();
-  if (!val) {
-    errors.email = "Email or username is required.";
-  } else if (val.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-    errors.email = "Enter a valid email address.";
->>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
   }
   if (!form.password) {
     errors.password = "Password is required.";
@@ -161,11 +153,7 @@ export default function Login() {
                     value={form.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
-<<<<<<< HEAD
                     placeholder="it23624859@my.sliit.lk"
-=======
-                    placeholder="you@university.edu or username"
->>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
                     autoComplete="email"
                     className={fieldClass("email")}
                   />

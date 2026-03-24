@@ -1,9 +1,5 @@
 import { useState, useEffect } from 'react';
-<<<<<<< HEAD
-import { Link, useLocation } from 'react-router-dom';
-=======
-import { Link, useNavigate } from 'react-router-dom';
->>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from './Sidebar';
 import TopBar from '../components/TopBar';
@@ -12,13 +8,9 @@ import AdminNoticeEditModal from '../components/AdminNoticeEditModal';
 import NoticePDFGenerator from '../../notice-management/components/NoticePDFGenerator';
 
 export default function AdminNotices() {
-<<<<<<< HEAD
   const location = useLocation();
   const isExpiredFilter = new URLSearchParams(location.search).get('filter') === 'expired';
-
-=======
   const navigate = useNavigate();
->>>>>>> 49f17c69e1b9889dfe1f234e32bd3d56fa730e65
   const [editingNotice, setEditingNotice]     = useState(null);
   const [showEditModal, setShowEditModal]     = useState(false);
   const [notices, setNotices]                 = useState([]);

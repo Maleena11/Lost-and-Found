@@ -14,7 +14,7 @@ const initialForm = {
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRegex = /^[0-9+\-\s()]{7,15}$/;
+const phoneRegex = /^\d{10}$/;
 
 const validate = (form) => {
   const errors = {};
@@ -36,7 +36,7 @@ const validate = (form) => {
   if (!form.phone.trim()) {
     errors.phone = "Phone number is required.";
   } else if (!phoneRegex.test(form.phone.trim())) {
-    errors.phone = "Enter a valid phone number (7–15 digits).";
+    errors.phone = "Please enter a valid 10-digit phone number.";
   }
 
   if (!form.street.trim()) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
@@ -13,6 +13,10 @@ export default function EditItem() {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [errors, setErrors] = useState({});
+
+  // One ref per image slot for replace functionality
+  const replaceInputRefs = [useRef(null), useRef(null)];
 
   const [formData, setFormData] = useState({
     itemType: "",
@@ -30,11 +34,8 @@ export default function EditItem() {
   });
 
   useEffect(() => {
-    // Get the temporary user
     const user = getTempUser();
     setTempUser(user);
-
-    // Fetch the item details
     fetchItemDetails();
   }, [id]);
 
@@ -44,15 +45,13 @@ export default function EditItem() {
       const response = await axios.get(`http://localhost:3001/api/lost-found/${id}`);
       const item = response.data.data;
 
-      // Verify the current user owns this item
       const user = getTempUser();
       if (item.userId !== user.id) {
         throw new Error("You don't have permission to edit this item");
       }
 
-      // Format the date for the datetime-local input
       const dateObj = new Date(item.dateTime);
-      const formattedDate = dateObj.toISOString().slice(0, 16); // Format: "YYYY-MM-DDThh:mm"
+      const formattedDate = dateObj.toISOString().slice(0, 16);
 
       setFormData({
         ...item,
@@ -62,18 +61,46 @@ export default function EditItem() {
     } catch (err) {
       console.error("Error fetching item:", err);
       setError(err.message || "Failed to load item details");
-      // Redirect to notices page after a delay if there's an error
       setTimeout(() => navigate('/notice'), 3000);
     } finally {
       setLoading(false);
     }
   };
 
+  const clearError = (key) => {
+    if (errors[key]) setErrors(prev => { const e = { ...prev }; delete e[key]; return e; });
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.description.trim()) newErrors.description = "Description is required.";
+    if (!formData.location.trim()) newErrors.location = "Campus location is required.";
+
+    if (!formData.contactInfo.name.trim()) newErrors.contactName = "Full name is required.";
+    if (!formData.contactInfo.phone.trim()) {
+      newErrors.contactPhone = "Phone number is required.";
+    } else if (formData.contactInfo.phone.length !== 10) {
+      newErrors.contactPhone = "Phone number must be exactly 10 digits.";
+    }
+    if (!formData.contactInfo.email.trim()) {
+      newErrors.contactEmail = "University email is required.";
+    } else if (!/^it\d{8}@my\.sliit\.lk$/.test(formData.contactInfo.email)) {
+      newErrors.contactEmail = "Email must be in the format: it12345678@my.sliit.lk";
+    }
+
+    if (!formData.images || formData.images.length === 0) {
+      newErrors.images = "Please upload at least one image.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name.includes('.')) {
-      // Handle nested objects like contactInfo.name
       const [parent, child] = name.split('.');
       setFormData(prev => ({
         ...prev,
@@ -82,62 +109,87 @@ export default function EditItem() {
           [child]: value
         }
       }));
+      const errorKey = { "contactInfo.name": "contactName", "contactInfo.phone": "contactPhone", "contactInfo.email": "contactEmail" }[name];
+      if (errorKey) clearError(errorKey);
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFormData(prev => ({ ...prev, [name]: value }));
+      clearError(name);
     }
   };
 
+  // Add images up to maximum of 2
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    const remaining = 2 - formData.images.length;
+    if (remaining <= 0) return;
+
+    const filesToProcess = files.slice(0, remaining);
 
     Promise.all(
-      files.map(file => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      })
-    )
-    .then(newImages => {
+      filesToProcess.map(file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      }))
+    ).then(base64Images => {
       setFormData(prev => ({
         ...prev,
-        images: [...newImages] // Replace with new images
+        images: [...prev.images, ...base64Images]
       }));
+      clearError("images");
     });
+
+    e.target.value = "";
+  };
+
+  // Replace a specific image by index
+  const handleReplaceImage = (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setFormData(prev => {
+        const updated = [...prev.images];
+        updated[index] = ev.target.result;
+        return { ...prev, images: updated };
+      });
+      clearError("images");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage({ text: "", type: "" });
+
+    if (!validateForm()) {
+      setMessage({ text: "Please fill in all required fields before saving.", type: "error" });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      if (!tempUser) {
-        throw new Error("User information not available");
-      }
+      if (!tempUser) throw new Error("User information not available");
 
-      // Prepare the update data
-      const updateData = {
-        ...formData,
-        userId: tempUser.id // Include userId for permission check
-      };
+      const updateData = { ...formData, userId: tempUser.id };
+      await axios.put(`http://localhost:3001/api/lost-found/${id}`, updateData);
 
-      const response = await axios.put(`http://localhost:3001/api/lost-found/${id}`, updateData);
-
-      setMessage({
-        text: "Item updated successfully!",
-        type: "success"
-      });
-
-      // Redirect after successful update
+      setMessage({ text: "Item updated successfully!", type: "success" });
       setTimeout(() => navigate('/notice'), 2000);
-    } catch (error) {
+    } catch (err) {
       setMessage({
-        text: error.response?.data?.error || error.message || "Failed to update item",
+        text: err.response?.data?.error || err.message || "Failed to update item",
         type: "error"
       });
     } finally {
@@ -217,48 +269,25 @@ export default function EditItem() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-            {/* Report Type Selection */}
+            {/* Report Type — read-only display */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-base font-semibold text-gray-800 mb-1">Report Type</h2>
-              <p className="text-xs text-gray-500 mb-4">Update whether this is a lost or found item report.</p>
-              <div className="grid grid-cols-2 gap-4">
-                <label className={`flex flex-col items-center justify-center p-5 rounded-xl border-2 cursor-pointer transition-all ${
-                  formData.itemType === 'lost'
-                    ? 'border-red-400 bg-red-50'
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                }`}>
-                  <input
-                    type="radio"
-                    id="lostItem"
-                    name="itemType"
-                    value="lost"
-                    checked={formData.itemType === "lost"}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <i className={`fas fa-search-minus text-2xl mb-2 ${formData.itemType === 'lost' ? 'text-red-500' : 'text-gray-300'}`}></i>
-                  <span className={`font-semibold text-sm ${formData.itemType === 'lost' ? 'text-red-700' : 'text-gray-500'}`}>Lost Item</span>
-                  <span className="text-xs mt-1 text-gray-400 text-center">Something you've lost</span>
-                </label>
-
-                <label className={`flex flex-col items-center justify-center p-5 rounded-xl border-2 cursor-pointer transition-all ${
-                  formData.itemType === 'found'
-                    ? 'border-green-400 bg-green-50'
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                }`}>
-                  <input
-                    type="radio"
-                    id="foundItem"
-                    name="itemType"
-                    value="found"
-                    checked={formData.itemType === "found"}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <i className={`fas fa-hand-holding text-2xl mb-2 ${formData.itemType === 'found' ? 'text-green-500' : 'text-gray-300'}`}></i>
-                  <span className={`font-semibold text-sm ${formData.itemType === 'found' ? 'text-green-700' : 'text-gray-500'}`}>Found Item</span>
-                  <span className="text-xs mt-1 text-gray-400 text-center">Something you've found</span>
-                </label>
+              <p className="text-xs text-gray-400 mb-4">Report type cannot be changed after submission.</p>
+              <div className={`flex items-center gap-3 px-5 py-4 rounded-xl border-2 w-fit ${
+                formData.itemType === 'lost'
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-green-300 bg-green-50'
+              }`}>
+                <i className={`fas ${formData.itemType === 'lost' ? 'fa-search-minus text-red-500' : 'fa-hand-holding text-green-500'} text-xl`}></i>
+                <div>
+                  <span className={`font-semibold text-sm ${formData.itemType === 'lost' ? 'text-red-700' : 'text-green-700'}`}>
+                    {formData.itemType === 'lost' ? 'Lost Item' : 'Found Item'}
+                  </span>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {formData.itemType === 'lost' ? "Something you've lost" : "Something you've found"}
+                  </p>
+                </div>
+                <i className="fas fa-lock text-gray-300 ml-3 text-sm"></i>
               </div>
             </div>
 
@@ -270,7 +299,7 @@ export default function EditItem() {
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-gray-800">Item Details</h2>
-                  <p className="text-xs text-gray-400">Update the information about this item</p>
+                  <p className="text-xs text-gray-400">Item name and category cannot be changed after submission.</p>
                 </div>
               </div>
 
@@ -284,13 +313,8 @@ export default function EditItem() {
                     type="text"
                     name="itemName"
                     value={formData.itemName}
-                    onChange={(e) => {
-                      const regex = /^[a-zA-Z0-9 ]*$/;
-                      if (regex.test(e.target.value)) handleChange(e);
-                    }}
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g. Blue Samsung Laptop, Student ID Card, Black Wallet"
+                    disabled
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
                   />
                 </div>
 
@@ -302,10 +326,10 @@ export default function EditItem() {
                   <select
                     name="category"
                     value={formData.category}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    disabled
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
                   >
+                    <option value="">Select a category</option>
                     <option value="student-id">Student ID / Access Card</option>
                     <option value="laptop-tablet">Laptop / Tablet</option>
                     <option value="books-notes">Books & Lecture Notes</option>
@@ -321,6 +345,7 @@ export default function EditItem() {
                     <option value="water-bottle">Water Bottle / Lunch Box</option>
                     <option value="other">Other</option>
                   </select>
+                  {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
                 </div>
 
                 {/* Description */}
@@ -333,10 +358,10 @@ export default function EditItem() {
                     value={formData.description}
                     onChange={handleChange}
                     rows="4"
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${errors.description ? 'border-red-400' : 'border-gray-200'}`}
                     placeholder="Please describe the item in detail (color, brand, markings, student ID number, etc.)"
                   />
+                  {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
                 </div>
 
                 {/* Location & DateTime */}
@@ -350,10 +375,10 @@ export default function EditItem() {
                       name="location"
                       value={formData.location}
                       onChange={handleChange}
-                      required
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.location ? 'border-red-400' : 'border-gray-200'}`}
                       placeholder="e.g. Library, Block A, Canteen, Lab"
                     />
+                    {errors.location && <p className="mt-1 text-xs text-red-500">{errors.location}</p>}
                   </div>
                   <div>
                     <label className="block mb-1.5 text-sm font-medium text-gray-700">
@@ -385,21 +410,26 @@ export default function EditItem() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Full Name</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="contactInfo.name"
                     value={formData.contactInfo.name || ""}
                     onChange={(e) => {
-                      const regex = /^[a-zA-Z0-9!@#$%^&*()_+={}\[\]:;"'<>.,?/-]*$/;
+                      const regex = /^[a-zA-Z0-9!@#$%^&*()_+={}\[\]:;"'<>.,?/ -]*$/;
                       if (regex.test(e.target.value)) handleChange(e);
                     }}
                     placeholder="Your full name"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.contactName ? 'border-red-400' : 'border-gray-200'}`}
                   />
+                  {errors.contactName && <p className="mt-1 text-xs text-red-500">{errors.contactName}</p>}
                 </div>
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Phone Number</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="tel"
                     name="contactInfo.phone"
@@ -409,12 +439,15 @@ export default function EditItem() {
                       if (regex.test(e.target.value)) handleChange(e);
                     }}
                     placeholder="07X XXX XXXX"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.contactPhone ? 'border-red-400' : 'border-gray-200'}`}
                   />
+                  {errors.contactPhone && <p className="mt-1 text-xs text-red-500">{errors.contactPhone}</p>}
                 </div>
               </div>
               <div className="mt-5">
-                <label className="block mb-1.5 text-sm font-medium text-gray-700">University Email</label>
+                <label className="block mb-1.5 text-sm font-medium text-gray-700">
+                  University Email <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="email"
                   name="contactInfo.email"
@@ -423,9 +456,10 @@ export default function EditItem() {
                     const regex = /^[a-zA-Z0-9@.]*$/;
                     if (regex.test(e.target.value)) handleChange(e);
                   }}
-                  placeholder="yourname@university.edu"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="it12345678@my.sliit.lk"
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.contactEmail ? 'border-red-400' : 'border-gray-200'}`}
                 />
+                {errors.contactEmail && <p className="mt-1 text-xs text-red-500">{errors.contactEmail}</p>}
               </div>
             </div>
 
@@ -436,32 +470,77 @@ export default function EditItem() {
                   <i className="fas fa-camera text-purple-500 text-sm"></i>
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-gray-800">Item Images</h2>
-                  <p className="text-xs text-gray-400">Uploading new images will replace the existing ones</p>
+                  <h2 className="text-base font-semibold text-gray-800">
+                    Item Images <span className="text-red-500">*</span>
+                  </h2>
+                  <p className="text-xs text-gray-400">Maximum 2 images. Click an image to replace it.</p>
                 </div>
               </div>
 
-              <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all">
-                <i className="fas fa-cloud-upload-alt text-3xl text-gray-300 mb-2"></i>
-                <span className="text-sm text-gray-500 font-medium">Click to upload new photos</span>
-                <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG supported</span>
-                <input type="file" onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
-              </label>
+              {/* Upload area — only shown when fewer than 2 images */}
+              {formData.images.length < 2 && (
+                <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all ${errors.images ? 'border-red-400' : 'border-gray-300'}`}>
+                  <i className="fas fa-cloud-upload-alt text-3xl text-gray-300 mb-2"></i>
+                  <span className="text-sm text-gray-500 font-medium">Click to upload photos</span>
+                  <span className="text-xs text-gray-400 mt-1">
+                    PNG, JPG, JPEG — {2 - formData.images.length} slot{2 - formData.images.length !== 1 ? 's' : ''} remaining
+                  </span>
+                  <input
+                    type="file"
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                  />
+                </label>
+              )}
 
+              {errors.images && <p className="mt-2 text-xs text-red-500">{errors.images}</p>}
+
+              {/* Image previews */}
               {formData.images && formData.images.length > 0 && (
                 <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">Current Images</p>
-                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                  <p className="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">
+                    Current Images ({formData.images.length}/2)
+                  </p>
+                  <div className="flex gap-3 flex-wrap">
                     {formData.images.map((img, index) => (
-                      <div key={index} className="relative rounded-xl overflow-hidden border border-gray-200">
+                      <div key={index} className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200 group">
                         <img
                           src={img}
                           alt={`Preview ${index + 1}`}
-                          className="h-24 w-full object-cover"
+                          className="h-full w-full object-cover"
                         />
+                        {/* Overlay actions */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          {/* Replace button */}
+                          <label
+                            className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center cursor-pointer hover:bg-white transition-colors"
+                            title="Replace image"
+                          >
+                            <i className="fas fa-sync-alt text-blue-600 text-xs"></i>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              ref={replaceInputRefs[index]}
+                              onChange={(e) => handleReplaceImage(e, index)}
+                            />
+                          </label>
+                          {/* Remove button */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                            title="Remove image"
+                          >
+                            <i className="fas fa-trash text-red-500 text-xs"></i>
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
+                  <p className="text-xs text-gray-400 mt-2">Hover over an image to replace or remove it.</p>
                 </div>
               )}
             </div>

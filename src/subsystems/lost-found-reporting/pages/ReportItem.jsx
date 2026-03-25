@@ -241,6 +241,23 @@ export default function ReportItem() {
     }));
   };
 
+  const handleReplaceImage = (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setFormData(prev => {
+        const updated = [...prev.images];
+        updated[index] = ev.target.result;
+        return { ...prev, images: updated };
+      });
+      clearError("images");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ text: "", type: "" });
@@ -729,21 +746,28 @@ export default function ReportItem() {
               {errors.images && <p className="mt-2 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.images}</p>}
 
               {formData.images.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="mt-4 flex gap-3 flex-wrap">
                   {formData.images.map((img, index) => (
-                    <div key={index} className="relative rounded-xl overflow-hidden border border-gray-200 group">
+                    <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 group flex-shrink-0">
                       <img
                         src={img}
                         alt={`Preview ${index + 1}`}
-                        className="h-24 w-full object-cover"
+                        className="h-full w-full object-cover"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <i className="fas fa-times"></i>
-                      </button>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                        <label className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center cursor-pointer hover:bg-white transition-colors" title="Replace image">
+                          <i className="fas fa-sync-alt text-blue-600 text-xs"></i>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleReplaceImage(e, index)} />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
+                          title="Remove image"
+                        >
+                          <i className="fas fa-trash text-red-500 text-xs"></i>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -29,6 +29,53 @@ export default function ReportItem() {
   const [departmentError, setDepartmentError] = useState("");
   const [errors, setErrors] = useState({});
 
+  const validCategories = [
+    "student-id", "laptop-tablet", "books-notes", "stationery", "electronics",
+    "lab-equipment", "sports-equipment", "clothing", "jewelry", "keys",
+    "wallet", "documents", "water-bottle", "other"
+  ];
+
+  const categoryLabels = {
+    "student-id": "Student ID / Access Card",
+    "laptop-tablet": "Laptop / Tablet",
+    "books-notes": "Books & Lecture Notes",
+    "stationery": "Stationery / USB Drive",
+    "electronics": "Electronics",
+    "lab-equipment": "Lab Equipment",
+    "sports-equipment": "Sports Equipment",
+    "clothing": "Clothing",
+    "jewelry": "Jewelry / Accessories",
+    "keys": "Keys",
+    "wallet": "Wallet / Purse",
+    "documents": "Documents / Certificates",
+    "water-bottle": "Water Bottle / Lunch Box",
+    "other": "Other",
+  };
+
+  const categoryKeywordMap = {
+    "sports-equipment": ["cricket", "bat", "football", "basketball", "tennis", "badminton", "rugby", "volleyball", "hockey", "racket", "shuttlecock", "ball", "sports gear", "gloves", "helmet", "skipping rope"],
+    "laptop-tablet": ["laptop", "tablet", "macbook", "chromebook", "ipad", "surface"],
+    "electronics": ["phone", "mobile", "charger", "headphone", "earphone", "earbuds", "camera", "calculator", "speaker", "powerbank", "power bank", "cable", "adapter", "mouse", "keyboard"],
+    "wallet": ["wallet", "purse", "cardholder"],
+    "keys": ["key", "keys", "keychain"],
+    "student-id": ["student id", "id card", "access card", "library card", "matric card"],
+    "books-notes": ["book", "textbook", "lecture notes", "notebook", "manual", "module"],
+    "stationery": ["pen", "pencil", "marker", "usb", "flash drive", "ruler", "eraser", "stapler", "highlighter"],
+    "jewelry": ["ring", "necklace", "bracelet", "watch", "earring", "chain", "pendant", "bangle"],
+    "clothing": ["shirt", "jacket", "coat", "umbrella", "hoodie", "cap", "hat", "scarf", "sweater", "bag", "backpack"],
+    "documents": ["certificate", "transcript", "report card", "passport", "document"],
+    "water-bottle": ["water bottle", "lunch box", "lunchbox", "flask", "thermos", "tiffin"],
+    "lab-equipment": ["microscope", "beaker", "pipette", "goggles", "lab coat", "test tube"],
+  };
+
+  const getSuggestedCategory = (itemName) => {
+    const lower = itemName.toLowerCase();
+    for (const [cat, keywords] of Object.entries(categoryKeywordMap)) {
+      if (keywords.some(kw => lower.includes(kw))) return cat;
+    }
+    return null;
+  };
+
   const facultyDepartmentMap = {
     "Computing": ["Software Engineering", "Information Systems", "Information Technology", "Computer Science", "Data Science"],
     "Engineering": ["Electrical Engineering", "Mechanical Engineering", "Civil Engineering", "Electronics"],
@@ -63,7 +110,16 @@ export default function ReportItem() {
 
     // Item Details
     if (!formData.itemName.trim()) newErrors.itemName = "Item name is required.";
-    if (!formData.category) newErrors.category = "Please select a category.";
+    if (!formData.category) {
+      newErrors.category = "Please select a category.";
+    } else if (!validCategories.includes(formData.category)) {
+      newErrors.category = "Invalid category selected. Please choose a valid category from the list.";
+    } else if (formData.itemName.trim()) {
+      const suggested = getSuggestedCategory(formData.itemName);
+      if (suggested && suggested !== formData.category) {
+        newErrors.category = `The item name suggests this should be "${categoryLabels[suggested]}". Please select the correct category.`;
+      }
+    }
     if (!formData.description.trim()) newErrors.description = "Description is required.";
     if (!formData.location) newErrors.location = "Please select a campus location.";
 
@@ -150,10 +206,14 @@ export default function ReportItem() {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    const remaining = 2 - formData.images.length;
 
-    // Process each file to create base64 strings
+    if (remaining <= 0) return;
+
+    const filesToProcess = files.slice(0, remaining);
+
     Promise.all(
-      files.map(file => {
+      filesToProcess.map(file => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target.result);
@@ -165,10 +225,20 @@ export default function ReportItem() {
     .then(base64Images => {
       setFormData(prev => ({
         ...prev,
-        images: [...base64Images]
+        images: [...prev.images, ...base64Images]
       }));
       clearError("images");
     });
+
+    // Reset input so same file can be re-selected if removed
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -641,29 +711,39 @@ export default function ReportItem() {
                   </h2>
                   <p className="text-xs text-gray-400">
                     {formData.itemType === 'found'
-                      ? 'A photo is required to report a found item'
-                      : 'Photos help identify the item faster (optional)'}
+                      ? 'A photo is required to report a found item (max 2)'
+                      : 'Photos help identify the item faster — up to 2 (optional)'}
                   </p>
                 </div>
+                <span className="ml-auto text-xs font-medium text-gray-400">{formData.images.length}/2</span>
               </div>
 
-              <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all ${errors.images ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                <i className="fas fa-cloud-upload-alt text-3xl text-gray-300 mb-2"></i>
-                <span className="text-sm text-gray-500 font-medium">Click to upload photos</span>
-                <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG supported</span>
-                <input type="file" onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
-              </label>
+              {formData.images.length < 2 && (
+                <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all ${errors.images ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                  <i className="fas fa-cloud-upload-alt text-3xl text-gray-300 mb-2"></i>
+                  <span className="text-sm text-gray-500 font-medium">Click to upload photos</span>
+                  <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG supported · max 2 photos</span>
+                  <input type="file" onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
+                </label>
+              )}
               {errors.images && <p className="mt-2 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.images}</p>}
 
               {formData.images.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-3">
                   {formData.images.map((img, index) => (
-                    <div key={index} className="relative rounded-xl overflow-hidden border border-gray-200">
+                    <div key={index} className="relative rounded-xl overflow-hidden border border-gray-200 group">
                       <img
                         src={img}
                         alt={`Preview ${index + 1}`}
                         className="h-24 w-full object-cover"
                       />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
                     </div>
                   ))}
                 </div>

@@ -52,9 +52,13 @@ export default function Footer() {
             <li>
               <Link to="/admin/login" className="hover:text-amber-400 transition">Admin Login</Link>
             </li>
+
  
 
            
+
+
+            
 
           </ul>
         </div>

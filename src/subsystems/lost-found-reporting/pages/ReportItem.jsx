@@ -8,7 +8,7 @@ export default function ReportItem() {
   const [formData, setFormData] = useState({
     itemType: "lost", // Default to lost item
     itemName: "",
-    category: "student-id",
+    category: "",
     description: "",
     location: "",
     faculty: "",
@@ -26,6 +26,65 @@ export default function ReportItem() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [departmentError, setDepartmentError] = useState("");
+  const [errors, setErrors] = useState({});
+
+  const validCategories = [
+    "student-id", "laptop-tablet", "books-notes", "stationery", "electronics",
+    "lab-equipment", "sports-equipment", "clothing", "jewelry", "keys",
+    "wallet", "documents", "water-bottle", "other"
+  ];
+
+  const categoryLabels = {
+    "student-id": "Student ID / Access Card",
+    "laptop-tablet": "Laptop / Tablet",
+    "books-notes": "Books & Lecture Notes",
+    "stationery": "Stationery / USB Drive",
+    "electronics": "Electronics",
+    "lab-equipment": "Lab Equipment",
+    "sports-equipment": "Sports Equipment",
+    "clothing": "Clothing",
+    "jewelry": "Jewelry / Accessories",
+    "keys": "Keys",
+    "wallet": "Wallet / Purse",
+    "documents": "Documents / Certificates",
+    "water-bottle": "Water Bottle / Lunch Box",
+    "other": "Other",
+  };
+
+  const categoryKeywordMap = {
+    "sports-equipment": ["cricket", "bat", "football", "basketball", "tennis", "badminton", "rugby", "volleyball", "hockey", "racket", "shuttlecock", "ball", "sports gear", "gloves", "helmet", "skipping rope"],
+    "laptop-tablet": ["laptop", "tablet", "macbook", "chromebook", "ipad", "surface"],
+    "electronics": ["phone", "mobile", "charger", "headphone", "earphone", "earbuds", "camera", "calculator", "speaker", "powerbank", "power bank", "cable", "adapter", "mouse", "keyboard"],
+    "wallet": ["wallet", "purse", "cardholder"],
+    "keys": ["key", "keys", "keychain"],
+    "student-id": ["student id", "id card", "access card", "library card", "matric card"],
+    "books-notes": ["book", "textbook", "lecture notes", "notebook", "manual", "module"],
+    "stationery": ["pen", "pencil", "marker", "usb", "flash drive", "ruler", "eraser", "stapler", "highlighter"],
+    "jewelry": ["ring", "necklace", "bracelet", "watch", "earring", "chain", "pendant", "bangle"],
+    "clothing": ["shirt", "jacket", "coat", "umbrella", "hoodie", "cap", "hat", "scarf", "sweater", "bag", "backpack"],
+    "documents": ["certificate", "transcript", "report card", "passport", "document"],
+    "water-bottle": ["water bottle", "lunch box", "lunchbox", "flask", "thermos", "tiffin"],
+    "lab-equipment": ["microscope", "beaker", "pipette", "goggles", "lab coat", "test tube"],
+  };
+
+  const getSuggestedCategory = (itemName) => {
+    const lower = itemName.toLowerCase();
+    for (const [cat, keywords] of Object.entries(categoryKeywordMap)) {
+      if (keywords.some(kw => lower.includes(kw))) return cat;
+    }
+    return null;
+  };
+
+  const facultyDepartmentMap = {
+    "Computing": ["Software Engineering", "Information Systems", "Information Technology", "Computer Science", "Data Science"],
+    "Engineering": ["Electrical Engineering", "Mechanical Engineering", "Civil Engineering", "Electronics"],
+    "Business": ["Business Management", "Marketing", "Finance", "Accounting"],
+    "Humanities & Sciences": ["Human Sciences"],
+    "Architecture": ["Architecture & Design"],
+    "Medicine": ["Medicine & Surgery"],
+    "Law": ["Law"],
+  };
 
   // Get the temporary user when component mounts
   const [tempUser, setTempUser] = useState(null);
@@ -46,11 +105,77 @@ export default function ReportItem() {
     }));
   }, []);
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Item Details
+    if (!formData.itemName.trim()) newErrors.itemName = "Item name is required.";
+    if (!formData.category) {
+      newErrors.category = "Please select a category.";
+    } else if (!validCategories.includes(formData.category)) {
+      newErrors.category = "Invalid category selected. Please choose a valid category from the list.";
+    } else if (formData.itemName.trim()) {
+      const suggested = getSuggestedCategory(formData.itemName);
+      if (suggested && suggested !== formData.category) {
+        newErrors.category = `The item name suggests this should be "${categoryLabels[suggested]}". Please select the correct category.`;
+      }
+    }
+    if (!formData.description.trim()) newErrors.description = "Description is required.";
+    if (!formData.location) newErrors.location = "Please select a campus location.";
+
+    // Academic Information
+    if (!formData.faculty) newErrors.faculty = "Please select your faculty.";
+    if (!formData.department) newErrors.department = "Please select your department.";
+    if (!formData.building) newErrors.building = "Please select your year group.";
+    if (!formData.yearGroup) newErrors.yearGroup = "Please select your semester.";
+
+    // Image upload (required for found items)
+    if (formData.itemType === 'found' && formData.images.length === 0) {
+      newErrors.images = "Please upload at least one image of the found item.";
+    }
+
+    // Student Contact Information
+    if (!formData.contactInfo.name.trim()) {
+      newErrors.contactName = "Full name is required.";
+    } else if (formData.contactInfo.name.trim().split(/\s+/).length < 2) {
+      newErrors.contactName = "Please enter your first and last name.";
+    }
+    if (!formData.contactInfo.phone.trim()) {
+      newErrors.contactPhone = "Phone number is required.";
+    } else if (formData.contactInfo.phone.length !== 10) {
+      newErrors.contactPhone = "Phone number must be exactly 10 digits.";
+    }
+    if (!formData.contactInfo.email.trim()) {
+      newErrors.contactEmail = "University email is required.";
+    } else if (!/^it\d{8}@my\.sliit\.lk$/.test(formData.contactInfo.email)) {
+      newErrors.contactEmail = "Email must be in the format: it12345678@my.sliit.lk";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateFacultyDepartment = (faculty, department) => {
+    if (!faculty || !department) {
+      setDepartmentError("");
+      return;
+    }
+    const validDepts = facultyDepartmentMap[faculty] || [];
+    if (!validDepts.includes(department)) {
+      setDepartmentError(`"${department}" does not belong to the Faculty of ${faculty}. Please select a valid department.`);
+    } else {
+      setDepartmentError("");
+    }
+  };
+
+  const clearError = (key) => {
+    if (errors[key]) setErrors(prev => { const e = { ...prev }; delete e[key]; return e; });
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name.includes('.')) {
-      // Handle nested objects like contactInfo.name
       const [parent, child] = name.split('.');
       setFormData({
         ...formData,
@@ -59,17 +184,40 @@ export default function ReportItem() {
           [child]: value
         }
       });
+      const errorKey = { "contactInfo.name": "contactName", "contactInfo.phone": "contactPhone", "contactInfo.email": "contactEmail" }[name];
+      if (errorKey) clearError(errorKey);
     } else {
-      setFormData({ ...formData, [name]: value });
+      const updatedData = { ...formData, [name]: value };
+
+      // Reset department and clear error when faculty changes
+      if (name === "faculty") {
+        updatedData.department = "";
+        setDepartmentError("");
+        clearError("faculty");
+        clearError("department");
+      }
+
+      // Validate when department is selected
+      if (name === "department") {
+        validateFacultyDepartment(formData.faculty, value);
+        clearError("department");
+      }
+
+      clearError(name);
+      setFormData(updatedData);
     }
   };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    const remaining = 2 - formData.images.length;
 
-    // Process each file to create base64 strings
+    if (remaining <= 0) return;
+
+    const filesToProcess = files.slice(0, remaining);
+
     Promise.all(
-      files.map(file => {
+      filesToProcess.map(file => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target.result);
@@ -81,15 +229,56 @@ export default function ReportItem() {
     .then(base64Images => {
       setFormData(prev => ({
         ...prev,
-        images: [...base64Images]
+        images: [...prev.images, ...base64Images]
       }));
+      clearError("images");
     });
+
+    // Reset input so same file can be re-selected if removed
+    e.target.value = "";
   };
+
+  const handleRemoveImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleReplaceImage = (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setFormData(prev => {
+        const updated = [...prev.images];
+        updated[index] = ev.target.result;
+        return { ...prev, images: updated };
+      });
+      clearError("images");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setMessage({ text: "", type: "" });
+
+    if (!validateForm()) {
+      setMessage({ text: "Please fill in all required fields before submitting.", type: "error" });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Block submission if faculty-department mismatch
+    if (departmentError) {
+      setMessage({ text: "Please fix the department selection before submitting.", type: "error" });
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (!tempUser) {
@@ -114,7 +303,7 @@ export default function ReportItem() {
       setFormData({
         itemType: "lost",
         itemName: "",
-        category: "student-id",
+        category: "",
         description: "",
         location: "",
         faculty: "",
@@ -245,12 +434,15 @@ export default function ReportItem() {
                       const val = e.target.value;
                       const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
                       const regex = /^[a-zA-Z0-9 ]*$/;
-                      if (regex.test(capitalized)) setFormData({ ...formData, itemName: capitalized });
+                      if (regex.test(capitalized)) {
+                        setFormData({ ...formData, itemName: capitalized });
+                        clearError("itemName");
+                      }
                     }}
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.itemName ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                     placeholder="e.g. Blue Samsung Laptop, Student ID Card, Black Wallet"
                   />
+                  {errors.itemName && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.itemName}</p>}
                 </div>
 
                 {/* Category */}
@@ -262,9 +454,9 @@ export default function ReportItem() {
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white ${errors.category ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                   >
+                    <option value="" disabled>Select a category</option>
                     <option value="student-id">Student ID / Access Card</option>
                     <option value="laptop-tablet">Laptop / Tablet</option>
                     <option value="books-notes">Books & Lecture Notes</option>
@@ -280,6 +472,7 @@ export default function ReportItem() {
                     <option value="water-bottle">Water Bottle / Lunch Box</option>
                     <option value="other">Other</option>
                   </select>
+                  {errors.category && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.category}</p>}
                 </div>
 
                 {/* Description */}
@@ -292,10 +485,10 @@ export default function ReportItem() {
                     value={formData.description}
                     onChange={handleChange}
                     rows="4"
-                    required
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent resize-none ${errors.description ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                     placeholder="Please describe the item in detail (color, brand, markings, student ID number, etc.)"
                   />
+                  {errors.description && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.description}</p>}
                 </div>
 
                 {/* Location & DateTime */}
@@ -308,8 +501,7 @@ export default function ReportItem() {
                       name="location"
                       value={formData.location}
                       onChange={handleChange}
-                      required
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white ${errors.location ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                     >
                       <option value="">Select location</option>
                       <option value="Main Library">Main Library</option>
@@ -326,6 +518,7 @@ export default function ReportItem() {
                       <option value="Parking Area">Parking Area</option>
                       <option value="Other">Other</option>
                     </select>
+                    {errors.location && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.location}</p>}
                   </div>
                   <div>
                     <label className="block mb-1.5 text-sm font-medium text-gray-700">
@@ -352,21 +545,21 @@ export default function ReportItem() {
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-gray-800">Academic Information</h2>
-                  <p className="text-xs text-gray-400">Helps identify incident hotspots and patterns (optional)</p>
+                  <p className="text-xs text-gray-400">Helps identify incident hotspots and patterns</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Faculty */}
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Faculty</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Faculty <span className="text-red-500">*</span></label>
                   <select
                     name="faculty"
                     value={formData.faculty}
                     onChange={handleChange}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white ${errors.faculty ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                   >
-                    <option value="">Select faculty (optional)</option>
+                    <option value="">Select faculty</option>
                     <option value="Computing">Faculty of Computing</option>
                     <option value="Engineering">Faculty of Engineering</option>
                     <option value="Business">Faculty of Business</option>
@@ -375,18 +568,23 @@ export default function ReportItem() {
                     <option value="Medicine">Faculty of Medicine</option>
                     <option value="Law">Faculty of Law</option>
                   </select>
+                  {errors.faculty && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.faculty}</p>}
                 </div>
 
                 {/* Department */}
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Department</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Department <span className="text-red-500">*</span></label>
                   <select
                     name="department"
                     value={formData.department}
                     onChange={handleChange}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white ${
+                      departmentError || errors.department
+                        ? "border-red-400 focus:ring-red-400"
+                        : "border-gray-200 focus:ring-blue-500"
+                    }`}
                   >
-                    <option value="">Select department (optional)</option>
+                    <option value="">Select department</option>
                     <optgroup label="Computing">
                       <option value="Software Engineering">Software Engineering</option>
                       <option value="Information Systems">Information Systems</option>
@@ -413,18 +611,24 @@ export default function ReportItem() {
                       <option value="Law">Law</option>
                     </optgroup>
                   </select>
+                  {departmentError && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{departmentError}</p>
+                  )}
+                  {!departmentError && errors.department && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.department}</p>
+                  )}
                 </div>
 
                 {/* Year Group */}
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Year Group</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Year Group <span className="text-red-500">*</span></label>
                   <select
                     name="building"
                     value={formData.building}
                     onChange={handleChange}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white ${errors.building ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                   >
-                    <option value="">Select year group (optional)</option>
+                    <option value="">Select year group</option>
                     <option value="Year 1">Year 1</option>
                     <option value="Year 2">Year 2</option>
                     <option value="Year 3">Year 3</option>
@@ -432,21 +636,23 @@ export default function ReportItem() {
                     <option value="Postgraduate">Postgraduate</option>
                     <option value="Staff">Staff / Faculty</option>
                   </select>
+                  {errors.building && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.building}</p>}
                 </div>
 
                 {/* Semester */}
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Semester</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Semester <span className="text-red-500">*</span></label>
                   <select
                     name="yearGroup"
                     value={formData.yearGroup}
                     onChange={handleChange}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white ${errors.yearGroup ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                   >
-                    <option value="">Select semester (optional)</option>
+                    <option value="">Select semester</option>
                     <option value="Semester 1">Semester 1</option>
                     <option value="Semester 2">Semester 2</option>
                   </select>
+                  {errors.yearGroup && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.yearGroup}</p>}
                 </div>
               </div>
             </div>
@@ -465,7 +671,7 @@ export default function ReportItem() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Full Name</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Full Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="contactInfo.name"
@@ -476,11 +682,12 @@ export default function ReportItem() {
                       if (regex.test(titled)) handleChange({ target: { name: e.target.name, value: titled } });
                     }}
                     placeholder="Your full name"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactName ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                   />
+                  {errors.contactName && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactName}</p>}
                 </div>
                 <div>
-                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Phone Number</label>
+                  <label className="block mb-1.5 text-sm font-medium text-gray-700">Phone Number <span className="text-red-500">*</span></label>
                   <input
                     type="tel"
                     name="contactInfo.phone"
@@ -490,12 +697,13 @@ export default function ReportItem() {
                       if (regex.test(e.target.value)) handleChange(e);
                     }}
                     placeholder="07X XXX XXXX"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactPhone ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                   />
+                  {errors.contactPhone && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactPhone}</p>}
                 </div>
               </div>
               <div className="mt-5">
-                <label className="block mb-1.5 text-sm font-medium text-gray-700">University Email</label>
+                <label className="block mb-1.5 text-sm font-medium text-gray-700">University Email <span className="text-red-500">*</span></label>
                 <input
                   type="email"
                   name="contactInfo.email"
@@ -504,9 +712,10 @@ export default function ReportItem() {
                     const regex = /^[a-zA-Z0-9@.]*$/;
                     if (regex.test(e.target.value)) handleChange(e);
                   }}
-                  placeholder="yourname@university.edu"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="it12345678@my.sliit.lk"
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactEmail ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                 />
+                {errors.contactEmail && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactEmail}</p>}
               </div>
             </div>
 
@@ -517,27 +726,52 @@ export default function ReportItem() {
                   <i className="fas fa-camera text-purple-500 text-sm"></i>
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-gray-800">Upload Images</h2>
-                  <p className="text-xs text-gray-400">Photos help identify the item faster (optional)</p>
+                  <h2 className="text-base font-semibold text-gray-800">
+                    Upload Images
+                    {formData.itemType === 'found' && <span className="text-red-500 ml-1">*</span>}
+                  </h2>
+                  <p className="text-xs text-gray-400">
+                    {formData.itemType === 'found'
+                      ? 'A photo is required to report a found item (max 2)'
+                      : 'Photos help identify the item faster — up to 2 (optional)'}
+                  </p>
                 </div>
+                <span className="ml-auto text-xs font-medium text-gray-400">{formData.images.length}/2</span>
               </div>
 
-              <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all">
-                <i className="fas fa-cloud-upload-alt text-3xl text-gray-300 mb-2"></i>
-                <span className="text-sm text-gray-500 font-medium">Click to upload photos</span>
-                <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG supported</span>
-                <input type="file" onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
-              </label>
+              {formData.images.length < 2 && (
+                <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all ${errors.images ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                  <i className="fas fa-cloud-upload-alt text-3xl text-gray-300 mb-2"></i>
+                  <span className="text-sm text-gray-500 font-medium">Click to upload photos</span>
+                  <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG supported · max 2 photos</span>
+                  <input type="file" onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
+                </label>
+              )}
+              {errors.images && <p className="mt-2 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.images}</p>}
 
               {formData.images.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="mt-4 flex gap-3 flex-wrap">
                   {formData.images.map((img, index) => (
-                    <div key={index} className="relative rounded-xl overflow-hidden border border-gray-200">
+                    <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 group flex-shrink-0">
                       <img
                         src={img}
                         alt={`Preview ${index + 1}`}
-                        className="h-24 w-full object-cover"
+                        className="h-full w-full object-cover"
                       />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                        <label className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center cursor-pointer hover:bg-white transition-colors" title="Replace image">
+                          <i className="fas fa-sync-alt text-blue-600 text-xs"></i>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleReplaceImage(e, index)} />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
+                          title="Remove image"
+                        >
+                          <i className="fas fa-trash text-red-500 text-xs"></i>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

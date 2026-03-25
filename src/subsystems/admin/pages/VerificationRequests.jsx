@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import Sidebar from './Sidebar';
 import TopBar from '../components/TopBar';
@@ -75,6 +75,216 @@ function PhotoGalleryPanel({ images, activeIdx, setActiveIdx, accentColor, label
   );
 }
 
+// ── Side-by-side Claim Comparison Modal ──────────────────────────────────
+function ClaimCompareModal({ claimA, claimB, onClose }) {
+  const [photoIdxA, setPhotoIdxA] = useState(0);
+  const [photoIdxB, setPhotoIdxB] = useState(0);
+  const [lightbox, setLightbox]   = useState({ open: false, images: [], index: 0, label: '' });
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (lightbox.open) setLightbox(p => ({ ...p, open: false }));
+        else onClose();
+      }
+      if (!lightbox.open) return;
+      if (e.key === 'ArrowRight') setLightbox(p => ({ ...p, index: (p.index + 1) % p.images.length }));
+      if (e.key === 'ArrowLeft')  setLightbox(p => ({ ...p, index: (p.index - 1 + p.images.length) % p.images.length }));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox.open, onClose]);
+
+  const openLb = (imgs, idx, lbl) => setLightbox({ open: true, images: imgs, index: idx, label: lbl });
+
+  const statusStyles = {
+    pending:   'bg-amber-50 text-amber-600 border-amber-200',
+    approved:  'bg-emerald-50 text-emerald-600 border-emerald-200',
+    rejected:  'bg-rose-50 text-rose-600 border-rose-200',
+    processed: 'bg-sky-50 text-sky-600 border-sky-200',
+  };
+
+  const ClaimColumn = ({ claim, accent, photoIdx, setPhotoIdx }) => {
+    const photos = claim.claimantImages || [];
+    const accentMap = {
+      blue:   { bar: 'bg-blue-500', head: 'bg-gradient-to-br from-blue-50 to-white border-blue-100', icon: 'bg-blue-100 text-blue-500', label: 'text-blue-700 bg-blue-50 border-blue-200' },
+      violet: { bar: 'bg-violet-500', head: 'bg-gradient-to-br from-violet-50 to-white border-violet-100', icon: 'bg-violet-100 text-violet-500', label: 'text-violet-700 bg-violet-50 border-violet-200' },
+    };
+    const a = accentMap[accent];
+
+    return (
+      <div className="flex-1 min-w-0 flex flex-col gap-4">
+        {/* Claimant header card */}
+        <div className={`rounded-xl border p-4 shadow-sm ${a.head}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-[3px] h-4 ${a.bar} rounded-full`}></div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Claimant</p>
+            <span className={`ml-auto text-[10px] font-semibold border px-2 py-0.5 rounded-full capitalize ${statusStyles[claim.status] || statusStyles.processed}`}>
+              {claim.status}
+            </span>
+          </div>
+          <div className="space-y-2.5">
+            {[
+              { icon: 'fa-user',     val: claim.claimantInfo.name },
+              { icon: 'fa-envelope', val: claim.claimantInfo.email },
+              { icon: 'fa-phone',    val: claim.claimantInfo.phone },
+              { icon: 'fa-building', val: claim.claimantInfo.address },
+            ].map(({ icon, val }) => val ? (
+              <div key={icon} className="flex items-center gap-2.5">
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${a.icon}`}>
+                  <i className={`fas ${icon} text-[10px]`}></i>
+                </div>
+                <p className="text-sm text-slate-700 font-medium truncate">{val}</p>
+              </div>
+            ) : null)}
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-400">
+            <i className="fas fa-clock text-[10px]"></i>
+            {new Date(claim.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Item Description</p>
+          <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.description || <span className="text-slate-300 italic">None provided</span>}</p>
+        </div>
+
+        {/* Ownership Proof */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Ownership Proof</p>
+          <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.ownershipProof || <span className="text-slate-300 italic">None provided</span>}</p>
+        </div>
+
+        {/* Additional Info */}
+        {claim.verificationDetails.additionalInfo && (
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Additional Info</p>
+            <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.additionalInfo}</p>
+          </div>
+        )}
+
+        {/* Photos */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
+            Photos
+            <span className="ml-2 text-slate-300 normal-case font-normal">{photos.length} submitted</span>
+          </p>
+          <PhotoGalleryPanel
+            images={photos}
+            activeIdx={photoIdx}
+            setActiveIdx={setPhotoIdx}
+            accentColor={accent === 'blue' ? 'teal' : 'amber'}
+            label="Claimant's Photos"
+            onLightboxOpen={openLb}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[55] p-4">
+      <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <div className="relative bg-gradient-to-r from-[#0f1f3d] via-[#1a3560] to-[#1e4d8c] px-7 py-5 shrink-0 overflow-hidden">
+          <div className="pointer-events-none absolute -top-10 -right-10 w-56 h-56 rounded-full bg-blue-400/10 blur-2xl"></div>
+          <div className="pointer-events-none absolute inset-0 opacity-[0.04]"
+            style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '18px 18px' }}></div>
+          <div className="relative flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-300/70 mb-1.5">Side-by-Side Comparison</p>
+              <h2 className="text-xl font-bold text-white tracking-tight">Compare Claims</h2>
+              <p className="text-xs text-blue-300/60 mt-1">{claimA.itemId?.itemName || 'Item'}</p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-blue-400 shrink-0"></span>
+                <span className="text-xs text-white/80 font-medium">{claimA.claimantInfo.name}</span>
+              </div>
+              <span className="text-white/30 text-lg font-thin">vs</span>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-violet-400 shrink-0"></span>
+                <span className="text-xs text-white/80 font-medium">{claimB.claimantInfo.name}</span>
+              </div>
+              <button
+                onClick={onClose}
+                className="ml-2 w-8 h-8 rounded-lg text-white/40 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 flex items-center justify-center transition-all"
+              >
+                <i className="fas fa-times text-sm"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 bg-[#eef0f6] p-6">
+          {/* Column labels */}
+          <div className="grid grid-cols-2 gap-5 mb-1">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Claim A</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-violet-500 shrink-0"></span>
+              <p className="text-xs font-bold text-violet-600 uppercase tracking-wider">Claim B</p>
+            </div>
+          </div>
+
+          {/* Two columns */}
+          <div className="grid grid-cols-2 gap-5">
+            <ClaimColumn claim={claimA} accent="blue"   photoIdx={photoIdxA} setPhotoIdx={setPhotoIdxA} />
+            <ClaimColumn claim={claimB} accent="violet" photoIdx={photoIdxB} setPhotoIdx={setPhotoIdxB} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-white border-t border-slate-100 px-6 py-4 flex items-center justify-end shrink-0 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            Close Comparison
+          </button>
+        </div>
+      </div>
+
+      {/* Inner lightbox */}
+      {lightbox.open && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/92 flex items-center justify-center p-4"
+          onClick={() => setLightbox(p => ({ ...p, open: false }))}
+        >
+          <div className="relative flex flex-col items-center w-full max-w-4xl max-h-[92vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between w-full mb-3 px-1">
+              <p className="text-white text-sm font-semibold">{lightbox.label}</p>
+              <button onClick={() => setLightbox(p => ({ ...p, open: false }))} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+                <i className="fas fa-times text-sm"></i>
+              </button>
+            </div>
+            <div className="relative flex items-center justify-center w-full">
+              {lightbox.images.length > 1 && (
+                <button onClick={() => setLightbox(p => ({ ...p, index: (p.index - 1 + p.images.length) % p.images.length }))}
+                  className="absolute left-0 -translate-x-5 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-colors">
+                  <i className="fas fa-chevron-left text-sm"></i>
+                </button>
+              )}
+              <img src={lightbox.images[lightbox.index]} alt="" className="max-h-[75vh] max-w-full rounded-xl object-contain shadow-2xl" draggable={false} />
+              {lightbox.images.length > 1 && (
+                <button onClick={() => setLightbox(p => ({ ...p, index: (p.index + 1) % p.images.length }))}
+                  className="absolute right-0 translate-x-5 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-colors">
+                  <i className="fas fa-chevron-right text-sm"></i>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VerificationRequests({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen }) {
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +295,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const [actionLoading, setActionLoading] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
+  const [quickActionLoading, setQuickActionLoading] = useState(null); // requestId being quick-actioned
 
   const [approvalStages, setApprovalStages] = useState(EMPTY_STAGES);
 
@@ -92,6 +303,10 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0, label: '' });
   const [foundPhotoIdx, setFoundPhotoIdx]       = useState(0);
   const [claimantPhotoIdx, setClaimantPhotoIdx] = useState(0);
+
+  // Compare
+  const [compareIds, setCompareIds]         = useState([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   useEffect(() => {
     if (!lightbox.open) return;
@@ -115,12 +330,20 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const [requestsPerPage] = useState(10);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('pending');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState({
     startDate: '',
     endDate: ''
   });
+  const [selectedFoundItemId, setSelectedFoundItemId] = useState(null);
+  const [sortOrder, setSortOrder] = useState('oldest');
+
+  // Bulk selection
+  const [bulkSelected, setBulkSelected] = useState(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   useEffect(() => {
     fetchVerificationRequests();
@@ -137,6 +360,24 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
       setError('Failed to load verification requests. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQuickAction = async (requestId, status) => {
+    setQuickActionLoading(requestId + status);
+    try {
+      await axios.patch(`http://localhost:3001/api/verification/${requestId}/status`, {
+        status,
+        notes: '',
+        processedBy: 'admin'
+      });
+      setSuccess(`Claim ${status} successfully!`);
+      fetchVerificationRequests();
+    } catch (err) {
+      console.error('Error quick-actioning verification request:', err);
+      setError('Failed to update request. Please try again.');
+    } finally {
+      setQuickActionLoading(null);
     }
   };
 
@@ -187,6 +428,14 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     setApprovalStages(EMPTY_STAGES);
   };
 
+  const toggleCompare = (id) => {
+    setCompareIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= 2) return [prev[1], id]; // replace oldest
+      return [...prev, id];
+    });
+  };
+
   const handleSaveStages = async () => {
     setSaveLoading(true);
     try {
@@ -235,11 +484,53 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     }
   };
 
-  // Filter requests based on status, search term, and date range
+  // Group all requests by found item for the left pane (always over the full set)
+  const foundItemGroups = useMemo(() => {
+    const groups = {};
+    verificationRequests.forEach(req => {
+      const id = req.itemId?._id || '__unknown__';
+      if (!groups[id]) {
+        groups[id] = {
+          itemId: id,
+          itemName: req.itemId?.itemName || 'Unknown Item',
+          category: req.itemId?.category || '',
+          location: req.itemId?.location || '',
+          claims: [],
+        };
+      }
+      groups[id].claims.push(req);
+    });
+    return Object.values(groups).sort((a, b) => {
+      // Items with no pending claims (fully resolved) sink to bottom
+      const aPending = a.claims.filter(c => c.status === 'pending').length;
+      const bPending = b.claims.filter(c => c.status === 'pending').length;
+      const aResolved = aPending === 0 ? 1 : 0;
+      const bResolved = bPending === 0 ? 1 : 0;
+      if (aResolved !== bResolved) return aResolved - bResolved;
+      // Within active items: more pending first, then more total claims
+      if (bPending !== aPending) return bPending - aPending;
+      return b.claims.length - a.claims.length;
+    });
+  }, [verificationRequests]);
+
+  // Derive sorted unique categories from all requests
+  const availableCategories = useMemo(() => {
+    const cats = new Set();
+    verificationRequests.forEach(r => { if (r.itemId?.category) cats.add(r.itemId.category); });
+    return [...cats].sort();
+  }, [verificationRequests]);
+
+  // Filter requests based on status, category, search term, date range, and selected item
   const filteredRequests = verificationRequests.filter(request => {
+    // Item filter (left-pane selection)
+    if (selectedFoundItemId && (request.itemId?._id || '__unknown__') !== selectedFoundItemId) return false;
+
     // Status filter
     if (statusFilter !== 'all' && request.status !== statusFilter) return false;
-    
+
+    // Category filter
+    if (categoryFilter !== 'all' && request.itemId?.category !== categoryFilter) return false;
+
     // Search filter (search in multiple fields)
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -249,26 +540,79 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
       const matchesItem = request.itemId?.itemName?.toLowerCase().includes(searchLower);
       const matchesCategory = request.itemId?.category?.toLowerCase().includes(searchLower);
       const matchesLocation = request.itemId?.location?.toLowerCase().includes(searchLower);
-      
+
       if (!matchesName && !matchesEmail && !matchesPhone && !matchesItem && !matchesCategory && !matchesLocation) {
         return false;
       }
     }
-    
+
     // Date filter
     if (dateFilter.startDate || dateFilter.endDate) {
       const requestDate = new Date(request.submittedAt);
       if (dateFilter.startDate && requestDate < new Date(dateFilter.startDate)) return false;
       if (dateFilter.endDate && requestDate > new Date(dateFilter.endDate + 'T23:59:59')) return false;
     }
-    
+
     return true;
   });
+
+  // Reset to page 1, clear compare + bulk selection whenever filters change
+  useEffect(() => { setCurrentPage(1); setCompareIds([]); setBulkSelected(new Set()); setBulkConfirm(false); }, [selectedFoundItemId, statusFilter, categoryFilter, searchTerm, dateFilter, sortOrder]);
+
+  const toggleBulkSelect = (id) => {
+    setBulkSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+    setBulkConfirm(false);
+  };
+
+  const handleBulkReject = async () => {
+    if (!bulkConfirm) { setBulkConfirm(true); return; }
+    setBulkLoading(true);
+    setBulkConfirm(false);
+    try {
+      await Promise.all([...bulkSelected].map(id =>
+        axios.patch(`http://localhost:3001/api/verification/${id}/status`, {
+          status: 'rejected', notes: 'Bulk rejected by admin', processedBy: 'admin'
+        })
+      ));
+      setSuccess(`${bulkSelected.size} claim${bulkSelected.size !== 1 ? 's' : ''} rejected successfully.`);
+      setBulkSelected(new Set());
+      fetchVerificationRequests();
+    } catch {
+      setError('Bulk reject failed. Please try again.');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // Build a quick lookup: itemId → total claim count (over ALL requests, not just filtered)
+  const claimCountByItemId = useMemo(() => {
+    const map = {};
+    foundItemGroups.forEach(g => { map[g.itemId] = g.claims.length; });
+    return map;
+  }, [foundItemGroups]);
+
+  // Sort filtered requests by submitted date (oldest/newest first)
+  const sortedFilteredRequests = useMemo(() => {
+    const resolved = (s) => (s === 'approved' || s === 'rejected' || s === 'processed' ? 1 : 0);
+    return [...filteredRequests].sort((a, b) => {
+      // Resolved always sink to bottom
+      const resolvedDiff = resolved(a.status) - resolved(b.status);
+      if (resolvedDiff !== 0) return resolvedDiff;
+      // Within each group, sort by date
+      const aTime = new Date(a.submittedAt).getTime();
+      const bTime = new Date(b.submittedAt).getTime();
+      return sortOrder === 'oldest' ? aTime - bTime : bTime - aTime;
+    });
+  }, [filteredRequests, sortOrder]);
 
   // Pagination logic
   const indexOfLastRequest = currentPage * requestsPerPage;
   const indexOfFirstRequest = indexOfLastRequest - requestsPerPage;
-  const currentRequests = filteredRequests.slice(indexOfFirstRequest, indexOfLastRequest);
+  const currentRequests = sortedFilteredRequests.slice(indexOfFirstRequest, indexOfLastRequest);
   const totalPages = Math.ceil(filteredRequests.length / requestsPerPage);
 
   const getStatusColor = (status) => {
@@ -507,9 +851,9 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Name, email, item, location…"
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-slate-50/80 placeholder-gray-300 transition-all"
+                    className="w-full pl-9 pr-4 py-2.5 text-base border border-gray-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white placeholder-gray-400 text-gray-700 transition-all shadow-sm"
                   />
-                  <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                  <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
                 </div>
               </div>
 
@@ -526,6 +870,21 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   <option value="approved">Approved</option>
                   <option value="rejected">Rejected</option>
                   <option value="processed">Processed</option>
+                </select>
+              </div>
+
+              {/* Category Filter */}
+              <div className="min-w-[150px]">
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Category</label>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50/80 text-gray-700 transition-all"
+                >
+                  <option value="all">All Categories</option>
+                  {availableCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
 
@@ -553,12 +912,13 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
               {/* Action Buttons */}
               <div className="flex gap-2 shrink-0">
-                {(dateFilter.startDate || dateFilter.endDate || searchTerm || statusFilter !== 'all') && (
+                {(dateFilter.startDate || dateFilter.endDate || searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') && (
                   <button
                     onClick={() => {
                       setDateFilter({ startDate: '', endDate: '' });
                       setSearchTerm('');
                       setStatusFilter('all');
+                      setCategoryFilter('all');
                     }}
                     className="px-3 py-2.5 border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-1.5 text-sm font-medium"
                   >
@@ -597,10 +957,159 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               {statusFilter !== 'all' && (
                 <span className="text-gray-400">· status: <span className="font-medium text-gray-600 capitalize">{statusFilter}</span></span>
               )}
+              {categoryFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 font-semibold px-2.5 py-1 rounded-full text-xs">
+                  <i className="fas fa-tag text-[10px]"></i>
+                  {categoryFilter}
+                  <button onClick={() => setCategoryFilter('all')} className="ml-0.5 hover:text-indigo-800">
+                    <i className="fas fa-times text-[9px]"></i>
+                  </button>
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Verification Requests Table */}
+          {/* Two-Pane Layout */}
+          <div className="flex gap-4 items-start">
+
+            {/* ── Left Pane: Found Items ── */}
+            <div
+              className="w-72 shrink-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 flex flex-col overflow-hidden"
+              style={{ position: 'sticky', top: '24px', maxHeight: 'calc(100vh - 96px)' }}
+            >
+              <div className="px-4 py-3.5 border-b border-gray-100 bg-slate-50/70 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-md bg-blue-100 flex items-center justify-center">
+                    <i className="fas fa-boxes text-blue-500 text-[9px]"></i>
+                  </div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Found Items</p>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 ml-7">
+                  {loading ? '…' : `${foundItemGroups.length} item${foundItemGroups.length !== 1 ? 's' : ''} with claims`}
+                </p>
+              </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-10">
+                  <i className="fas fa-spinner fa-spin text-blue-400 text-lg"></i>
+                </div>
+              ) : (
+                <div className="overflow-y-auto flex-1 p-2 space-y-0.5">
+                  <button
+                    onClick={() => setSelectedFoundItemId(null)}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center justify-between gap-2 ${
+                      !selectedFoundItemId
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-sm shadow-blue-200'
+                        : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <i className={`fas fa-layer-group text-xs shrink-0 ${!selectedFoundItemId ? 'text-blue-200' : 'text-slate-400'}`}></i>
+                      <span className={`text-sm font-semibold truncate ${!selectedFoundItemId ? 'text-white' : 'text-slate-700'}`}>All Claims</span>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${!selectedFoundItemId ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {verificationRequests.length}
+                    </span>
+                  </button>
+                  <div className="h-px bg-slate-100 mx-2 my-1"></div>
+                  {foundItemGroups.map(group => {
+                    const pendingCount = group.claims.filter(c => c.status === 'pending').length;
+                    const approvedCount = group.claims.filter(c => c.status === 'approved').length;
+                    const isSelected = selectedFoundItemId === group.itemId;
+                    return (
+                      <button
+                        key={group.itemId}
+                        onClick={() => setSelectedFoundItemId(group.itemId)}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-sm shadow-blue-200'
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-sm font-semibold truncate leading-tight ${isSelected ? 'text-white' : 'text-slate-800'}`}>
+                              {group.itemName}
+                            </p>
+                            {(group.category || group.location) && (
+                              <p className={`text-xs truncate mt-0.5 ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
+                                {[group.category, group.location].filter(Boolean).join(' · ')}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {(() => {
+                              const n = group.claims.length;
+                              const color = isSelected
+                                ? 'bg-white/20 text-white'
+                                : n >= 3
+                                  ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                                  : n === 2
+                                    ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                                    : 'bg-slate-100 text-slate-500';
+                              return (
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex items-center gap-1 ${color}`}>
+                                  {n >= 2 && <i className="fas fa-fire text-[9px]"></i>}
+                                  {n} claim{n !== 1 ? 's' : ''}
+                                </span>
+                              );
+                            })()}
+                            {pendingCount > 0 && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${isSelected ? 'bg-amber-400/30 text-amber-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
+                                {pendingCount} pending
+                              </span>
+                            )}
+                            {approvedCount > 0 && pendingCount === 0 && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${isSelected ? 'bg-emerald-400/30 text-emerald-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
+                                resolved
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ── Right Pane: Claims ── */}
+            <div className="flex-1 min-w-0">
+
+              {/* Right pane sub-header */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 mb-3 px-5 py-3.5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">
+                    {selectedFoundItemId
+                      ? (foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Claims')
+                      : 'All Claims'}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {filteredRequests.length} claim{filteredRequests.length !== 1 ? 's' : ''}
+                    {selectedFoundItemId ? ' for this item' : ' across all items'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Sort toggle */}
+                  <button
+                    onClick={() => setSortOrder(o => o === 'oldest' ? 'newest' : 'oldest')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                    title={sortOrder === 'oldest' ? 'Showing oldest first — click for newest first' : 'Showing newest first — click for oldest first'}
+                  >
+                    <i className={`fas fa-sort-amount-${sortOrder === 'oldest' ? 'up' : 'down'} text-[10px] text-blue-500`}></i>
+                    {sortOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
+                  </button>
+                  {selectedFoundItemId && (
+                    <button
+                      onClick={() => setSelectedFoundItemId(null)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                    >
+                      <i className="fas fa-times text-[10px]"></i>
+                      Show All
+                    </button>
+                  )}
+                </div>
+              </div>
+
           {loading ? (
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 p-16 text-center">
               <div className="flex flex-col items-center gap-4">
@@ -643,180 +1152,259 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             </div>
           ) : (
             <>
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 overflow-hidden">
-                <div className="overflow-x-auto">
-                  {/* table-fixed + colgroup locks every column to the same width on every page */}
-                  <table className="w-full border-collapse table-fixed" style={{ minWidth: '980px' }}>
-                    <colgroup>
-                      <col style={{ width: '96px' }} />
-                      <col style={{ width: '200px' }} />
-                      <col style={{ width: '210px' }} />
-                      <col style={{ width: '185px' }} />
-                      <col style={{ width: '175px' }} />
-                      <col style={{ width: '115px' }} />
-                      <col style={{ width: '99px' }} />
-                    </colgroup>
-                    <thead>
-                      <tr className="bg-gradient-to-r from-slate-800 to-slate-700">
-                        <th className="px-5 py-4 text-left">
-                          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">ID</span>
-                        </th>
-                        <th className="px-5 py-4 text-left">
-                          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Claimant</span>
-                        </th>
-                        <th className="px-5 py-4 text-left">
-                          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Item Details</span>
-                        </th>
-                        <th className="px-5 py-4 text-left">
-                          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Contact</span>
-                        </th>
-                        <th className="px-5 py-4 text-left">
-                          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Status</span>
-                        </th>
-                        <th className="px-5 py-4 text-left">
-                          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Submitted</span>
-                        </th>
-                        <th className="py-4 text-left" style={{ paddingLeft: '12px', paddingRight: '4px' }}>
-                          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Action</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentRequests.map((request, idx) => {
-                        const initials = request.claimantInfo.name
-                          ? request.claimantInfo.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-                          : '?';
-                        // Hash based on the stable request ID — same request always gets the same colour across all pages
-                        const avatarColors = [
-                          'from-blue-400 to-indigo-500',
-                          'from-violet-400 to-purple-500',
-                          'from-rose-400 to-pink-500',
-                          'from-amber-400 to-orange-500',
-                          'from-teal-400 to-cyan-500',
-                          'from-emerald-400 to-green-500',
-                        ];
-                        const idHash = request._id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-                        const avatarGrad = avatarColors[idHash % avatarColors.length];
+              {/* ── Bulk Action Toolbar ── */}
+              {bulkSelected.size > 0 && (() => {
+                const pendingOnPage = currentRequests.filter(r => r.status === 'pending');
+                const allOnPageSelected = pendingOnPage.length > 0 && pendingOnPage.every(r => bulkSelected.has(r._id));
+                return (
+                  <div className="mb-2 flex items-center gap-3 px-4 py-3 bg-rose-50 border border-rose-200 rounded-2xl shadow-sm">
+                    {/* Select-all checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      onChange={() => {
+                        setBulkSelected(prev => {
+                          const next = new Set(prev);
+                          if (allOnPageSelected) pendingOnPage.forEach(r => next.delete(r._id));
+                          else pendingOnPage.forEach(r => next.add(r._id));
+                          return next;
+                        });
+                        setBulkConfirm(false);
+                      }}
+                      className="w-4 h-4 accent-rose-500 cursor-pointer shrink-0"
+                    />
+                    <span className="text-sm font-semibold text-rose-700 flex items-center gap-1.5 flex-1">
+                      <i className="fas fa-check-square text-rose-400 text-xs"></i>
+                      {bulkSelected.size} claim{bulkSelected.size !== 1 ? 's' : ''} selected
+                    </span>
+                    <button
+                      onClick={handleBulkReject}
+                      disabled={bulkLoading}
+                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
+                        bulkConfirm
+                          ? 'bg-rose-600 border-rose-600 text-white shadow-sm shadow-rose-300 animate-pulse'
+                          : 'bg-white border-rose-300 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600'
+                      }`}
+                    >
+                      {bulkLoading
+                        ? <><i className="fas fa-spinner fa-spin text-[10px]"></i> Rejecting…</>
+                        : bulkConfirm
+                          ? <><i className="fas fa-exclamation-triangle text-[10px]"></i> Confirm Reject {bulkSelected.size}</>
+                          : <><i className="fas fa-times-circle text-[10px]"></i> Reject Selected</>
+                      }
+                    </button>
+                    <button
+                      onClick={() => { setBulkSelected(new Set()); setBulkConfirm(false); }}
+                      className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-rose-400 hover:text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors"
+                    >
+                      <i className="fas fa-times text-[10px]"></i>
+                      Clear
+                    </button>
+                  </div>
+                );
+              })()}
 
-                        const statusStyles = {
-                          pending:   'bg-amber-50 text-amber-600 border border-amber-200',
-                          approved:  'bg-emerald-50 text-emerald-600 border border-emerald-200',
-                          rejected:  'bg-rose-50 text-rose-600 border border-rose-200',
-                          processed: 'bg-sky-50 text-sky-600 border border-sky-200',
-                        };
-                        const dotStyles = {
-                          pending:   'bg-amber-400',
-                          approved:  'bg-emerald-400',
-                          rejected:  'bg-rose-400',
-                          processed: 'bg-sky-400',
-                        };
-                        const { badge, subtitle, subtitleColor } = getStatusDisplay(request);
+              <div className="space-y-2">
+                {currentRequests.map((request) => {
+                  const initials = request.claimantInfo.name
+                    ? request.claimantInfo.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                    : '?';
+                  const avatarColors = [
+                    'from-blue-400 to-indigo-500', 'from-violet-400 to-purple-500',
+                    'from-rose-400 to-pink-500',   'from-amber-400 to-orange-500',
+                    'from-teal-400 to-cyan-500',   'from-emerald-400 to-green-500',
+                  ];
+                  const idHash = request._id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+                  const avatarGrad = avatarColors[idHash % avatarColors.length];
+                  const statusStyles = {
+                    pending:   'bg-amber-50 text-amber-600 border border-amber-200',
+                    approved:  'bg-emerald-50 text-emerald-600 border border-emerald-200',
+                    rejected:  'bg-rose-50 text-rose-600 border border-rose-200',
+                    processed: 'bg-sky-50 text-sky-600 border border-sky-200',
+                  };
+                  const dotStyles = {
+                    pending: 'bg-amber-400', approved: 'bg-emerald-400',
+                    rejected: 'bg-rose-400', processed: 'bg-sky-400',
+                  };
+                  const { badge, subtitle, subtitleColor } = getStatusDisplay(request);
+                  const ageMs = Date.now() - new Date(request.submittedAt).getTime();
+                  const ageDays = Math.floor(ageMs / 86400000);
+                  const isStale = request.status === 'pending' && ageDays > 3;
+                  const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays} days ago`;
+                  const agePillStyle = request.status !== 'pending'
+                    ? 'bg-slate-50 text-slate-400 border-slate-200'
+                    : ageDays > 3
+                      ? 'bg-red-50 text-red-600 border-red-200'
+                      : ageDays >= 2
+                        ? 'bg-amber-50 text-amber-600 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-200';
 
-                        return (
-                          <tr
-                            key={request._id}
-                            className={`group border-b border-gray-200/70 last:border-0 transition-colors hover:bg-blue-50/40 ${idx % 2 === 0 ? 'bg-white/60' : 'bg-slate-50/50'}`}
-                          >
-                            {/* ID */}
-                            <td className="px-5 py-[18px] align-middle">
-                              <span className="font-mono text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg tracking-wider whitespace-nowrap">
-                                #{request._id.slice(-6).toUpperCase()}
+                  return (
+                    <div
+                      key={request._id}
+                      className={`backdrop-blur-sm rounded-2xl px-5 py-4 shadow-sm hover:shadow-md transition-all group ${
+                        bulkSelected.has(request._id)
+                          ? 'bg-rose-50/80 border border-rose-300 ring-1 ring-rose-200/60'
+                          : isStale
+                            ? 'bg-white/90 border border-orange-300 ring-1 ring-orange-200/60'
+                            : 'bg-white/90 border border-white/60 hover:border-blue-100'
+                      }`}
+                    >
+                      {/* ── Row 1: checkbox · avatar · name · status ── */}
+                      <div className="flex items-start gap-3">
+                        {/* Checkbox (pending only) — aligned with avatar */}
+                        <div className="flex items-center shrink-0 pt-3">
+                          {request.status === 'pending' ? (
+                            <input
+                              type="checkbox"
+                              checked={bulkSelected.has(request._id)}
+                              onChange={() => toggleBulkSelect(request._id)}
+                              onClick={e => e.stopPropagation()}
+                              className="w-4 h-4 accent-rose-500 cursor-pointer"
+                            />
+                          ) : (
+                            <div className="w-4" />
+                          )}
+                        </div>
+
+                        {/* Avatar */}
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 shadow-sm text-white text-sm font-bold mt-0.5`}>
+                          {initials}
+                        </div>
+
+                        {/* Name + address — grows to fill */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 truncate leading-tight">{request.claimantInfo.name}</p>
+                          {request.claimantInfo.address && (
+                            <p className="text-xs text-slate-400 truncate mt-0.5">{request.claimantInfo.address}</p>
+                          )}
+                        </div>
+
+                        {/* Status badge — pinned right */}
+                        <div className="shrink-0 text-right">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusStyles[request.status] || statusStyles.processed}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
+                            {badge}
+                          </span>
+                          <p className={`text-xs mt-1 font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
+                        </div>
+                      </div>
+
+                      {/* ── Row 2: contact · item · date · actions ── */}
+                      <div className="flex items-center gap-2 mt-2.5 flex-wrap pl-[1.75rem]">
+                        {/* Contact + age */}
+                        <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-0">
+                          <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
+                            <i className="fas fa-envelope text-slate-300 text-[10px]"></i>
+                            {request.claimantInfo.email}
+                          </span>
+                          <span className="text-slate-200 text-xs">·</span>
+                          <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
+                            <i className="fas fa-phone text-slate-300 text-[10px]"></i>
+                            {request.claimantInfo.phone}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border whitespace-nowrap ${agePillStyle}`}>
+                            <i className={`fas ${isStale ? 'fa-exclamation-triangle' : 'fa-clock'} text-[8px]`}></i>
+                            {ageLabel}
+                          </span>
+
+                          {/* Item badge — only when viewing all items */}
+                          {!selectedFoundItemId && request.itemId?.itemName && (
+                            <>
+                              <span className="text-slate-200 text-xs">·</span>
+                              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+                                <i className="fas fa-tag text-slate-300 text-[10px] mr-1"></i>
+                                {request.itemId.itemName}
                               </span>
-                            </td>
-
-                            {/* Claimant */}
-                            <td className="px-5 py-[18px] align-middle">
-                              <div className="flex items-center gap-2.5">
-                                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 shadow-sm text-white text-sm font-bold`}>
-                                  {initials}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-semibold text-gray-800 leading-5 truncate">
-                                    {request.claimantInfo.name}
-                                  </div>
-                                  <div className="text-xs text-gray-400 leading-4 truncate mt-0.5">
-                                    {request.claimantInfo.address || <span className="text-gray-200">—</span>}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-
-                            {/* Item Details */}
-                            <td className="px-5 py-[18px] align-middle">
-                              <div className="text-sm font-semibold text-gray-800 leading-5 truncate">
-                                {request.itemId?.itemName || 'N/A'}
-                              </div>
-                              <div className="mt-1 h-[22px] flex items-center">
-                                {request.itemId?.category ? (
-                                  <span className="inline-block text-xs bg-indigo-50 text-indigo-500 font-semibold px-2 py-0.5 rounded-full border border-indigo-100 truncate max-w-full">
-                                    {request.itemId.category}
+                              {request.itemId?.category && (
+                                <span className="text-xs bg-indigo-50 text-indigo-500 font-semibold px-2 py-0.5 rounded-full border border-indigo-100 whitespace-nowrap">
+                                  {request.itemId.category}
+                                </span>
+                              )}
+                              {(() => {
+                                const n = claimCountByItemId[request.itemId?._id || '__unknown__'] || 0;
+                                if (n < 2) return null;
+                                const color = n >= 3 ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-amber-50 text-amber-600 border-amber-200';
+                                return (
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border whitespace-nowrap ${color}`}>
+                                    <i className="fas fa-fire text-[8px]"></i>
+                                    {n} claims
                                   </span>
-                                ) : <span className="text-xs text-gray-200">—</span>}
-                              </div>
-                              <div className="mt-1 flex items-center gap-1 h-[18px]">
-                                <i className="fas fa-location-dot text-gray-300 text-[11px] shrink-0"></i>
-                                <span className="text-xs text-gray-400 leading-none truncate">
-                                  {request.itemId?.location || <span className="text-gray-200">—</span>}
-                                </span>
-                              </div>
-                            </td>
+                                );
+                              })()}
+                            </>
+                          )}
+                        </div>
 
-                            {/* Contact */}
-                            <td className="px-5 py-[18px] align-middle">
-                              <div className="flex items-center gap-1.5 h-5">
-                                <i className="fas fa-envelope text-gray-300 text-[11px] shrink-0"></i>
-                                <span className="text-xs text-gray-600 leading-none truncate">
-                                  {request.claimantInfo.email}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 h-5 mt-1.5">
-                                <i className="fas fa-phone text-gray-300 text-[11px] shrink-0"></i>
-                                <span className="text-xs text-gray-500 leading-none">
-                                  {request.claimantInfo.phone}
-                                </span>
-                              </div>
-                            </td>
+                        {/* Date */}
+                        <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">
+                          <i className="fas fa-calendar-alt text-slate-300 text-[10px] mr-1"></i>
+                          {new Date(request.submittedAt).toLocaleDateString()}
+                        </span>
 
-                            {/* Status */}
-                            <td className="px-5 py-[18px] align-middle">
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusStyles[request.status] || statusStyles.processed}`}>
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
-                                {badge}
-                              </span>
-                              <div className={`mt-1.5 text-xs font-medium leading-4 truncate ${subtitleColor || 'text-gray-400'}`}>
-                                {subtitle}
-                              </div>
-                              <div className="mt-1 text-xs text-gray-400 leading-4 h-4">
-                                {request.processedAt ? new Date(request.processedAt).toLocaleDateString() : ''}
-                              </div>
-                            </td>
+                        {/* Compare toggle */}
+                        {selectedFoundItemId && (() => {
+                          const group = foundItemGroups.find(g => g.itemId === selectedFoundItemId);
+                          if (!group || group.claims.length < 2) return null;
+                          const isSel = compareIds.includes(request._id);
+                          const isDisabled = !isSel && compareIds.length >= 2;
+                          return (
+                            <button
+                              onClick={() => toggleCompare(request._id)}
+                              disabled={isDisabled}
+                              title={isDisabled ? 'Deselect one claim first' : isSel ? 'Remove from comparison' : 'Add to comparison'}
+                              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
+                                isSel
+                                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-200'
+                                  : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50'
+                              }`}
+                            >
+                              <i className={`fas ${isSel ? 'fa-check-square' : 'fa-columns'} text-[10px]`}></i>
+                              {isSel ? 'Selected' : 'Compare'}
+                            </button>
+                          );
+                        })()}
 
-                            {/* Submitted */}
-                            <td className="px-5 py-[18px] align-middle whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-700 leading-5">
-                                {new Date(request.submittedAt).toLocaleDateString()}
-                              </div>
-                              <div className="text-xs text-gray-400 leading-4 mt-0.5">
-                                {new Date(request.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </td>
+                        {/* Quick-action Approve / Reject — pending only */}
+                        {request.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleQuickAction(request._id, 'approved')}
+                              disabled={quickActionLoading !== null}
+                              title="Quick Approve"
+                              className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                              {quickActionLoading === request._id + 'approved'
+                                ? <i className="fas fa-spinner fa-spin text-[10px]"></i>
+                                : <i className="fas fa-check text-[10px]"></i>}
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleQuickAction(request._id, 'rejected')}
+                              disabled={quickActionLoading !== null}
+                              title="Quick Reject"
+                              className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                              {quickActionLoading === request._id + 'rejected'
+                                ? <i className="fas fa-spinner fa-spin text-[10px]"></i>
+                                : <i className="fas fa-times text-[10px]"></i>}
+                              Reject
+                            </button>
+                          </>
+                        )}
 
-                            {/* Action */}
-                            <td className="py-0 align-middle" style={{ paddingLeft: '12px', paddingRight: '4px' }}>
-                              <button
-                                onClick={() => openModal(request)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-semibold rounded-lg transition-all shadow-sm shadow-blue-200 group-hover:shadow-md group-hover:shadow-blue-200 whitespace-nowrap"
-                              >
-                                <i className="fas fa-eye text-[10px]"></i>
-                                Review
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        {/* Review button */}
+                        <button
+                          onClick={() => openModal(request)}
+                          className="shrink-0 flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-semibold rounded-xl transition-all shadow-sm shadow-blue-200 whitespace-nowrap"
+                        >
+                          <i className="fas fa-eye text-[10px]"></i>
+                          Review
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Pagination */}
@@ -864,7 +1452,55 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
             </>
           )}
+            </div>{/* end right pane */}
+          </div>{/* end two-pane */}
         </div>
+
+        {/* ── Floating Compare Bar ── */}
+        {compareIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 no-print">
+            <div className="bg-gradient-to-r from-[#1a3560] to-[#1e4d8c] text-white rounded-2xl shadow-2xl shadow-indigo-900/40 px-5 py-3.5 flex items-center gap-4 backdrop-blur-sm border border-white/10">
+              <div className="flex items-center gap-2">
+                <i className="fas fa-columns text-blue-300 text-sm"></i>
+                <span className="text-sm font-semibold">
+                  {compareIds.length === 1 ? 'Select 1 more claim to compare' : '2 claims selected'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {compareIds.length === 2 && (
+                  <button
+                    onClick={() => setShowCompareModal(true)}
+                    className="px-4 py-2 bg-white text-indigo-700 text-xs font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-sm flex items-center gap-1.5"
+                  >
+                    <i className="fas fa-exchange-alt text-[10px]"></i>
+                    Compare Side-by-Side
+                  </button>
+                )}
+                <button
+                  onClick={() => setCompareIds([])}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-colors border border-white/10"
+                  title="Clear selection"
+                >
+                  <i className="fas fa-times text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Claim Comparison Modal ── */}
+        {showCompareModal && compareIds.length === 2 && (() => {
+          const claimA = verificationRequests.find(r => r._id === compareIds[0]);
+          const claimB = verificationRequests.find(r => r._id === compareIds[1]);
+          if (!claimA || !claimB) return null;
+          return (
+            <ClaimCompareModal
+              claimA={claimA}
+              claimB={claimB}
+              onClose={() => setShowCompareModal(false)}
+            />
+          );
+        })()}
 
         {/* Review Modal */}
         {showModal && selectedRequest && (

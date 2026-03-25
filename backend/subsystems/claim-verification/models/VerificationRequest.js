@@ -72,7 +72,11 @@ const verificationRequestSchema = new mongoose.Schema({
       status: { type: String, enum: ['pending', 'passed', 'failed'], default: 'pending' },
       notes: { type: String, default: '' }
     }
-  }
+  },
+  // Collection confirmation — PIN is bcrypt-hashed, only plain text is sent via email
+  collectionPin: { type: String },
+  collectionPinExpiry: { type: Date },
+  collectedAt: { type: Date }
 });
 
 

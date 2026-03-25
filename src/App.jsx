@@ -23,6 +23,7 @@ import ChatBotWidget from "./shared/components/ChatBotWidget";
 import AllItems from "./subsystems/admin/pages/Items";
 import Report from "./subsystems/admin/pages/Reports";
 import VerificationRequests from "./subsystems/admin/pages/VerificationRequests";
+import ConfirmCollection from "./subsystems/admin/pages/ConfirmCollection";
 import UserAccount from "./pages/UserAccount";
 
 
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/admin/dashboard/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="/admin/dashboard/notices" element={<AdminRoute><AdminNotices /></AdminRoute>} />
         <Route path="/admin/dashboard/verification" element={<AdminRoute><VerificationRequests /></AdminRoute>} />
+        <Route path="/admin/dashboard/verification/confirm-collection" element={<AdminRoute><ConfirmCollection /></AdminRoute>} />
         {/* Other Protected Routes */}
         <Route path="/account" element={<ProtectedRoute><UserAccount /></ProtectedRoute>} />
         <Route path="/notification-settings" element={<NotificationSettings />} />

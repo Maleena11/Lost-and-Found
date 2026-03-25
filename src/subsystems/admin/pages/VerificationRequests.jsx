@@ -345,6 +345,9 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkConfirm, setBulkConfirm] = useState(false);
 
+  // Collection confirmation modal
+  const [collectionModal, setCollectionModal] = useState({ open: false, request: null, pin: '', loading: false, error: '' });
+
   useEffect(() => {
     fetchVerificationRequests();
   }, []);
@@ -588,6 +591,28 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     }
   };
 
+  const handleConfirmCollection = async () => {
+    if (!collectionModal.pin || collectionModal.pin.length !== 6) {
+      setCollectionModal(prev => ({ ...prev, error: 'Please enter the full 6-digit PIN' }));
+      return;
+    }
+    setCollectionModal(prev => ({ ...prev, loading: true, error: '' }));
+    try {
+      await axios.post(`http://localhost:3001/api/verification/${collectionModal.request._id}/confirm-collection`, {
+        pin: collectionModal.pin
+      });
+      setCollectionModal({ open: false, request: null, pin: '', loading: false, error: '' });
+      setSuccess(`Item collection confirmed — ${collectionModal.request.claimantInfo.name} has received their item.`);
+      fetchVerificationRequests();
+    } catch (err) {
+      setCollectionModal(prev => ({
+        ...prev,
+        loading: false,
+        error: err.response?.data?.error || 'Something went wrong. Please try again.'
+      }));
+    }
+  };
+
   // Build a quick lookup: itemId → total claim count (over ALL requests, not just filtered)
   const claimCountByItemId = useMemo(() => {
     const map = {};
@@ -644,7 +669,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     const s3 = s?.stage3?.status || 'pending';
 
     if (status === 'approved') {
-      return { badge: 'Approved', subtitle: 'Verification Complete' };
+      return { badge: 'Approved', subtitle: 'Awaiting Collection', subtitleColor: 'text-teal-500' };
     }
     if (status === 'rejected') {
       const failedAt = s3 === 'failed' ? 'Stage 3' : s2 === 'failed' ? 'Stage 2' : 'Stage 1';
@@ -711,10 +736,144 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
       {/* Print styles */}
       <style>{`
         @media print {
-          .no-print { display: none !important; }
-          .print-full-width { width: 100% !important; margin: 0 !important; }
+          /* ── Reset & base ── */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { background: #fff !important; font-family: 'Segoe UI', system-ui, sans-serif; }
+          .print-only-header { display: block !important; }
+
+          /* ── Hide non-content UI ── */
+          .no-print,
+          [class*="Sidebar"],
+          [class*="TopBar"],
+          button:not(.print-keep),
+          input[type="checkbox"],
+          input[type="text"],
+          select,
+          .fa-spinner { display: none !important; }
+
+          /* ── Page layout ── */
+          html, body { margin: 0; padding: 0; }
+          .flex.min-h-screen { display: block !important; background: #fff !important; }
+          .flex-1.lg\\:ml-64 { margin-left: 0 !important; }
+          main { padding: 0 !important; }
+          .max-w-7xl { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+
+          /* ── Print header ── */
+          main::before {
+            content: "";
+            display: block;
+            height: 6px;
+            background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 50%, #6366f1 100%);
+            margin-bottom: 24px;
+            border-radius: 0 0 4px 4px;
+          }
+          main::after {
+            content: "Lost & Found — Verification Requests Report  ·  Printed: " attr(data-print-date);
+            display: block;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+            margin-top: 32px;
+          }
+
+          /* ── Two-pane → single column ── */
+          .flex.gap-4.items-start {
+            display: block !important;
+          }
+
+          /* ── Left pane: items summary table ── */
+          .w-72.shrink-0 {
+            width: 100% !important;
+            max-height: none !important;
+            position: static !important;
+            border: 1.5px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            background: #f8fafc !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            margin-bottom: 28px !important;
+            overflow: visible !important;
+          }
+          .w-72.shrink-0 .overflow-y-auto {
+            overflow: visible !important;
+            max-height: none !important;
+          }
+          /* Hide "All Claims" button in left pane */
+          .w-72.shrink-0 button:first-child { display: none !important; }
+          .w-72.shrink-0 .h-px { display: none !important; }
+          /* Style item rows as table-like strips */
+          .w-72.shrink-0 button {
+            display: flex !important;
+            border-radius: 8px !important;
+            background: #fff !important;
+            border: 1px solid #f1f5f9 !important;
+            box-shadow: none !important;
+            margin-bottom: 4px !important;
+            page-break-inside: avoid;
+          }
+          .w-72.shrink-0 button p { color: #1e293b !important; }
+          .w-72.shrink-0 button span { color: #475569 !important; }
+
+          /* ── Right pane: claims list ── */
+          .flex-1.min-w-0 { width: 100% !important; }
+
+          /* Sub-header strip */
+          .bg-white\\/80.backdrop-blur-sm.rounded-2xl.shadow-sm.border.border-white\\/60.mb-3 {
+            border: 1.5px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            background: #f8fafc !important;
+          }
+          .bg-white\\/80.backdrop-blur-sm.rounded-2xl.shadow-sm.border.border-white\\/60.mb-3 button { display: none !important; }
+
+          /* ── Claim cards ── */
+          .space-y-2 > div {
+            border: 1.5px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            background: #fff !important;
+            page-break-inside: avoid;
+            margin-bottom: 8px !important;
+          }
+          /* Stale highlight preserved */
+          .space-y-2 > div[class*="border-orange"] {
+            border-color: #fed7aa !important;
+            background: #fff7ed !important;
+          }
+
+          /* Hide action buttons inside claim cards */
+          .space-y-2 > div button { display: none !important; }
+          /* Hide checkbox column spacer */
+          .pt-3 .w-4 { display: none !important; }
+
+          /* Avatar — print as circle with initials */
+          .w-10.h-10.rounded-xl {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            font-size: 11px !important;
+            flex-shrink: 0 !important;
+          }
+
+          /* Status badges */
+          span[class*="bg-amber-50"] { background: #fffbeb !important; color: #d97706 !important; border-color: #fde68a !important; }
+          span[class*="bg-emerald-50"] { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; }
+          span[class*="bg-rose-50"] { background: #fff1f2 !important; color: #e11d48 !important; border-color: #fecdd3 !important; }
+          span[class*="bg-sky-50"] { background: #f0f9ff !important; color: #0284c7 !important; border-color: #bae6fd !important; }
+
+          /* ── Pagination — hide ── */
+          nav, .flex.items-center.justify-between.pt-4 { display: none !important; }
+
+          /* ── Page breaks ── */
           .print-break { page-break-after: always; }
-          body { print-color-adjust: exact; }
+          @page {
+            size: A4 portrait;
+            margin: 16mm 14mm 16mm 14mm;
+          }
         }
       `}</style>
 
@@ -736,8 +895,25 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
           />
         </div>
 
-        <main className="flex-1 p-6 print-full-width">
+        <main className="flex-1 p-6 print-full-width" data-print-date={new Date().toLocaleString()}>
         <div className="max-w-7xl mx-auto">
+
+          {/* ── Print-only report header ── */}
+          <div className="print-only-header mb-6" style={{display:'none'}}>
+            <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 60%,#6366f1 100%)', borderRadius:'12px', padding:'20px 24px 16px'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div>
+                  <p style={{color:'#bfdbfe',fontSize:'10px',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'4px'}}>Lost &amp; Found System</p>
+                  <h1 style={{color:'#fff',fontSize:'20px',fontWeight:800,margin:0}}>Verification Requests Report</h1>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <p style={{color:'#bfdbfe',fontSize:'10px',margin:0}}>Printed on</p>
+                  <p style={{color:'#fff',fontSize:'12px',fontWeight:600,margin:0}}>{new Date().toLocaleString()}</p>
+                  <p style={{color:'#bfdbfe',fontSize:'10px',marginTop:'4px'}}>{filteredRequests.length} claim{filteredRequests.length !== 1 ? 's' : ''} shown</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Alerts */}
           {error && (
@@ -2016,6 +2192,133 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     </button>
                   )}
                 </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ── Collection Confirmation Modal ── */}
+        {collectionModal.open && collectionModal.request && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+
+              {/* Header */}
+              <div className="relative bg-gradient-to-r from-teal-600 to-emerald-600 px-7 py-6 overflow-hidden">
+                <div className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/10 blur-2xl"></div>
+                <div className="relative flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-200/70 mb-1.5">Item Handover</p>
+                    <h2 className="text-xl font-bold text-white tracking-tight">Confirm Collection</h2>
+                    <p className="text-teal-100 text-xs mt-1">Enter the 6-digit PIN from the student's approval email</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center border border-white/20 shrink-0">
+                    <i className="fas fa-hand-holding text-white text-lg"></i>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-5">
+
+                {/* Claimant + item summary */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
+                      <span className="text-white text-sm font-bold">
+                        {collectionModal.request.claimantInfo.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-800 truncate">{collectionModal.request.claimantInfo.name}</p>
+                      <p className="text-xs text-slate-500 truncate">{collectionModal.request.claimantInfo.email}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+                    <i className="fas fa-tag text-slate-300 text-[10px]"></i>
+                    <span className="font-semibold text-slate-700">{collectionModal.request.itemId?.itemName || 'Item'}</span>
+                    {collectionModal.request.itemId?.category && (
+                      <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-indigo-100">
+                        {collectionModal.request.itemId.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* PIN input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">
+                    Collection PIN
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={collectionModal.pin}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setCollectionModal(prev => ({ ...prev, pin: val, error: '' }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && collectionModal.pin.length === 6) handleConfirmCollection();
+                      if (e.key === 'Escape') setCollectionModal({ open: false, request: null, pin: '', loading: false, error: '' });
+                    }}
+                    placeholder="000000"
+                    maxLength={6}
+                    autoFocus
+                    className="w-full text-center text-4xl font-mono font-black tracking-[0.5em] py-5 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all text-slate-700 placeholder-slate-200"
+                  />
+                  {/* PIN progress dots */}
+                  <div className="flex justify-center gap-2 mt-3">
+                    {[0,1,2,3,4,5].map(i => (
+                      <div
+                        key={i}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          i < collectionModal.pin.length
+                            ? 'bg-teal-500 scale-110'
+                            : 'bg-slate-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  {/* Error message */}
+                  {collectionModal.error && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                      <i className="fas fa-exclamation-circle shrink-0"></i>
+                      {collectionModal.error}
+                    </div>
+                  )}
+                </div>
+
+                {/* Info hint */}
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-blue-700">
+                  <i className="fas fa-info-circle shrink-0 mt-0.5 text-blue-400"></i>
+                  <span>
+                    The student received this PIN when their claim was approved. Ask them to show it on their phone or a printed copy.
+                    Also verify their <strong>Student ID</strong> before confirming.
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setCollectionModal({ open: false, request: null, pin: '', loading: false, error: '' })}
+                  disabled={collectionModal.loading}
+                  className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmCollection}
+                  disabled={collectionModal.loading || collectionModal.pin.length !== 6}
+                  className="px-6 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-teal-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {collectionModal.loading ? (
+                    <><i className="fas fa-spinner fa-spin text-xs"></i> Confirming…</>
+                  ) : (
+                    <><i className="fas fa-check-circle text-xs"></i> Confirm Handover</>
+                  )}
+                </button>
               </div>
 
             </div>

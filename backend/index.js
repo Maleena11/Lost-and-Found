@@ -25,6 +25,7 @@ const chatRoutes = require("./subsystems/admin/routes/chatRoutes");
 const lostFoundRoutes = require('./subsystems/lost-found-reporting/routes/lostFoundRoutes');
 const noticeRoutes = require('./subsystems/notice-management/routes/noticeRoutes');
 const verificationRoutes = require('./subsystems/claim-verification/routes/verificationRoutes');
+const notificationRoutes = require('./subsystems/claim-verification/routes/notificationRoutes');
 
 const app = express(); 
 
@@ -110,6 +111,7 @@ app.use("/api/alerts", alertRoutes);
 app.use('/api/lost-found', lostFoundRoutes);
 app.use('/api/notices', noticeRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/items", itemRoutes);
 app.use("/routes", RouteRoutes);

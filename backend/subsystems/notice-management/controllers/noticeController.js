@@ -1,6 +1,7 @@
 const Notice = require('../models/Notice');
 const NotificationPreference = require('../../claim-verification/models/NotificationPreference');
 const AppNotification = require('../../claim-verification/models/AppNotification');
+const mongoose = require('mongoose');
 const { sendNoticeNotification } = require('../../../utils/emailService');
 
 /**
@@ -227,7 +228,10 @@ const deleteNotice = async (req, res) => {
     
     // Use deleteOne instead of remove() which is deprecated
     await Notice.deleteOne({ _id: req.params.id });
-    
+
+    // Delete all app notifications linked to this notice
+    await AppNotification.deleteMany({ noticeId: new mongoose.Types.ObjectId(req.params.id) });
+
     res.status(200).json({
       success: true,
       data: {}

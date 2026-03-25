@@ -77,7 +77,11 @@ export default function EditItem() {
     if (!formData.description.trim()) newErrors.description = "Description is required.";
     if (!formData.location.trim()) newErrors.location = "Campus location is required.";
 
-    if (!formData.contactInfo.name.trim()) newErrors.contactName = "Full name is required.";
+    if (!formData.contactInfo.name.trim()) {
+      newErrors.contactName = "Full name is required.";
+    } else if (formData.contactInfo.name.trim().split(/\s+/).length < 2) {
+      newErrors.contactName = "Please enter your first and last name.";
+    }
     if (!formData.contactInfo.phone.trim()) {
       newErrors.contactPhone = "Phone number is required.";
     } else if (formData.contactInfo.phone.length !== 10) {
@@ -370,14 +374,27 @@ export default function EditItem() {
                     <label className="block mb-1.5 text-sm font-medium text-gray-700">
                       Campus Location <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="location"
                       value={formData.location}
                       onChange={handleChange}
-                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.location ? 'border-red-400' : 'border-gray-200'}`}
-                      placeholder="e.g. Library, Block A, Canteen, Lab"
-                    />
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${errors.location ? 'border-red-400' : 'border-gray-200'}`}
+                    >
+                      <option value="">Select location</option>
+                      <option value="Main Library">Main Library</option>
+                      <option value="Block A">Block A</option>
+                      <option value="Block B">Block B</option>
+                      <option value="Block C">Block C</option>
+                      <option value="Lab Block">Lab Block</option>
+                      <option value="Lecture Hall Complex">Lecture Hall Complex</option>
+                      <option value="Canteen / Cafeteria">Canteen / Cafeteria</option>
+                      <option value="Sports Complex">Sports Complex</option>
+                      <option value="Admin Building">Admin Building</option>
+                      <option value="Auditorium">Auditorium</option>
+                      <option value="Student Center">Student Center</option>
+                      <option value="Parking Area">Parking Area</option>
+                      <option value="Other">Other</option>
+                    </select>
                     {errors.location && <p className="mt-1 text-xs text-red-500">{errors.location}</p>}
                   </div>
                   <div>

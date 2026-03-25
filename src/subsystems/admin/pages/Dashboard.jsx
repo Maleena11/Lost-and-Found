@@ -807,10 +807,15 @@ export default function Dashboard() {
           const total = items.length;
 
           // 1. Top Reported Locations (from existing `location` text field)
+          const normalizeLocation = (loc) => {
+            const l = loc.trim().toLowerCase();
+            if (l.includes('canteen') || l.includes('cafeteria')) return 'canteen';
+            return l;
+          };
           const locMap = {};
           items.forEach(item => {
             if (item.location) {
-              const key = item.location.trim().toLowerCase();
+              const key = normalizeLocation(item.location);
               locMap[key] = (locMap[key] || 0) + 1;
             }
           });

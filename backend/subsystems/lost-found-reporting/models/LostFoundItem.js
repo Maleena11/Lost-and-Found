@@ -18,7 +18,22 @@ const lostFoundItemSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['electronics', 'clothing', 'jewelry', 'documents', 'accessories', 'other']
+    enum: [
+      'student-id',
+      'laptop-tablet',
+      'books-notes',
+      'stationery',
+      'electronics',
+      'lab-equipment',
+      'sports-equipment',
+      'clothing',
+      'jewelry',
+      'keys',
+      'wallet',
+      'documents',
+      'water-bottle',
+      'other'
+    ]
   },
   description: {
     type: String,

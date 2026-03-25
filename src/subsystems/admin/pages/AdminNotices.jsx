@@ -145,8 +145,8 @@ export default function AdminNotices() {
   const getCategoryConfig = (category) => {
     switch (category) {
       case 'lost-item':    return { bg: 'bg-orange-50 text-orange-700 border border-orange-200', icon: 'fas fa-search text-orange-500',      label: 'Lost Item' };
-      case 'found-item':   return { bg: 'bg-emerald-50 text-emerald-700 border border-emerald-200', icon: 'fas fa-hand-holding text-emerald-500', label: 'Found Item' };
-      case 'announcement': return { bg: 'bg-blue-50 text-blue-700 border border-blue-200',     icon: 'fas fa-bullhorn text-blue-500',       label: 'Announcement' };
+      case 'found-item':   return { bg: 'bg-cyan-50 text-cyan-800 border border-cyan-300', icon: 'fas fa-hand-holding text-cyan-600', label: 'Found Item' };
+      case 'announcement': return { bg: 'bg-blue-100 text-blue-700 border border-blue-200',     icon: 'fas fa-bullhorn text-blue-500',       label: 'Announcement' };
       case 'advisory':     return { bg: 'bg-purple-50 text-purple-700 border border-purple-200', icon: 'fas fa-info-circle text-purple-500',  label: 'Advisory' };
       default:             return { bg: 'bg-gray-50 text-gray-600 border border-gray-200',      icon: 'fas fa-tag text-gray-400',            label: category };
     }
@@ -246,7 +246,7 @@ export default function AdminNotices() {
               </button>
               <Link
                 to="/create-notice"
-                className="flex items-center gap-2 bg-white text-blue-700 hover:bg-blue-50 text-sm font-bold px-4 py-2 rounded-xl transition-colors shadow-md"
+                className="flex items-center gap-2 bg-white text-blue-700 hover:bg-blue-100 text-sm font-bold px-4 py-2 rounded-xl transition-colors shadow-md"
               >
                 <i className="fas fa-plus text-xs"></i>
                 Create Notice
@@ -280,10 +280,10 @@ export default function AdminNotices() {
           {/* Stats Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             {[
-              { label: 'Total Notices', value: notices.length, icon: 'fas fa-layer-group', bg: 'bg-blue-50', iconBg: 'bg-blue-100', iconColor: 'text-blue-500', border: 'border-2 border-blue-200', textColor: 'text-blue-700', subColor: 'text-blue-400' },
-              { label: 'Urgent',        value: urgentCount,    icon: 'fas fa-exclamation-circle', bg: 'bg-red-50',    iconBg: 'bg-red-100',    iconColor: 'text-red-500',   border: 'border-2 border-red-200',   textColor: 'text-red-700',   subColor: 'text-red-400' },
-              { label: 'Medium',        value: mediumCount,    icon: 'fas fa-minus-circle',       bg: 'bg-green-50',  iconBg: 'bg-green-100',  iconColor: 'text-green-500', border: 'border-2 border-green-200', textColor: 'text-green-700', subColor: 'text-green-400' },
-              { label: 'Low',           value: lowCount,       icon: 'fas fa-arrow-circle-down',  bg: 'bg-yellow-50', iconBg: 'bg-yellow-100', iconColor: 'text-yellow-500',border: 'border-2 border-yellow-200',textColor: 'text-yellow-700',subColor: 'text-yellow-500' },
+              { label: 'Total Notices', value: notices.length, icon: 'fas fa-layer-group', bg: 'bg-blue-100', iconBg: 'bg-blue-200', iconColor: 'text-blue-600', border: 'border-2 border-blue-300', textColor: 'text-blue-700', subColor: 'text-blue-400' },
+              { label: 'Urgent',        value: urgentCount,    icon: 'fas fa-exclamation-circle', bg: 'bg-red-100',    iconBg: 'bg-red-200',    iconColor: 'text-red-600',   border: 'border-2 border-red-300',   textColor: 'text-red-700',   subColor: 'text-red-400' },
+              { label: 'Medium',        value: mediumCount,    icon: 'fas fa-minus-circle',       bg: 'bg-green-100',  iconBg: 'bg-green-200',  iconColor: 'text-green-600', border: 'border-2 border-green-300', textColor: 'text-green-700', subColor: 'text-green-400' },
+              { label: 'Low',           value: lowCount,       icon: 'fas fa-arrow-circle-down',  bg: 'bg-yellow-100', iconBg: 'bg-yellow-200', iconColor: 'text-yellow-600',border: 'border-2 border-yellow-300',textColor: 'text-yellow-700',subColor: 'text-yellow-500' },
             ].map(({ label, value, icon, bg, iconBg, iconColor, border, textColor, subColor }) => (
               <div key={label} className={`${bg} ${border} rounded-2xl px-5 py-5 flex items-center gap-4 shadow-md hover:shadow-lg transition-shadow duration-200`}>
                 <div className={`w-14 h-14 ${iconBg} rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0`}>
@@ -300,17 +300,17 @@ export default function AdminNotices() {
           {/* Archived Notices Panel */}
           {showArchived && (
             <div className="mb-6">
-              <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center gap-2">
+              <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
                   <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
                     <i className="fas fa-archive text-blue-500 text-xs"></i>
                   </div>
-                  <span className="text-sm font-bold text-gray-700">Archived Notices</span>
+                  <span className="text-sm font-bold text-blue-700">Archived Notices</span>
                   {archivedNotices.length > 0 && (
-                    <span className="ml-1 text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">{archivedNotices.length}</span>
+                    <span className="ml-1 text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">{archivedNotices.length}</span>
                   )}
-                  <button onClick={() => setShowArchived(false)} className="ml-auto w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors">
-                    <i className="fas fa-times text-gray-500 text-xs"></i>
+                  <button onClick={() => setShowArchived(false)} className="ml-auto w-6 h-6 bg-blue-100 hover:bg-blue-200 rounded-full flex items-center justify-center transition-colors">
+                    <i className="fas fa-times text-blue-500 text-xs"></i>
                   </button>
                 </div>
                 <div className="p-4">
@@ -321,7 +321,7 @@ export default function AdminNotices() {
                     </div>
                   ) : archivedNotices.length === 0 ? (
                     <div className="bg-white border border-gray-100 shadow-sm p-10 rounded-2xl text-center flex flex-col items-center gap-3">
-                      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                         <i className="fas fa-archive text-2xl text-blue-300"></i>
                       </div>
                       <p className="text-gray-600 font-medium">No archived notices yet.</p>
@@ -386,12 +386,12 @@ export default function AdminNotices() {
           )}
 
           {/* Filter & Search Panel */}
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm mb-6 overflow-hidden">
-            <div className="px-4 py-3 bg-white border-b border-gray-100 flex items-center gap-2">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl shadow-sm mb-6 overflow-hidden">
+            <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
               <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
                 <i className="fas fa-filter text-blue-500 text-xs"></i>
               </div>
-              <span className="text-sm font-bold text-gray-700">Filter & Search</span>
+              <span className="text-sm font-bold text-blue-700">Filter & Search</span>
               {(searchTerm || filterCategory !== 'all' || filterPriority !== 'all') && (
                 <button
                   onClick={() => { setSearchTerm(''); setFilterCategory('all'); setFilterPriority('all'); }}
@@ -401,7 +401,7 @@ export default function AdminNotices() {
                 </button>
               )}
             </div>
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white">
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-blue-50">
               {/* Search */}
               <div className="sm:col-span-1">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Search</label>
@@ -453,7 +453,7 @@ export default function AdminNotices() {
               </div>
             </div>
             {filteredNotices.length !== notices.length && (
-              <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 text-xs text-blue-600 font-medium flex items-center gap-1.5">
+              <div className="px-4 py-2 bg-blue-100 border-t border-blue-100 text-xs text-blue-600 font-medium flex items-center gap-1.5">
                 <i className="fas fa-info-circle"></i>
                 Showing <strong>{filteredNotices.length}</strong> of <strong>{notices.length}</strong> notices
               </div>
@@ -487,11 +487,11 @@ export default function AdminNotices() {
           ) : (
             <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
               {/* Table header */}
-              <div className="px-5 py-3 bg-white border-b border-gray-100 flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-                  <i className="fas fa-list text-gray-400"></i> All Notices
+              <div className="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+                <p className="text-xs font-bold text-blue-700 uppercase tracking-widest flex items-center gap-1.5">
+                  <i className="fas fa-list text-blue-500"></i> All Notices
                 </p>
-                <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full">
+                <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full">
                   {filteredNotices.length} notice{filteredNotices.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -499,13 +499,13 @@ export default function AdminNotices() {
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse">
                   <thead>
-                    <tr className="bg-white border-b border-gray-100">
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Notice</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item Image</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Priority</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date Range</th>
-                      <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                    <tr className="bg-blue-50 border-b border-blue-100">
+                      <th className="px-5 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Notice</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Category</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Item Image</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Priority</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Date Range</th>
+                      <th className="px-5 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -564,12 +564,12 @@ export default function AdminNotices() {
                             {/* Date range */}
                             <td className="px-5 py-4">
                               <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                  <i className="fas fa-calendar-alt text-gray-300 text-xs"></i>
+                                <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                                  <i className="fas fa-calendar-alt text-gray-400 text-xs"></i>
                                   <span>{formatDate(notice.startDate)}</span>
                                 </div>
                                 {notice.endDate && (
-                                  <div className="flex items-center gap-1.5 text-xs text-red-400 font-medium">
+                                  <div className="flex items-center gap-1.5 text-xs text-red-500 font-semibold">
                                     <i className="fas fa-hourglass-end text-xs"></i>
                                     <span>Exp. {formatDate(notice.endDate)}</span>
                                   </div>
@@ -582,7 +582,7 @@ export default function AdminNotices() {
                               <div className="flex justify-end gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={e => handleEditClick(notice, e)}
-                                  className="flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+                                  className="flex items-center gap-1.5 text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
                                   title="Edit"
                                 >
                                   <i className="fas fa-pen text-xs"></i>
@@ -590,7 +590,7 @@ export default function AdminNotices() {
                                 </button>
                                 <button
                                   onClick={() => setConfirmDelete(notice._id)}
-                                  className="flex items-center gap-1.5 text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors"
+                                  className="flex items-center gap-1.5 text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors"
                                   title="Delete"
                                 >
                                   <i className="fas fa-trash text-xs"></i>

@@ -11,14 +11,41 @@ export default function Contact() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [nameError, setNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const formatted = name === "name"
+      ? value.replace(/\b\w/g, (c) => c.toUpperCase())
+      : value;
+    setFormData({ ...formData, [name]: formatted });
+  };
+
+  const validateEmail = (value) => {
+    const pattern = /^it\d{8}@my\.sliit\.lk$/;
+    if (!pattern.test(value)) {
+      setEmailError("Email must be in the format: it########@my.sliit.lk");
+      return false;
+    }
+    setEmailError("");
+    return true;
+  };
+
+  const validateName = (value) => {
+    const parts = value.trim().split(/\s+/);
+    if (parts.length < 2 || parts[1] === "") {
+      setNameError("Please enter both your first and last name.");
+      return false;
+    }
+    setNameError("");
+    return true;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateName(formData.name)) return;
+    if (!validateEmail(formData.email)) return;
     setSubmitting(true);
     // Simulate submission delay
     setTimeout(() => {
@@ -160,11 +187,18 @@ export default function Contact() {
                       type="text"
                       name="name"
                       value={formData.name}
-                      onChange={handleChange}
+                      onChange={(e) => { handleChange(e); if (nameError) validateName(e.target.value); }}
+                      onBlur={(e) => validateName(e.target.value)}
                       required
                       placeholder="Your full name"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${nameError ? "border-red-400 bg-red-50" : "border-gray-200"}`}
                     />
+                    {nameError && (
+                      <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {nameError}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block mb-1.5 text-sm font-medium text-gray-700">
@@ -174,11 +208,18 @@ export default function Contact() {
                       type="email"
                       name="email"
                       value={formData.email}
-                      onChange={handleChange}
+                      onChange={(e) => { handleChange(e); if (emailError) validateEmail(e.target.value); }}
+                      onBlur={(e) => validateEmail(e.target.value)}
                       required
-                      placeholder="yourname@university.edu"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="it########@my.sliit.lk"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${emailError ? "border-red-400 bg-red-50" : "border-gray-200"}`}
                     />
+                    {emailError && (
+                      <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {emailError}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -211,12 +252,14 @@ export default function Contact() {
                   <textarea
                     name="message"
                     value={formData.message}
-                    onChange={handleChange}
+                    onChange={(e) => { if (e.target.value.length <= 300) handleChange(e); }}
                     required
                     rows="5"
+                    maxLength={300}
                     placeholder="Describe your inquiry in detail..."
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
+                  <p className="text-xs text-gray-400 text-right mt-1">{formData.message.length}/300</p>
                 </div>
 
                 <button

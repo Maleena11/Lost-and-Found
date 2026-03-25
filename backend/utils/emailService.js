@@ -158,4 +158,127 @@ const sendArchiveNotification = async (notice) => {
   console.log(`[Archive Email] Sent archive notification to ${officeEmail} for notice: "${notice.title}"`);
 };
 
-module.exports = { sendNoticeNotification, sendArchiveNotification };
+const sendClaimConfirmation = async (toEmail, { claimantName, claimRef, itemName, submittedAt }) => {
+  const transport = await getTransporter();
+
+  const formattedDate = new Date(submittedAt).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 24px; border-radius: 12px;">
+
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #1d4ed8, #4338ca); padding: 28px 32px; border-radius: 10px 10px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">
+          Lost &amp; Found — Claim Received
+        </h1>
+        <p style="color: #bfdbfe; margin: 6px 0 0 0; font-size: 13px;">SLIIT Student Services</p>
+      </div>
+
+      <!-- Body -->
+      <div style="background: white; padding: 32px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+
+        <p style="color: #374151; font-size: 15px; margin: 0 0 20px 0;">
+          Hi <strong>${claimantName}</strong>,
+        </p>
+        <p style="color: #4b5563; font-size: 14px; line-height: 1.7; margin: 0 0 24px 0;">
+          We have successfully received your ownership claim for the item listed below.
+          Our team will review your submission and get back to you within <strong>1–2 business days</strong>.
+        </p>
+
+        <!-- Reference box -->
+        <div style="background: linear-gradient(135deg, #1e40af, #3730a3); border-radius: 10px; padding: 20px 24px; text-align: center; margin-bottom: 24px;">
+          <p style="color: #bfdbfe; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; margin: 0 0 6px 0;">
+            Claim Reference Number
+          </p>
+          <p style="color: white; font-size: 22px; font-family: 'Courier New', monospace; font-weight: 800; letter-spacing: 0.15em; margin: 0;">
+            ${claimRef}
+          </p>
+          <p style="color: #93c5fd; font-size: 11px; margin: 6px 0 0 0;">Keep this number — you will need it to collect your item</p>
+        </div>
+
+        <!-- Claim details -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+          <tr>
+            <td style="padding: 10px 14px; background: #f1f5f9; border-radius: 6px 6px 0 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;" colspan="2">
+              Claim Summary
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280; width: 40%;">Item</td>
+            <td style="padding: 10px 14px; font-size: 13px; color: #111827; font-weight: 600;">${itemName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280;">Submitted</td>
+            <td style="padding: 10px 14px; font-size: 13px; color: #111827;">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280;">Status</td>
+            <td style="padding: 10px 14px;">
+              <span style="background: #fef9c3; color: #92400e; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;">
+                Under Review
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- What happens next -->
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <p style="color: #0369a1; font-size: 13px; font-weight: 700; margin: 0 0 14px 0;">What Happens Next</p>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="vertical-align: top; padding-bottom: 12px; width: 32px;">
+                <div style="width: 22px; height: 22px; background: #0284c7; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700;">1</div>
+              </td>
+              <td style="vertical-align: top; padding-bottom: 12px; padding-left: 10px; font-size: 13px; color: #0c4a6e; line-height: 1.5;">
+                Our team reviews your claim details within <strong>1–2 business days</strong>.
+              </td>
+            </tr>
+            <tr>
+              <td style="vertical-align: top; padding-bottom: 12px; width: 32px;">
+                <div style="width: 22px; height: 22px; background: #0284c7; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700;">2</div>
+              </td>
+              <td style="vertical-align: top; padding-bottom: 12px; padding-left: 10px; font-size: 13px; color: #0c4a6e; line-height: 1.5;">
+                You will receive a follow-up email with the approval decision.
+              </td>
+            </tr>
+            <tr>
+              <td style="vertical-align: top; width: 32px;">
+                <div style="width: 22px; height: 22px; background: #0284c7; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700;">3</div>
+              </td>
+              <td style="vertical-align: top; padding-left: 10px; font-size: 13px; color: #0c4a6e; line-height: 1.5;">
+                Once approved, visit the <strong>Student Services Office</strong> with your Student ID and reference number to collect your item.
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0;">
+          If you did not submit this claim or believe this is a mistake, please contact Student Services immediately.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="color: #9ca3af; font-size: 11px; margin: 0; text-align: center; line-height: 1.6;">
+          This is an automated message from the SLIIT Lost &amp; Found System.<br />
+          Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const info = await transport.sendMail({
+    from: `"SLIIT Lost & Found" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@lostfound.lk'}>`,
+    to: toEmail,
+    subject: `Claim Received — ${claimRef} | SLIIT Lost & Found`,
+    html
+  });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Email] Claim confirmation preview for ${toEmail}: ${previewUrl}`);
+  }
+};
+
+module.exports = { sendNoticeNotification, sendArchiveNotification, sendClaimConfirmation };

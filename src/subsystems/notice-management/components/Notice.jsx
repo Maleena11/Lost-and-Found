@@ -68,10 +68,12 @@ export default function Notice() {
     }
   };
 
-  const filteredItems = items.filter(item => {
-    if (activeTab === "all") return true;
-    return item.itemType === activeTab;
-  });
+  const filteredItems = items
+    .filter(item => {
+      if (activeTab === "all") return true;
+      return item.itemType === activeTab;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const userOwnsItem = (item) => {
     return tempUser && item.userId === tempUser.id;

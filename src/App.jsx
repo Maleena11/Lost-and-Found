@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import ProtectedRoute from "./shared/components/ProtectedRoute";
 import AdminRoute from "./shared/components/AdminRoute";
 import ReportItem from "./subsystems/lost-found-reporting/pages/ReportItem";
+import ItemBoard from "./subsystems/lost-found-reporting/pages/ItemBoard";
 import Contact from "./shared/components/contact";
 import Notice from "./subsystems/notice-management/components/Notice";
 import Verification from "./subsystems/claim-verification/components/Verification";
@@ -51,6 +52,7 @@ export default function App() {
 
         {/* Protected Routes — must be logged in */}
         <Route path="/report-item" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />
+        <Route path="/item-board" element={<ProtectedRoute><ItemBoard /></ProtectedRoute>} />
         <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
         <Route path="/notice" element={<ProtectedRoute><Notice /></ProtectedRoute>} />
         <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />

@@ -59,24 +59,28 @@ export default function Contact() {
     {
       icon: "fa-map-marker-alt",
       color: "bg-blue-100 text-blue-600",
+      border: "border-t-4 border-t-blue-500",
       title: "Visit Us",
       lines: ["Student Services Building", "Ground Floor, Room 101", "University Campus"]
     },
     {
       icon: "fa-phone",
       color: "bg-green-100 text-green-600",
+      border: "border-t-4 border-t-green-500",
       title: "Call Us",
       lines: ["+94 77 123 4567", "+94 11 234 5678", "Mon – Fri, 8AM – 6PM"]
     },
     {
       icon: "fa-envelope",
       color: "bg-orange-100 text-orange-600",
+      border: "border-t-4 border-t-orange-400",
       title: "Email Us",
       lines: ["lostandfound@university.edu", "support@university.edu"]
     },
     {
       icon: "fa-clock",
       color: "bg-purple-100 text-purple-600",
+      border: "border-t-4 border-t-purple-500",
       title: "Office Hours",
       lines: ["Monday – Friday: 8AM – 6PM", "Saturday: 9AM – 1PM", "Sunday: Closed"]
     }
@@ -110,18 +114,50 @@ export default function Contact() {
       <Header />
 
       {/* Page Banner */}
-      <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white py-8 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-2 text-blue-200 text-sm mb-2">
-            <i className="fas fa-home text-xs"></i>
-            <span>Home</span>
-            <i className="fas fa-chevron-right text-xs"></i>
-            <span className="text-white font-medium">Contact</span>
+      <div className="bg-gradient-to-r from-blue-800 via-blue-900 to-indigo-950 text-white py-12 px-6 relative overflow-hidden">
+        {/* Dot grid background */}
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        {/* Right fade overlay */}
+        <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-indigo-900/60 to-transparent hidden lg:block" />
+
+        <div className="max-w-7xl mx-auto relative">
+          <div className="flex items-center justify-between gap-8">
+
+            {/* Left: text content */}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-blue-300 text-xs mb-3">
+                <i className="fas fa-home text-xs"></i>
+                <span>Home</span>
+                <i className="fas fa-chevron-right text-xs"></i>
+                <span className="text-white font-medium">Contact</span>
+              </div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-headset text-white text-lg"></i>
+                </div>
+                <h1 className="text-3xl font-extrabold tracking-tight">Contact Us</h1>
+              </div>
+              <p className="text-blue-300 text-sm leading-relaxed max-w-xl">
+                Have a question or need help? We're here for you. Reach out and our team will respond promptly.
+              </p>
+              {/* Info chips */}
+              <div className="flex flex-wrap gap-3 mt-5">
+                {[
+                  { label: "Visit Us", icon: "fa-map-marker-alt" },
+                  { label: "Call Us", icon: "fa-phone" },
+                  { label: "Email Us", icon: "fa-envelope" },
+                  { label: "Office Hours", icon: "fa-clock" },
+                ].map((chip, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
+                    <i className={`fas ${chip.icon} text-blue-300`}></i>
+                    <span className="hidden sm:inline">{chip.label}</span>
+                    <span className="sm:hidden">{idx + 1}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
-          <h1 className="text-2xl font-bold mb-1">Contact Us</h1>
-          <p className="text-blue-200 text-sm">
-            Have a question or need help? We're here for you. Reach out and our team will respond promptly.
-          </p>
         </div>
       </div>
 
@@ -130,7 +166,7 @@ export default function Contact() {
         {/* Contact Info Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           {contactCards.map((card, i) => (
-            <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-3">
+            <div key={i} className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-3 ${card.border}`}>
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${card.color}`}>
                 <i className={`fas ${card.icon} text-base`}></i>
               </div>
@@ -148,7 +184,7 @@ export default function Contact() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
           {/* Contact Form */}
-          <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 border-l-4 border-l-blue-500 border-r-4 border-r-blue-500">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-paper-plane text-blue-600 text-sm"></i>
@@ -287,7 +323,7 @@ export default function Contact() {
           <div className="lg:col-span-2 flex flex-col gap-5">
 
             {/* Quick Help header card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 border-t-4 border-t-orange-400">
               <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
                 <div className="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-question-circle text-orange-500 text-sm"></i>

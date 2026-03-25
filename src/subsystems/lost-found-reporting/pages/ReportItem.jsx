@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import axios from "axios";
 import { getTempUser } from "../../../shared/utils/tempUserAuth"; // Import the temp user utility
 
 export default function ReportItem() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     itemType: "lost", // Default to lost item
     itemName: "",
@@ -299,6 +301,8 @@ export default function ReportItem() {
         type: "success"
       });
 
+      setTimeout(() => navigate('/item-board'), 1500);
+
       // Reset the form after successful submission but keep user contact info
       setFormData({
         itemType: "lost",
@@ -379,6 +383,16 @@ export default function ReportItem() {
               </div>
             </div>
 
+            {/* Right: CTA Button */}
+            <div className="hidden lg:flex flex-shrink-0">
+              <Link
+                to="/item-board"
+                className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-lg"
+              >
+                <i className="fas fa-clipboard-list"></i>
+                View Item Catalogue
+              </Link>
+            </div>
 
           </div>
         </div>

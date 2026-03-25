@@ -575,7 +575,7 @@ export default function EditItem() {
               <div className="flex gap-4">
                 <button
                   type="button"
-                  onClick={() => navigate('/notice')}
+                  onClick={() => navigate('/item-board')}
                   className="flex-1 py-4 rounded-xl font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 text-sm flex items-center justify-center gap-2 shadow-sm"
                 >
                   <i className="fas fa-arrow-left"></i>

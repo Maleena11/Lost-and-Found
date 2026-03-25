@@ -218,7 +218,9 @@ export default function ItemBoard() {
             {filteredItems.map(item => (
               <div
                 key={item._id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer group relative"
+                className={`bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer group relative ${
+                  item.itemType === "found" ? "border-green-400" : "border-red-400"
+                }`}
                 onClick={() => openItemDetails(item)}
               >
                 {/* Your Post badge */}

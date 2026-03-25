@@ -135,7 +135,11 @@ export default function ReportItem() {
     }
 
     // Student Contact Information
-    if (!formData.contactInfo.name.trim()) newErrors.contactName = "Full name is required.";
+    if (!formData.contactInfo.name.trim()) {
+      newErrors.contactName = "Full name is required.";
+    } else if (formData.contactInfo.name.trim().split(/\s+/).length < 2) {
+      newErrors.contactName = "Please enter your first and last name.";
+    }
     if (!formData.contactInfo.phone.trim()) {
       newErrors.contactPhone = "Phone number is required.";
     } else if (formData.contactInfo.phone.length !== 10) {

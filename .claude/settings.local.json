@@ -9,7 +9,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
       "Bash(node -e \"require\\(''./utils/emailService''\\); console.log\\(''emailService loads OK''\\)\")",
-      "Bash(node -e \"require\\(''./subsystems/claim-verification/controllers/verificationController''\\); console.log\\(''verificationController loads OK''\\)\")"
+      "Bash(node -e \"require\\(''./subsystems/claim-verification/controllers/verificationController''\\); console.log\\(''verificationController loads OK''\\)\")",
+      "Bash(python3 -c \":*)"
     ]
   }
 }

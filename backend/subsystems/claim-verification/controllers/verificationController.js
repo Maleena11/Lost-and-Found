@@ -1,6 +1,7 @@
+const bcrypt = require('bcryptjs');
 const VerificationRequest = require('../models/VerificationRequest');
 const LostFoundItem = require('../../lost-found-reporting/models/LostFoundItem');
-const { sendClaimConfirmation } = require('../../../utils/emailService');
+const { sendClaimConfirmation, sendApprovalWithPin, sendCollectionReceipt } = require('../../../utils/emailService');
 
 // Create a new verification request
 exports.createVerificationRequest = async (req, res) => {
@@ -154,8 +155,14 @@ exports.updateVerificationRequestStatus = async (req, res) => {
     request.processedBy = processedBy;
     if (notes) request.notes = notes;
 
-    // If approved, update the item status to claimed
+    // Generate collection PIN and update item status on approval
+    let plainCollectionPin = null;
     if (status === 'approved') {
+      plainCollectionPin = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedPin = await bcrypt.hash(plainCollectionPin, 10);
+      request.collectionPin = hashedPin;
+      request.collectionPinExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
       await LostFoundItem.findByIdAndUpdate(request.itemId, {
         status: 'claimed',
         isResolved: true
@@ -164,6 +171,18 @@ exports.updateVerificationRequestStatus = async (req, res) => {
 
     await request.save();
     await request.populate('itemId');
+
+    // Send approval email with collection PIN (non-blocking)
+    if (status === 'approved' && plainCollectionPin) {
+      const claimRef = `CLM-${request._id.toString().slice(-6).toUpperCase()}`;
+      sendApprovalWithPin(request.claimantInfo.email, {
+        claimantName: request.claimantInfo.name,
+        claimRef,
+        itemName: request.itemId?.itemName || 'Your item',
+        collectionPin: plainCollectionPin,
+        expiryDate: request.collectionPinExpiry
+      }).catch(err => console.error('[Email] Failed to send approval+PIN email:', err.message));
+    }
 
     res.status(200).json({
       success: true,
@@ -251,6 +270,103 @@ exports.getVerificationRequestsByEmail = async (req, res) => {
       data: requests
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+// Confirm student collected item by validating the collection PIN
+exports.confirmCollection = async (req, res) => {
+  try {
+    const { pin } = req.body;
+
+    if (!pin) {
+      return res.status(400).json({ success: false, error: 'Collection PIN is required' });
+    }
+
+    const request = await VerificationRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Verification request not found' });
+    }
+
+    if (request.status !== 'approved') {
+      return res.status(400).json({ success: false, error: 'This claim is not in an approved state' });
+    }
+
+    if (!request.collectionPin) {
+      return res.status(400).json({ success: false, error: 'No collection PIN has been set for this claim' });
+    }
+
+    if (request.collectionPinExpiry && new Date() > request.collectionPinExpiry) {
+      return res.status(400).json({ success: false, error: 'Collection PIN has expired. Please contact Student Services.' });
+    }
+
+    const isValid = await bcrypt.compare(pin.toString(), request.collectionPin);
+    if (!isValid) {
+      return res.status(400).json({ success: false, error: 'Invalid PIN. Please ask the student to check their approval email.' });
+    }
+
+    // Mark claim as processed and record collection timestamp
+    request.status = 'processed';
+    request.collectedAt = new Date();
+    await request.save();
+    await request.populate('itemId');
+
+    // Update item status to returned
+    await LostFoundItem.findByIdAndUpdate(request.itemId?._id || request.itemId, {
+      status: 'returned'
+    });
+
+    // Send collection receipt email (non-blocking)
+    const claimRef = `CLM-${request._id.toString().slice(-6).toUpperCase()}`;
+    sendCollectionReceipt(request.claimantInfo.email, {
+      claimantName: request.claimantInfo.name,
+      claimRef,
+      itemName: request.itemId?.itemName || 'Your item',
+      collectedAt: request.collectedAt
+    }).catch(err => console.error('[Email] Failed to send collection receipt:', err.message));
+
+    console.log(`[Collection] Item collected — claim ${request._id}, item ${request.itemId?._id}, claimant: ${request.claimantInfo.email}`);
+
+    res.status(200).json({ success: true, data: request });
+  } catch (error) {
+    console.error('Confirm collection error:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+// Regenerate an expired (or soon-expiring) collection PIN for an approved claim
+exports.regeneratePin = async (req, res) => {
+  try {
+    const request = await VerificationRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Verification request not found' });
+    }
+
+    if (request.status !== 'approved') {
+      return res.status(400).json({ success: false, error: 'PIN can only be regenerated for approved claims' });
+    }
+
+    const plainCollectionPin = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedPin = await bcrypt.hash(plainCollectionPin, 10);
+    request.collectionPin = hashedPin;
+    request.collectionPinExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    await request.save();
+    await request.populate('itemId');
+
+    const claimRef = `CLM-${request._id.toString().slice(-6).toUpperCase()}`;
+    sendApprovalWithPin(request.claimantInfo.email, {
+      claimantName: request.claimantInfo.name,
+      claimRef,
+      itemName: request.itemId?.itemName || 'Your item',
+      collectionPin: plainCollectionPin,
+      expiryDate: request.collectionPinExpiry
+    }).catch(err => console.error('[Email] Failed to send regenerated PIN email:', err.message));
+
+    console.log(`[PIN] Regenerated PIN for claim ${request._id}, claimant: ${request.claimantInfo.email}`);
+
+    res.status(200).json({ success: true, data: request });
+  } catch (error) {
+    console.error('Regenerate PIN error:', error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };

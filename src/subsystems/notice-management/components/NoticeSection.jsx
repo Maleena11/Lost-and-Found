@@ -112,7 +112,7 @@ export default function NoticeSection() {
   const getCategoryBadgeStyle = (category) => {
     switch (category) {
       case 'lost-item':     return "bg-white text-gray-700 border border-gray-500 font-bold";
-      case 'found-item':    return "bg-white text-gray-700 border border-gray-500 font-bold";
+      case 'found-item':    return "bg-cyan-50 text-cyan-800 border border-cyan-300 font-bold";
       case 'announcement':  return "bg-purple-100 text-purple-700 border border-purple-200";
       case 'service-update':return "bg-blue-100 text-blue-700 border border-blue-200";
       case 'emergency':     return "bg-red-100 text-red-700 border border-red-200";
@@ -503,8 +503,8 @@ export default function NoticeSection() {
                     inactive: 'bg-white text-orange-500 border-orange-200 hover:border-orange-300 hover:bg-orange-50',
                     count: notices.filter(n => n.category === 'lost-item').length },
                   { value: 'found-item', label: 'Found Item', icon: 'fas fa-hand-holding', desc: 'Items recovered',
-                    active: 'bg-emerald-50 text-emerald-700 border-emerald-400',
-                    inactive: 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50',
+                    active: 'bg-cyan-50 text-cyan-700 border-cyan-400',
+                    inactive: 'bg-white text-cyan-500 border-cyan-200 hover:border-cyan-300 hover:bg-cyan-50',
                     count: notices.filter(n => n.category === 'found-item').length },
                 ].map(({ value, label, icon, desc, active, inactive, count }) => (
                   <button
@@ -573,7 +573,7 @@ export default function NoticeSection() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          n.category === 'found-item' ? 'bg-green-100 text-green-700' :
+                          n.category === 'found-item' ? 'bg-cyan-100 text-cyan-700' :
                           n.category === 'lost-item'  ? 'bg-red-100 text-red-700' :
                           'bg-purple-100 text-purple-700'
                         }`}>
@@ -654,9 +654,9 @@ export default function NoticeSection() {
               onClick={() => openNoticeDetails(notice)}
             >
               {/* Thick top gradient accent bar */}
-              {isUrgent && <div className="h-3 bg-gradient-to-r from-red-600 via-rose-500 to-orange-500 animate-pulse flex-shrink-0" />}
-              {isMedium && <div className="h-3 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-400 flex-shrink-0" />}
-              {isLow && <div className="h-3 bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-300 flex-shrink-0" />}
+              {isUrgent && <div className="h-1.5 bg-gradient-to-r from-red-600 via-rose-500 to-orange-500 animate-pulse flex-shrink-0" />}
+              {isMedium && <div className="h-1.5 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-400 flex-shrink-0" />}
+              {isLow && <div className="h-1.5 bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-300 flex-shrink-0" />}
 
               {/* Header area — "Official Notice" label + category + circular priority seal */}
               <div className={`px-4 pt-4 pb-3.5 flex items-start justify-between gap-3 ${
@@ -685,7 +685,7 @@ export default function NoticeSection() {
                   {notice.category === 'found-item' && (
                     <div className="mb-2.5">
                       <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-bold bg-white text-gray-700 border border-gray-400 shadow-sm">
-                        <i className="fas fa-hand-holding text-emerald-500 animate-bounce-slow"></i>
+                        <i className="fas fa-hand-holding text-cyan-500 animate-bounce-slow"></i>
                         Found Item
                       </span>
                     </div>

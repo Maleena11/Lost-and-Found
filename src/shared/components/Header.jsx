@@ -60,6 +60,16 @@ export default function Header() {
     setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
   };
 
+  const handleNotificationClick = async (n) => {
+    await markOneRead(n._id);
+    setBellOpen(false);
+    if (n.noticeId) {
+      navigate(`/notice?noticeId=${n.noticeId}&t=${Date.now()}`);
+    } else {
+      navigate('/notice');
+    }
+  };
+
   const categoryLabel = (cat) => ({ 'lost-item': 'Lost', 'found-item': 'Found', announcement: 'Notice', advisory: 'Advisory' }[cat] || cat);
   const timeAgo = (date) => {
     const diff = Math.floor((Date.now() - new Date(date)) / 1000);
@@ -137,7 +147,7 @@ export default function Header() {
                         notifications.slice(0, 10).map(n => (
                           <div
                             key={n._id}
-                            onClick={() => markOneRead(n._id)}
+                            onClick={() => handleNotificationClick(n)}
                             className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition ${!n.isRead ? "bg-blue-50" : ""}`}
                           >
                             <div className="flex items-start justify-between gap-2">

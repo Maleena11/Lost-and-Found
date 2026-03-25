@@ -432,7 +432,7 @@ export default function ReportItem() {
                     value={formData.itemName}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
+                      const capitalized = val.replace(/\b\w/g, (c) => c.toUpperCase());
                       const regex = /^[a-zA-Z0-9 ]*$/;
                       if (regex.test(capitalized)) {
                         setFormData({ ...formData, itemName: capitalized });

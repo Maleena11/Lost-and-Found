@@ -246,10 +246,16 @@ export default function AdminNotices() {
               </button>
               <Link
                 to="/create-notice"
-                className="flex items-center gap-2 bg-white text-blue-700 hover:bg-blue-100 text-sm font-bold px-4 py-2 rounded-xl transition-colors shadow-md"
+                className="relative flex items-center gap-2.5 bg-white text-blue-700 hover:bg-blue-100 active:scale-95 text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 shadow-md overflow-hidden group"
               >
-                <i className="fas fa-plus text-xs"></i>
-                Create Notice
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/60 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
+                <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
+                  <i className="fas fa-plus text-sm text-blue-700"></i>
+                </div>
+                <span className="flex flex-col items-start leading-none">
+                  <span className="text-xs font-bold tracking-wide">Create Notice</span>
+                  <span className="text-[10px] text-blue-400 font-normal">Post new notice</span>
+                </span>
               </Link>
             </div>
           </div>

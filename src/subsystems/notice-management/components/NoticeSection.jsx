@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { getTempUser } from "../../../shared/utils/tempUserAuth";
 
 export default function NoticeSection() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,6 +52,24 @@ export default function NoticeSection() {
     setTempUser(user);
     fetchNotices();
   }, []);
+
+  const [highlightedNoticeId, setHighlightedNoticeId] = useState(null);
+
+  // Auto-scroll and highlight notice if noticeId is in URL (from notification click)
+  useEffect(() => {
+    const noticeId = searchParams.get('noticeId');
+    if (noticeId && notices.length > 0) {
+      setHighlightedNoticeId(noticeId);
+      setTimeout(() => {
+        const el = document.getElementById(`notice-${noticeId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      // Remove highlight after 3 seconds
+      setTimeout(() => setHighlightedNoticeId(null), 3000);
+    }
+  }, [searchParams, notices]);
 
   const fetchNotices = async () => {
     setLoading(true);
@@ -641,8 +660,11 @@ export default function NoticeSection() {
             const isLow = notice.priority === 'low';
             return (
             <div
+              id={`notice-${notice._id}`}
               key={notice._id}
               className={`group flex flex-col rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1.5 relative bg-white ${
+                highlightedNoticeId === notice._id ? 'ring-4 ring-blue-600 ring-offset-2 scale-105' : ''
+              } ${
                 isUrgent
                   ? 'shadow-lg shadow-red-100/80 ring-2 ring-red-200 hover:shadow-2xl hover:shadow-red-200/60 urgent-card-pulse'
                   : isMedium

@@ -180,11 +180,15 @@ export default function Verification() {
   // Pre-fill from authenticated user account
   useEffect(() => {
     if (user) {
+      const studentIdFromEmail = user.email
+        ? user.email.split("@")[0].toUpperCase()
+        : "IT";
       setFormData(prev => ({
         ...prev,
-        name:  user.name  || prev.name,
-        email: user.email || prev.email,
-        phone: user.phone || prev.phone,
+        name:      user.name  || prev.name,
+        email:     user.email || prev.email,
+        phone:     user.phone || prev.phone,
+        studentId: studentIdFromEmail || prev.studentId,
       }));
     }
   }, [user]);
@@ -527,42 +531,75 @@ export default function Verification() {
 
   // ── Main Form ─────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen w-full bg-gray-50">
+    <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50/40 to-slate-100">
       <Header />
 
       {/* Banner */}
-      <div className="bg-gradient-to-r from-blue-800 to-blue-950 text-white py-10 px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-2 text-blue-300 text-xs mb-3">
-            <i className="fas fa-home text-xs" />
-            <span>Home</span>
-            <i className="fas fa-chevron-right text-xs" />
-            <span className="text-white font-medium">Claim Verification</span>
-          </div>
-          <h1 className="text-2xl font-bold mb-1">Item Ownership Verification</h1>
-          <p className="text-blue-300 text-sm max-w-xl">
-            Submit a formal claim for a found item. All claims are reviewed by the Student Services team
-            and require valid student identification for collection.
-          </p>
-          <div className="flex flex-wrap gap-4 mt-4">
-            {[
-              { icon: "fa-clock",   text: "Processing: 1–2 business days" },
-              { icon: "fa-id-card", text: "Student ID required for collection" },
-              { icon: "fa-lock",    text: "Secure & Confidential" },
-            ].map(({ icon, text }) => (
-              <div key={text} className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5 text-xs">
-                <i className={`fas ${icon} text-blue-300`} />
-                <span>{text}</span>
+      <div className="bg-gradient-to-r from-blue-800 via-blue-900 to-indigo-950 text-white py-12 px-6 relative overflow-hidden">
+        {/* Dot grid background */}
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        {/* Right fade overlay */}
+        <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-indigo-900/60 to-transparent hidden lg:block" />
+
+        <div className="max-w-7xl mx-auto relative">
+          <div className="flex items-center justify-between gap-8">
+
+            {/* Left: text content */}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-blue-300 text-xs mb-3">
+                <i className="fas fa-home text-xs" />
+                <span>Home</span>
+                <i className="fas fa-chevron-right text-xs" />
+                <span className="text-white font-medium">Claim Verification</span>
               </div>
-            ))}
+              <h1 className="text-3xl font-extrabold mb-2 tracking-tight">Item Ownership Verification</h1>
+              <p className="text-blue-300 text-sm max-w-xl leading-relaxed">
+                Submit a formal claim for a found item. All claims are reviewed by the Student Services team
+                and require valid student identification for collection.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-5">
+                {[
+                  { icon: "fa-clock",        text: "1–2 business days processing" },
+                  { icon: "fa-id-card",      text: "Student ID required at collection" },
+                  { icon: "fa-lock",         text: "Secure & Confidential" },
+                  { icon: "fa-shield-check", text: "Admin-reviewed claims" },
+                ].map(({ icon, text }) => (
+                  <div key={text} className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
+                    <i className={`fas ${icon} text-blue-300`} />
+                    <span>{text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: decorative icon panel */}
+            <div className="hidden lg:flex flex-col items-center justify-center flex-shrink-0">
+              <div className="relative">
+                <div className="w-32 h-32 bg-white/10 rounded-3xl flex items-center justify-center border border-white/20 shadow-2xl shadow-black/30 backdrop-blur-sm">
+                  <i className="fas fa-shield-alt text-white/80 text-5xl" />
+                </div>
+                <div className="absolute -top-2 -right-2 w-9 h-9 bg-emerald-400 rounded-full flex items-center justify-center shadow-lg shadow-emerald-900/40 border-2 border-emerald-300">
+                  <i className="fas fa-check text-white text-sm" />
+                </div>
+                <div className="absolute -bottom-2 -left-2 w-7 h-7 bg-amber-400 rounded-full flex items-center justify-center shadow-md border-2 border-amber-300">
+                  <i className="fas fa-star text-white text-[10px]" />
+                </div>
+              </div>
+              <p className="text-blue-300 text-xs mt-4 font-semibold tracking-wide uppercase">Verified Claims Portal</p>
+            </div>
+
           </div>
         </div>
       </div>
 
-      <main className="flex-1 px-4 py-8 max-w-4xl mx-auto w-full">
+      <main className="flex-1 px-4 py-8 w-full max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* ── Left: Main Form Column ─────────────────────────────────────── */}
+        <div className="flex-1 min-w-0 flex flex-col gap-5">
 
         {/* Step Progress */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between relative">
             <div className="absolute left-0 right-0 top-5 h-0.5 bg-gray-100 mx-12 hidden sm:block" />
             {steps.map((step) => {
@@ -594,13 +631,11 @@ export default function Verification() {
 
         {/* Error banner */}
         {error && (
-          <div className="mb-5 p-4 rounded-xl flex items-start gap-3 bg-red-50 border border-red-200 text-red-800">
+          <div className="p-4 rounded-xl flex items-start gap-3 bg-red-50 border border-red-200 text-red-800">
             <i className="fas fa-exclamation-circle text-red-500 mt-0.5 flex-shrink-0" />
             <span className="text-sm font-medium">{error}</span>
           </div>
         )}
-
-        <div className="flex flex-col gap-5">
 
           {/* ── Step 1 — Item Catalogue ──────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -1287,7 +1322,131 @@ export default function Verification() {
             </form>
           )}
 
-        </div>
+        </div>{/* end left column */}
+
+        {/* ── Right: Sidebar ─────────────────────────────────────────────── */}
+        <aside className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4 lg:sticky lg:top-6">
+
+          {/* How It Works */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-blue-500 to-indigo-600" />
+            <div className="p-5">
+              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-road text-blue-600 text-xs" />
+                </div>
+                How the Process Works
+              </h3>
+              <div className="space-y-4">
+                {[
+                  { step: "1", color: "bg-blue-500",    title: "Select the Item",   desc: "Browse found items and click the one you believe is yours." },
+                  { step: "2", color: "bg-amber-500",   title: "Fill Your Details", desc: "Provide your student information for identity verification." },
+                  { step: "3", color: "bg-purple-500",  title: "Prove Ownership",   desc: "Describe the item and provide verifiable proof of ownership." },
+                  { step: "4", color: "bg-emerald-500", title: "Await Approval",    desc: "Staff review within 1–2 business days and notify you by email." },
+                ].map(({ step, color, title, desc }, i, arr) => (
+                  <div key={step} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-6 h-6 ${color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <span className="text-white text-[10px] font-bold">{step}</span>
+                      </div>
+                      {i < arr.length - 1 && <div className="w-px flex-1 bg-gray-100 mt-1" />}
+                    </div>
+                    <div className="pb-3">
+                      <p className="text-xs font-semibold text-gray-700">{title}</p>
+                      <p className="text-xs text-gray-400 leading-relaxed mt-0.5">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tips for Success */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
+            <div className="p-5">
+              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-lightbulb text-amber-500 text-xs" />
+                </div>
+                Tips for a Successful Claim
+              </h3>
+              <ul className="space-y-2.5">
+                {[
+                  "Include serial numbers, IMEI, or model numbers when possible.",
+                  "Mention unique marks — stickers, scratches, engravings.",
+                  "Upload photos of you with the item as supporting evidence.",
+                  "Be specific — vague descriptions are harder to verify.",
+                  "Ensure your student email and ID are correct before submitting.",
+                ].map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-gray-500 leading-relaxed">
+                    <i className="fas fa-check-circle text-amber-400 flex-shrink-0 mt-0.5" />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Privacy & Security */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
+            <div className="p-5">
+              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-lock text-emerald-600 text-xs" />
+                </div>
+                Privacy &amp; Security
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Your submitted information is handled in strict accordance with university data protection policies and is only accessible to authorised Student Services staff.
+              </p>
+              <div className="mt-3 pt-3 border-t border-gray-50 space-y-2">
+                {[
+                  { icon: "fa-shield-alt", text: "Encrypted submission" },
+                  { icon: "fa-eye-slash",  text: "Not visible to other students" },
+                  { icon: "fa-trash-alt",  text: "Data removed after 90 days" },
+                ].map(({ icon, text }) => (
+                  <div key={text} className="flex items-center gap-2 text-xs text-gray-400">
+                    <i className={`fas ${icon} text-emerald-400 w-4 text-center`} />
+                    {text}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Need Help */}
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white relative overflow-hidden">
+            <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+            <div className="relative">
+              <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-headset text-white text-xs" />
+                </div>
+                Need Assistance?
+              </h3>
+              <p className="text-xs text-blue-200 leading-relaxed mb-3">
+                Having trouble with your claim? Visit or contact the Student Services office directly.
+              </p>
+              <div className="space-y-2">
+                {[
+                  { icon: "fa-map-marker-alt", text: "Ground Floor, Main Building" },
+                  { icon: "fa-clock",          text: "Mon – Fri, 8:30 AM – 4:30 PM" },
+                  { icon: "fa-envelope",       text: "studentservices@sliit.lk" },
+                ].map(({ icon, text }) => (
+                  <div key={text} className="flex items-center gap-2 text-xs text-blue-100">
+                    <i className={`fas ${icon} text-blue-300 w-4 text-center flex-shrink-0`} />
+                    {text}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+        </div>{/* end two-column layout */}
       </main>
 
       <Footer />

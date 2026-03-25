@@ -64,7 +64,7 @@ export default function App() {
         <Route path="/admin/dashboard/verification" element={<AdminRoute><VerificationRequests /></AdminRoute>} />
         {/* Other Protected Routes */}
         <Route path="/account" element={<ProtectedRoute><UserAccount /></ProtectedRoute>} />
-        <Route path="/notification-settings" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+        <Route path="/notification-settings" element={<NotificationSettings />} />
         <Route path="/edit-item/:id" element={<ProtectedRoute><EditItem /></ProtectedRoute>} />
         <Route path="/create-notice" element={<AdminRoute><CreateNotice /></AdminRoute>} />
         <Route path="/edit-notice/:id" element={<AdminRoute><EditNotice /></AdminRoute>} />

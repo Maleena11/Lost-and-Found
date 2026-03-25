@@ -73,4 +73,13 @@ const markAllRead = async (req, res) => {
   }
 };
 
-module.exports = { savePreference, getPreference, getAppNotifications, markAsRead, markAllRead };
+const deletePreference = async (req, res) => {
+  try {
+    await NotificationPreference.findOneAndDelete({ email: req.params.email.toLowerCase() });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+module.exports = { savePreference, getPreference, getAppNotifications, markAsRead, markAllRead, deletePreference };

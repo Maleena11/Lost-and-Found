@@ -13,6 +13,9 @@ export default function NotificationSettings() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [isSaving, setIsSaving] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [toggleError, setToggleError] = useState("");
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,6 +28,7 @@ export default function NotificationSettings() {
           if (res.data.data) {
             const p = res.data.data;
             setForm({ name: p.name || "", email: p.email, receiveEmails: p.receiveEmails, receiveInApp: p.receiveInApp });
+            setIsSubscribed(true);
           } else {
             setForm(prev => ({ ...prev, email: savedEmail }));
           }
@@ -33,22 +37,61 @@ export default function NotificationSettings() {
     }
   }, []);
 
+  const handleUnsubscribe = async () => {
+    if (!form.email) return;
+    try {
+      await axios.delete(`http://localhost:3001/api/notifications/preferences/${form.email}`);
+      localStorage.removeItem("notif_email");
+      setForm({ name: "", email: "", receiveEmails: true, receiveInApp: true });
+      setIsSubscribed(false);
+      setMessage({ text: "You have been unsubscribed successfully.", type: "success" });
+    } catch (err) {
+      setMessage({ text: "Failed to unsubscribe. Please try again.", type: "error" });
+    }
+  };
+
   const handleToggle = (field) => {
     setForm(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    let valid = true;
+
+    if (!form.name.trim()) {
+      setNameError("Please enter your name");
+      valid = false;
+    } else if (form.name.trim().length < 2) {
+      setNameError("Name must be at least 2 characters");
+      valid = false;
+    } else if (form.name.trim().length > 50) {
+      setNameError("Name cannot exceed 50 characters");
+      valid = false;
+    } else {
+      setNameError("");
+    }
+
     if (!emailRegex.test(form.email)) {
       setEmailError("Please enter a valid email address");
-      return;
+      valid = false;
+    } else {
+      setEmailError("");
     }
-    setEmailError("");
+
+    if (!form.receiveEmails && !form.receiveInApp) {
+      setToggleError("Please enable at least one notification type");
+      valid = false;
+    } else {
+      setToggleError("");
+    }
+
+    if (!valid) return;
     setIsSaving(true);
     try {
       await axios.post("http://localhost:3001/api/notifications/preferences", form);
       localStorage.setItem("notif_email", form.email.toLowerCase());
-      setMessage({ text: "Notification preferences saved successfully!", type: "success" });
+      setMessage({ text: "Subscribed successfully! You will receive email notifications for new notices.", type: "success" });
+      setIsSubscribed(true);
     } catch (err) {
       setMessage({ text: err.response?.data?.error || "Failed to save preferences", type: "error" });
     } finally {
@@ -81,10 +124,12 @@ export default function NotificationSettings() {
               <input
                 type="text"
                 value={form.name}
-                onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                onChange={e => { setForm(prev => ({ ...prev, name: e.target.value })); setNameError(""); }}
                 placeholder="e.g. Kamal Perera"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                maxLength={50}
+                className={`w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${nameError ? "border-red-400" : "border-gray-300"}`}
               />
+              {nameError && <p className="mt-1 text-xs text-red-600">{nameError}</p>}
             </div>
 
             {/* Email */}
@@ -121,6 +166,7 @@ export default function NotificationSettings() {
               </button>
             </div>
 
+            {toggleError && <p className="text-xs text-red-600 -mt-2">{toggleError}</p>}
             {/* In-App Notifications Toggle */}
             <div className="flex items-center justify-between">
               <div>
@@ -136,13 +182,25 @@ export default function NotificationSettings() {
               </button>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-300"
-            >
-              {isSaving ? "Saving..." : "Save Preferences"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition disabled:bg-blue-300"
+              >
+                {isSaving ? "Subscribing..." : "Subscribe"}
+              </button>
+
+              {isSubscribed && (
+                <button
+                  type="button"
+                  onClick={handleUnsubscribe}
+                  className="flex-1 bg-red-500 text-white py-3 rounded-lg font-semibold border border-red-500 hover:bg-red-600 transition"
+                >
+                  Unsubscribe
+                </button>
+              )}
+            </div>
           </form>
         </div>
       </main>

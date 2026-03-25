@@ -10,6 +10,8 @@ export const validateUserForm = (userData, isNewUser = true) => {
     errors.name = "Name must be at least 2 characters long";
   } else if (userData.name.trim().length > 50) {
     errors.name = "Name must be less than 50 characters";
+  } else if (!/^[A-Z][a-z]+ [A-Z][a-z]+$/.test(userData.name.trim())) {
+    errors.name = "Each name must start with a capital letter followed by lowercase letters (e.g. Nimali Perera)";
   }
 
   // Email validation

@@ -25,6 +25,8 @@ const validate = (form) => {
     errors.name = "Name must be at least 2 characters.";
   } else if (form.name.trim().length > 50) {
     errors.name = "Name must be less than 50 characters.";
+  } else if (!/^[A-Z][a-z]+ [A-Z][a-z]+$/.test(form.name.trim())) {
+    errors.name = "Each name must start with a capital letter followed by lowercase letters (e.g. Nimali Perera)";
   }
 
   if (!form.email.trim()) {

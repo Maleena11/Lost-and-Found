@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTheme } from "../../../context/ThemeContext";
 import Sidebar from "./Sidebar";
 import TopBar from "../components/TopBar";
 import WhatsAppAlertsPanel from "../components/WhatsAppAlertsPanel";
@@ -39,7 +40,7 @@ function Toggle({ checked, onChange, disabled }) {
       onClick={() => !disabled && onChange(!checked)}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
         transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
-        ${checked ? "bg-blue-600" : "bg-gray-200"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+        ${checked ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
     >
       <span
         className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
@@ -52,8 +53,8 @@ function Toggle({ checked, onChange, disabled }) {
 // ─── Section Card ─────────────────────────────────────────────────────────────
 function SectionCard({ icon, title, description, children }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-100 flex items-start gap-4">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-start gap-4">
         <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
@@ -71,9 +72,9 @@ function SectionCard({ icon, title, description, children }) {
 function Field({ label, hint, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{label}</label>
       {children}
-      {hint && <p className="mt-1.5 text-xs text-gray-400">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{hint}</p>}
     </div>
   );
 }
@@ -83,9 +84,9 @@ function InputField({ label, hint, ...props }) {
     <Field label={label} hint={hint}>
       <input
         {...props}
-        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50
+        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-gray-100
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-          placeholder-gray-400 transition"
+          placeholder-gray-400 dark:placeholder-gray-500 transition"
       />
     </Field>
   );
@@ -96,7 +97,7 @@ function SelectField({ label, hint, children, ...props }) {
     <Field label={label} hint={hint}>
       <select
         {...props}
-        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50
+        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-gray-100
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
       >
         {children}
@@ -108,10 +109,10 @@ function SelectField({ label, hint, children, ...props }) {
 function ToggleRow({ label, description, name, checked, onChange, disabled }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3.5 first:pt-0 last:pb-0
-      [&:not(:last-child)]:border-b [&:not(:last-child)]:border-gray-50">
+      [&:not(:last-child)]:border-b [&:not(:last-child)]:border-gray-50 dark:[&:not(:last-child)]:border-gray-700">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800">{label}</p>
-        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{label}</p>
+        {description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>}
       </div>
       <Toggle checked={checked} onChange={v => onChange({ target: { name, type: "checkbox", checked: v } })} disabled={disabled} />
     </div>
@@ -164,11 +165,23 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
   const sidebarOpenState = propSidebarOpen !== undefined ? propSidebarOpen : sidebarOpen;
   const setSidebarOpen   = propSetSidebarOpen || setSidebarOpenLocal;
 
-  const [settings, setSettings]   = useState(DEFAULTS);
-  const [saved, setSaved]         = useState(DEFAULTS);
+  const { theme: contextTheme, setTheme } = useTheme();
+
+  const loadPersistedSettings = () => {
+    try {
+      const raw = localStorage.getItem("adminSettings");
+      return raw ? { ...DEFAULTS, ...JSON.parse(raw), theme: contextTheme } : { ...DEFAULTS, theme: contextTheme };
+    } catch {
+      return { ...DEFAULTS, theme: contextTheme };
+    }
+  };
+
+  const [settings, setSettings]   = useState(loadPersistedSettings);
+  const [saved, setSaved]         = useState(loadPersistedSettings);
   const [activeNav, setActiveNav] = useState("general");
   const [isSaving, setIsSaving]   = useState(false);
   const [toasts, setToasts]       = useState([]);
+  const [exportLoading, setExportLoading] = useState({});
   const contentRef = useRef(null);
 
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(saved);
@@ -180,6 +193,53 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   }, []);
   const removeToast = useCallback(id => setToasts(prev => prev.filter(t => t.id !== id)), []);
+
+  // ── CSV Export ─────────────────────────────────────────────────────────────
+  const handleExport = useCallback(async (type) => {
+    setExportLoading(prev => ({ ...prev, [type]: true }));
+    try {
+      const endpoints = {
+        users:  "http://localhost:3001/api/users",
+        items:  "http://localhost:3001/api/lost-found",
+        claims: "http://localhost:3001/api/verification",
+      };
+      const res = await fetch(endpoints[type]);
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const json = await res.json();
+      const rows = Array.isArray(json) ? json : (json.data ?? json.users ?? json.items ?? json.claims ?? []);
+      if (!rows.length) { addToast(`No ${type} data to export.`, "info"); return; }
+
+      const flattenRow = (obj, prefix = "") =>
+        Object.entries(obj).reduce((acc, [k, v]) => {
+          const key = prefix ? `${prefix}_${k}` : k;
+          if (v && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date)) {
+            Object.assign(acc, flattenRow(v, key));
+          } else {
+            acc[key] = Array.isArray(v) ? v.length : (v ?? "");
+          }
+          return acc;
+        }, {});
+
+      const flat = rows.map(r => flattenRow(r));
+      const skip = new Set(["__v", "password"]);
+      const headers = [...new Set(flat.flatMap(Object.keys))].filter(h => !skip.has(h));
+      const escape = v => `"${String(v).replace(/"/g, '""')}"`;
+      const csv = [headers.map(escape).join(","), ...flat.map(r => headers.map(h => escape(r[h] ?? "")).join(","))].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `${type}_export_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addToast(`${type.charAt(0).toUpperCase() + type.slice(1)} exported successfully.`, "success");
+    } catch (err) {
+      addToast(`Export failed: ${err.message}`, "error");
+    } finally {
+      setExportLoading(prev => ({ ...prev, [type]: false }));
+    }
+  }, [addToast]);
 
   // ── Change handler ─────────────────────────────────────────────────────────
   const handleChange = useCallback(e => {
@@ -193,7 +253,9 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
     setIsSaving(true);
     // Simulate async save
     await new Promise(r => setTimeout(r, 900));
+    localStorage.setItem("adminSettings", JSON.stringify(settings));
     setSaved({ ...settings });
+    setTheme(settings.theme);
     setIsSaving(false);
     addToast("Settings saved successfully!", "success");
   };
@@ -222,7 +284,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
       <Sidebar activeSection={activeSection} setActiveSection={setActiveSection}
         sidebarOpen={sidebarOpenState} setSidebarOpen={setSidebarOpen} />
 
-      <div className="flex-1 min-h-screen lg:ml-64 flex flex-col bg-gray-50">
+      <div className="flex-1 min-h-screen lg:ml-64 flex flex-col bg-gray-50 dark:bg-gray-900">
         <TopBar sidebarOpen={sidebarOpenState} setSidebarOpen={setSidebarOpen}
           title="System Settings" subtitle="Manage global system preferences and configuration" />
 
@@ -268,17 +330,17 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
           <div className="flex flex-1 overflow-hidden">
 
             {/* Left nav */}
-            <aside className="hidden md:flex flex-col w-52 flex-shrink-0 bg-white border-r border-gray-100 py-4 px-3 gap-0.5">
+            <aside className="hidden md:flex flex-col w-52 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 py-4 px-3 gap-0.5">
               {NAV.map(n => (
                 <button
                   key={n.id}
                   onClick={() => handleNav(n.id)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left
                     ${activeNav === n.id
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+                      ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"}`}
                 >
-                  <span className={`flex-shrink-0 ${activeNav === n.id ? "text-blue-600" : "text-gray-400"}`}>
+                  <span className={`flex-shrink-0 ${activeNav === n.id ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}>
                     {n.icon}
                   </span>
                   {n.label}
@@ -290,12 +352,12 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
             </aside>
 
             {/* Mobile nav (horizontal scroll) */}
-            <div className="md:hidden bg-white border-b border-gray-100 overflow-x-auto flex-shrink-0 w-full">
+            <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 overflow-x-auto flex-shrink-0 w-full">
               <div className="flex px-4 py-2 gap-1 w-max">
                 {NAV.map(n => (
                   <button key={n.id} onClick={() => handleNav(n.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition
-                      ${activeNav === n.id ? "bg-blue-600 text-white" : "text-gray-600 bg-gray-50 hover:bg-gray-100"}`}>
+                      ${activeNav === n.id ? "bg-blue-600 text-white" : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"}`}>
                     {n.icon}
                     {n.label}
                   </button>
@@ -434,7 +496,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                         </SelectField>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-3">Theme</label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Theme</label>
                           <div className="flex gap-3">
                             {[
                               { value: "light", label: "Light", icon: "☀️" },
@@ -444,19 +506,19 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                               <label key={opt.value}
                                 className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition
                                   ${settings.theme === opt.value
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-200 hover:border-gray-300 bg-white"}`}>
+                                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
+                                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-700"}`}>
                                 <input type="radio" name="theme" value={opt.value}
                                   checked={settings.theme === opt.value} onChange={handleChange}
                                   className="sr-only" />
                                 <span className="text-2xl">{opt.icon}</span>
-                                <span className={`text-xs font-medium ${settings.theme === opt.value ? "text-blue-700" : "text-gray-600"}`}>
+                                <span className={`text-xs font-medium ${settings.theme === opt.value ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}>
                                   {opt.label}
                                 </span>
                               </label>
                             ))}
                           </div>
-                          <p className="text-xs text-gray-400 mt-2">Theme customisation will be applied in a future update.</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Changes apply immediately after saving.</p>
                         </div>
                       </div>
                     </SectionCard>
@@ -472,7 +534,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       >
                         <div className="space-y-5">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                               Retention Period
                             </label>
                             <div className="flex items-center gap-3">
@@ -483,11 +545,11 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                                 onChange={handleChange}
                                 min="7"
                                 max="365"
-                                className="w-28 px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50
+                                className="w-28 px-3.5 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-gray-100
                                   focus:outline-none focus:ring-2 focus:ring-blue-500 text-center font-medium"
                               />
-                              <span className="text-sm text-gray-600">days</span>
-                              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">days</span>
+                              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-blue-500 rounded-full transition-all"
                                   style={{ width: `${Math.min((settings.retentionDays / 365) * 100, 100)}%` }}
@@ -497,7 +559,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                                 {settings.retentionDays}d
                               </span>
                             </div>
-                            <p className="mt-1.5 text-xs text-gray-400">
+                            <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
                               Items older than {settings.retentionDays} days will be marked as expired (7–365 days).
                             </p>
                           </div>
@@ -529,18 +591,36 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       >
                         <div className="flex flex-col sm:flex-row gap-3">
                           {[
-                            { label: "Export Users",       sub: "CSV",  icon: "👥" },
-                            { label: "Export Items",       sub: "CSV",  icon: "📦" },
-                            { label: "Export Claims",      sub: "CSV",  icon: "📋" },
+                            { label: "Export Users",  type: "users",  icon: (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                            )},
+                            { label: "Export Items",  type: "items",  icon: (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                              </svg>
+                            )},
+                            { label: "Export Claims", type: "claims", icon: (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                              </svg>
+                            )},
                           ].map(opt => (
-                            <button key={opt.label} type="button"
-                              onClick={() => addToast(`${opt.label} export started.`, "info")}
-                              className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-xl border border-gray-200
-                                hover:border-blue-300 hover:bg-blue-50 transition group text-left">
-                              <span className="text-xl">{opt.icon}</span>
+                            <button key={opt.type} type="button"
+                              onClick={() => handleExport(opt.type)}
+                              disabled={!!exportLoading[opt.type]}
+                              className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-600
+                                hover:border-blue-300 hover:bg-blue-50 dark:bg-gray-700 dark:hover:border-blue-500 dark:hover:bg-blue-900/20 transition group text-left
+                                disabled:opacity-60 disabled:cursor-not-allowed">
+                              <span className="text-blue-500 dark:text-blue-400 group-hover:text-blue-600 flex-shrink-0">
+                                {exportLoading[opt.type]
+                                  ? <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                  : opt.icon}
+                              </span>
                               <div>
-                                <p className="text-sm font-medium text-gray-800 group-hover:text-blue-700">{opt.label}</p>
-                                <p className="text-xs text-gray-400">{opt.sub} format</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">{opt.label}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">CSV format</p>
                               </div>
                             </button>
                           ))}
@@ -597,9 +677,9 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       </SectionCard>
 
                       {/* Danger zone */}
-                      <div className="bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-red-100 flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-red-200 dark:border-red-900/50 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-red-100 dark:border-red-900/30 flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
                             <DangerIcon className="text-red-500" />
                           </div>
                           <div>
@@ -614,17 +694,17 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                             { label: "Factory Reset Settings",     sub: "Resets all settings to their default values.", danger: true },
                           ].map(action => (
                             <div key={action.label} className="flex items-center justify-between gap-4 py-2.5
-                              [&:not(:last-child)]:border-b [&:not(:last-child)]:border-red-50">
+                              [&:not(:last-child)]:border-b [&:not(:last-child)]:border-red-50 dark:[&:not(:last-child)]:border-red-900/20">
                               <div>
-                                <p className="text-sm font-medium text-gray-800">{action.label}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">{action.sub}</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{action.label}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{action.sub}</p>
                               </div>
                               <button type="button"
                                 onClick={() => addToast(`"${action.label}" requires confirmation — this feature is restricted.`, "error")}
                                 className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-medium border transition
                                   ${action.danger
                                     ? "border-red-300 text-red-700 hover:bg-red-50"
-                                    : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
+                                    : "border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
                                 {action.danger ? "Reset" : "Clear"}
                               </button>
                             </div>
@@ -641,7 +721,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       title="System Information"
                       description="Technical details about this Lost & Found installation."
                     >
-                      <dl className="divide-y divide-gray-50">
+                      <dl className="divide-y divide-gray-50 dark:divide-gray-700">
                         {[
                           { label: "Application",     value: "UniFind Lost & Found" },
                           { label: "Version",         value: "1.0.0" },
@@ -653,8 +733,8 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                           { label: "Last Deploy",     value: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
                         ].map(row => (
                           <div key={row.label} className="flex justify-between py-3 gap-4">
-                            <dt className="text-sm text-gray-500 flex-shrink-0">{row.label}</dt>
-                            <dd className="text-sm font-medium text-gray-800 text-right break-all">{row.value}</dd>
+                            <dt className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{row.label}</dt>
+                            <dd className="text-sm font-medium text-gray-800 dark:text-gray-100 text-right break-all">{row.value}</dd>
                           </div>
                         ))}
                       </dl>
@@ -664,13 +744,13 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   {/* ── Sticky save footer (shown for all tabs except About) ── */}
                   {activeNav !== "about" && (
                     <div className="flex items-center justify-between pt-2 pb-4 gap-4">
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
                         {hasChanges ? "Unsaved changes present." : "All settings are up to date."}
                       </p>
                       <div className="flex items-center gap-3">
                         <button type="button" onClick={handleDiscard} disabled={!hasChanges || isSaving}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200
-                            rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600
+                            rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition">
                           Discard Changes
                         </button>
                         <button type="submit" disabled={isSaving || !hasChanges}

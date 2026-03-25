@@ -429,7 +429,21 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
   const formatDate = dateStr => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const d = new Date(dateStr);
+    if (isNaN(d)) return "—";
+    const day        = String(d.getDate()).padStart(2, "0");
+    const month      = String(d.getMonth() + 1).padStart(2, "0");
+    const year       = d.getFullYear();
+    const monthShort = d.toLocaleDateString("en-US", { month: "short" });
+    try {
+      const fmt = (JSON.parse(localStorage.getItem("adminSettings") || "{}")).dateFormat || "MMM DD, YYYY";
+      if (fmt === "DD/MM/YYYY") return `${day}/${month}/${year}`;
+      if (fmt === "MM/DD/YYYY") return `${month}/${day}/${year}`;
+      if (fmt === "YYYY-MM-DD") return `${year}-${month}-${day}`;
+      return `${monthShort} ${day}, ${year}`;
+    } catch {
+      return `${monthShort} ${day}, ${year}`;
+    }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

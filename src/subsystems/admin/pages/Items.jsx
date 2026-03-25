@@ -206,8 +206,22 @@ export default function AllItems({ activeSection, setActiveSection, sidebarOpen,
   
   // Format date for display
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    if (!dateString) return "—";
+    const d = new Date(dateString);
+    if (isNaN(d)) return "—";
+    const day        = String(d.getDate()).padStart(2, "0");
+    const month      = String(d.getMonth() + 1).padStart(2, "0");
+    const year       = d.getFullYear();
+    const monthShort = d.toLocaleDateString("en-US", { month: "short" });
+    try {
+      const fmt = (JSON.parse(localStorage.getItem("adminSettings") || "{}")).dateFormat || "MMM DD, YYYY";
+      if (fmt === "DD/MM/YYYY") return `${day}/${month}/${year}`;
+      if (fmt === "MM/DD/YYYY") return `${month}/${day}/${year}`;
+      if (fmt === "YYYY-MM-DD") return `${year}-${month}-${day}`;
+      return `${monthShort} ${day}, ${year}`;
+    } catch {
+      return `${monthShort} ${day}, ${year}`;
+    }
   };
   
   // Get unique categories for filter dropdown

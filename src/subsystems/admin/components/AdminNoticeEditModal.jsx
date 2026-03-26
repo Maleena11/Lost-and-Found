@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getTempUser } from '../../../shared/utils/tempUserAuth';
+import ItemImagePickerModal from '../../notice-management/components/ItemImagePickerModal';
 
 const URGENT_ITEMS = ['student-id', 'laptop', 'mobile-phone', 'atm-card', 'license'];
 
@@ -15,6 +16,7 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
   const [errors, setErrors]             = useState({ contactPhone: '', contactEmail: '' });
   const [tempUser, setTempUser]         = useState(null);
   const [dateError, setDateError]       = useState(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
 
   const phoneInputRegex = /^\d*$/;
   const emailValidRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,15 +78,9 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
     }
   };
 
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      Promise.all(files.map(file => new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      }))).then(fileData => setFormData(prev => ({ ...prev, attachments: [...prev.attachments, ...fileData] })));
-    }
+  const handleImagePickerSelect = (selectedImages) => {
+    setFormData(prev => ({ ...prev, attachments: [...prev.attachments, ...selectedImages] }));
+    setShowImagePicker(false);
   };
 
   const removeAttachment = (index) => {
@@ -364,14 +360,23 @@ export default function AdminNoticeEditModal({ notice, isOpen, onClose, onUpdate
 
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Add New Images</label>
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                multiple
-                accept="image/*"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
+              <p className="text-xs text-gray-400 mb-2">Select images from existing item reports to attach to this notice.</p>
+              <button
+                type="button"
+                onClick={() => setShowImagePicker(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-blue-400 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium text-sm shadow-sm"
+              >
+                <i className="fas fa-images"></i>
+                Select from Item Reports
+              </button>
             </div>
+
+            {showImagePicker && (
+              <ItemImagePickerModal
+                onSelect={handleImagePickerSelect}
+                onClose={() => setShowImagePicker(false)}
+              />
+            )}
 
             {/* Contact Phone */}
             <div>

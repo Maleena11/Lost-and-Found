@@ -383,6 +383,32 @@ export default function ItemBoard() {
 
                     {/* Detail Rows */}
                     <div className="space-y-4 mb-5">
+<<<<<<< HEAD
+                      {/* Description — hidden for found items to prevent fraudulent claims */}
+                      {selectedItem.itemType === "found" ? (
+                        <div className="flex gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i className="fas fa-shield-alt text-blue-500 text-xs"></i>
+                          </div>
+                          <div>
+                            <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-0.5">Description</p>
+                            <p className="text-xs text-blue-700 leading-relaxed bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                              Description is hidden for found items to protect against fraudulent claims. If this item belongs to you, please contact the finder directly using the details below.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-3">
+                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i className="fas fa-align-left text-gray-500 text-xs"></i>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Description</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{selectedItem.description}</p>
+                          </div>
+                        </div>
+                      )}
+=======
                       <div className="flex gap-3">
                         <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                           <i className="fas fa-align-left text-gray-500 text-xs"></i>
@@ -392,6 +418,7 @@ export default function ItemBoard() {
                           <p className="text-sm text-gray-700 leading-relaxed">{selectedItem.description}</p>
                         </div>
                       </div>
+>>>>>>> 38a11d005794d6bdabddce45ffde4285eb9f1baf
 
                       <div className="flex gap-3">
                         <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">

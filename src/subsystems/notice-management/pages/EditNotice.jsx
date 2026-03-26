@@ -4,6 +4,7 @@ import axios from 'axios';
 import Header from '../../../shared/components/Header';
 import Footer from '../../../shared/components/Footer';
 import { getTempUser } from "../../../shared/utils/tempUserAuth";
+import ItemImagePickerModal from '../components/ItemImagePickerModal';
 
 export default function EditNotice() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function EditNotice() {
   const [dateError, setDateError] = useState(null); // Add this state if not present
   const [phoneError, setPhoneError] = useState(null);
   const [emailError, setEmailError] = useState(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -158,25 +160,12 @@ export default function EditNotice() {
     setError && setError(null);
   };
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    
-    if (files.length > 0) {
-      Promise.all(
-        files.map(file => {
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(file);
-          });
-        })
-      ).then(fileData => {
-        setFormData({
-          ...formData,
-          attachments: [...formData.attachments, ...fileData]
-        });
-      });
-    }
+  const handleImagePickerSelect = (selectedImages) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: [...prev.attachments, ...selectedImages]
+    }));
+    setShowImagePicker(false);
   };
 
   const removeAttachment = (indexToRemove) => {
@@ -505,16 +494,26 @@ export default function EditNotice() {
 
             {/* Add new attachments */}
             <div className="mb-6">
-              <label htmlFor="attachments" className="block text-gray-700 font-medium mb-2">Add New Attachments</label>
-              <input
-                type="file"
-                id="attachments"
-                name="attachments"
-                onChange={handleFileChange}
-                multiple
-                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <label className="block text-gray-700 font-medium mb-2">Add Images from Item Reports</label>
+              <p className="text-xs text-gray-400 mb-2">
+                Select images from existing item reports to attach to this notice.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowImagePicker(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-blue-400 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium text-sm shadow-sm"
+              >
+                <i className="fas fa-images"></i>
+                Select from Item Reports
+              </button>
             </div>
+
+            {showImagePicker && (
+              <ItemImagePickerModal
+                onSelect={handleImagePickerSelect}
+                onClose={() => setShowImagePicker(false)}
+              />
+            )}
 
             {/* Date error message */}
             {dateError && (

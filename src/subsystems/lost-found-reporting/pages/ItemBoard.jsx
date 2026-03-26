@@ -5,15 +5,34 @@ import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import { getTempUser } from "../../../shared/utils/tempUserAuth";
 
+const CATEGORIES = {
+  "student-id": "Student ID / Access Card",
+  "laptop-tablet": "Laptop / Tablet",
+  "books-notes": "Books & Lecture Notes",
+  "stationery": "Stationery / USB Drive",
+  "electronics": "Electronics",
+  "lab-equipment": "Lab Equipment",
+  "sports-equipment": "Sports Equipment",
+  "clothing": "Clothing",
+  "jewelry": "Jewelry / Accessories",
+  "keys": "Keys",
+  "wallet": "Wallet / Purse",
+  "documents": "Documents / Certificates",
+  "water-bottle": "Water Bottle / Lunch Box",
+  "other": "Other",
+};
+
 export default function ItemBoard() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedItem, setSelectedItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [tempUser, setTempUser] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     const user = getTempUser();
@@ -37,6 +56,7 @@ export default function ItemBoard() {
 
   const openItemDetails = (item) => {
     setSelectedItem(item);
+    setActiveImageIndex(0);
     setShowModal(true);
   };
 
@@ -65,8 +85,9 @@ export default function ItemBoard() {
 
   const filteredItems = items
     .filter(item => {
-      if (activeTab === "all") return true;
-      return item.itemType === activeTab;
+      const typeMatch = activeTab === "all" || item.itemType === activeTab;
+      const categoryMatch = selectedCategory === "all" || item.category === selectedCategory;
+      return typeMatch && categoryMatch;
     })
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -188,6 +209,36 @@ export default function ItemBoard() {
           ))}
         </div>
 
+        {/* Category Filter */}
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <span className="text-sm text-gray-500 font-medium flex items-center gap-1.5 mr-1">
+            <i className="fas fa-filter text-gray-400 text-xs"></i> Category:
+          </span>
+          <button
+            onClick={() => setSelectedCategory("all")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              selectedCategory === "all"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            All Categories
+          </button>
+          {Object.entries(CATEGORIES).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setSelectedCategory(key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedCategory === key
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Item Grid / States */}
         {loading ? (
           <div className="flex flex-col justify-center items-center h-64 gap-3">
@@ -204,7 +255,9 @@ export default function ItemBoard() {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
               <i className="fas fa-inbox text-2xl text-gray-300"></i>
             </div>
-            <p className="text-gray-600 font-medium">No {activeTab === "all" ? "" : activeTab} items found.</p>
+            <p className="text-gray-600 font-medium">
+              No {activeTab === "all" ? "" : activeTab} items{selectedCategory !== "all" ? ` in "${CATEGORIES[selectedCategory]}"` : ""} found.
+            </p>
             <p className="text-sm text-gray-400">Be the first to report one!</p>
             <Link
               to="/report-item"
@@ -307,7 +360,7 @@ export default function ItemBoard() {
                   <div className="md:w-5/12">
                     {selectedItem.images && selectedItem.images.length > 0 ? (
                       <img
-                        src={selectedItem.images[0]}
+                        src={selectedItem.images[activeImageIndex]}
                         alt={selectedItem.itemName}
                         className="w-full h-52 object-cover rounded-xl mb-3 border border-gray-100"
                       />
@@ -318,16 +371,25 @@ export default function ItemBoard() {
                       </div>
                     )}
 
-                    {/* Additional images */}
+                    {/* Thumbnail strip — click to swap main image */}
                     {selectedItem.images && selectedItem.images.length > 1 && (
-                      <div className="grid grid-cols-4 gap-2">
-                        {selectedItem.images.slice(1).map((img, idx) => (
-                          <img
+                      <div className="flex gap-2">
+                        {selectedItem.images.map((img, idx) => (
+                          <button
                             key={idx}
-                            src={img}
-                            alt={`View ${idx + 2}`}
-                            className="w-full h-14 object-cover rounded-lg border border-gray-100"
-                          />
+                            onClick={() => setActiveImageIndex(idx)}
+                            className={`flex-1 rounded-lg overflow-hidden border-2 transition-all ${
+                              activeImageIndex === idx
+                                ? "border-blue-500 shadow-md"
+                                : "border-gray-100 hover:border-gray-300"
+                            }`}
+                          >
+                            <img
+                              src={img}
+                              alt={`View ${idx + 1}`}
+                              className="w-full h-14 object-cover"
+                            />
+                          </button>
                         ))}
                       </div>
                     )}

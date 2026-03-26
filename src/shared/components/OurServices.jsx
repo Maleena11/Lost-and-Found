@@ -97,17 +97,11 @@ return (
                         Join thousands of students who have successfully recovered their lost items through our platform.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a
-                            href="http://localhost:5173/report-item"
-                            className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-center"
-                        >
-                            Report Lost Item
-                        </a>
                         <button
-                            onClick={() => navigate('/notice?tab=found')}
+                            onClick={() => navigate('/item-board')}
                             className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors"
                         >
-                            Search Found Items
+                            Search All Items
                         </button>
                     </div>
                 </div>

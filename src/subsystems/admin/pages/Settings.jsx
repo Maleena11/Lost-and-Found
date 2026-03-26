@@ -51,15 +51,15 @@ function Toggle({ checked, onChange, disabled }) {
 }
 
 // ─── Section Card ─────────────────────────────────────────────────────────────
-function SectionCard({ icon, title, description, children }) {
+function SectionCard({ icon, title, description, children, iconBg = "bg-blue-100", topBorder = "border-t-blue-500" }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 border-t-2 ${topBorder} shadow-sm overflow-hidden`}>
       <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0`}>
           {icon}
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
         </div>
       </div>
@@ -121,12 +121,12 @@ function ToggleRow({ label, description, name, checked, onChange, disabled }) {
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "general",       label: "General",        icon: <CogIcon /> },
-  { id: "notifications", label: "Notifications",  icon: <BellIcon /> },
-  { id: "display",       label: "Display",        icon: <DisplayIcon /> },
-  { id: "data",          label: "Data & Retention",icon: <DatabaseIcon /> },
-  { id: "security",      label: "Security",       icon: <ShieldIcon /> },
-  { id: "about",         label: "About",          icon: <InfoIcon className="w-4 h-4" /> },
+  { id: "general",       label: "General",          icon: <CogIcon />,                      activeBg: "bg-blue-50 dark:bg-blue-900/30",    activeText: "text-blue-700 dark:text-blue-400",    iconActive: "text-blue-600",    iconBg: "bg-blue-100",    topBorder: "border-t-blue-500"    },
+  { id: "notifications", label: "Notifications",    icon: <BellIcon />,                     activeBg: "bg-amber-50 dark:bg-amber-900/30",  activeText: "text-amber-700 dark:text-amber-400",  iconActive: "text-amber-600",   iconBg: "bg-amber-100",   topBorder: "border-t-amber-500"   },
+  { id: "display",       label: "Display",           icon: <DisplayIcon />,                  activeBg: "bg-violet-50 dark:bg-violet-900/30",activeText: "text-violet-700 dark:text-violet-400",iconActive: "text-violet-600",  iconBg: "bg-violet-100",  topBorder: "border-t-violet-500"  },
+  { id: "data",          label: "Data & Retention",  icon: <DatabaseIcon />,                 activeBg: "bg-emerald-50 dark:bg-emerald-900/30",activeText: "text-emerald-700 dark:text-emerald-400",iconActive: "text-emerald-600",iconBg: "bg-emerald-100",topBorder: "border-t-emerald-500" },
+  { id: "security",      label: "Security",          icon: <ShieldIcon />,                   activeBg: "bg-red-50 dark:bg-red-900/30",      activeText: "text-red-700 dark:text-red-400",      iconActive: "text-red-600",     iconBg: "bg-red-100",     topBorder: "border-t-red-500"     },
+  { id: "about",         label: "About",             icon: <InfoIcon className="w-4 h-4" />, activeBg: "bg-sky-50 dark:bg-sky-900/30",      activeText: "text-sky-700 dark:text-sky-400",      iconActive: "text-sky-600",     iconBg: "bg-sky-100",     topBorder: "border-t-sky-500"     },
 ];
 
 // ─── Default settings ─────────────────────────────────────────────────────────
@@ -316,13 +316,18 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
           )}
 
           {/* Page Header Banner */}
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 mx-4 mt-4 rounded-2xl px-5 py-5 shadow-lg shadow-blue-200 flex items-center gap-4 flex-shrink-0">
+          <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 mx-4 mt-4 rounded-2xl px-5 py-5 shadow-lg shadow-indigo-200 flex items-center gap-4 flex-shrink-0">
             <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
               <i className="fas fa-cog text-white text-lg"></i>
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-xl font-extrabold text-white tracking-tight">System Settings</h2>
-              <p className="text-xs text-blue-100 mt-0.5">Configure and manage system-wide settings</p>
+              <p className="text-xs text-indigo-200 mt-0.5">Configure and manage system-wide preferences</p>
+            </div>
+            <div className="hidden sm:flex gap-2">
+              {NAV.map(n => (
+                <div key={n.id} className={`w-2 h-2 rounded-full transition-all ${activeNav === n.id ? "bg-white scale-125" : "bg-white/30"}`} />
+              ))}
             </div>
           </div>
 
@@ -337,10 +342,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   onClick={() => handleNav(n.id)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left
                     ${activeNav === n.id
-                      ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                      ? `${n.activeBg} ${n.activeText}`
                       : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"}`}
                 >
-                  <span className={`flex-shrink-0 ${activeNav === n.id ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}>
+                  <span className={`flex-shrink-0 ${activeNav === n.id ? n.iconActive : "text-gray-400 dark:text-gray-500"}`}>
                     {n.icon}
                   </span>
                   {n.label}
@@ -377,6 +382,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                         icon={<CogIcon className="text-blue-600" />}
                         title="System Identity"
                         description="Basic information that identifies this Lost & Found system."
+                        iconBg="bg-blue-100" topBorder="border-t-blue-500"
                       >
                         <div className="space-y-5">
                           <InputField label="System Name" name="systemName" value={settings.systemName}
@@ -396,6 +402,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       <SectionCard
                         icon={<GlobeIcon className="text-blue-600" />}
                         title="Localisation"
+                        iconBg="bg-blue-100" topBorder="border-t-blue-500"
                         description="Time zone and language preferences for the system."
                       >
                         <div className="space-y-5">
@@ -426,9 +433,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   {activeNav === "notifications" && (
                     <>
                       <SectionCard
-                        icon={<BellIcon className="text-blue-600" />}
+                        icon={<BellIcon className="text-amber-600" />}
                         title="Notification Channels"
                         description="Choose how the system sends alerts to administrators and users."
+                        iconBg="bg-amber-100" topBorder="border-t-amber-500"
                       >
                         <div>
                           <ToggleRow label="Email Notifications" name="emailNotifications"
@@ -444,9 +452,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       </SectionCard>
 
                       <SectionCard
-                        icon={<BellRingIcon className="text-blue-600" />}
+                        icon={<BellRingIcon className="text-amber-600" />}
                         title="Notification Triggers"
                         description="Select which events should trigger notifications."
+                        iconBg="bg-amber-100" topBorder="border-t-amber-500"
                       >
                         <div>
                           <ToggleRow label="New Item Reported"
@@ -471,9 +480,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   {/* ════════════════ DISPLAY ════════════════ */}
                   {activeNav === "display" && (
                     <SectionCard
-                      icon={<DisplayIcon className="text-blue-600" />}
+                      icon={<DisplayIcon className="text-violet-600" />}
                       title="Display Preferences"
                       description="Control how data and dates are presented in the dashboard."
+                      iconBg="bg-violet-100" topBorder="border-t-violet-500"
                     >
                       <div className="space-y-5">
                         <SelectField label="Items Per Page" name="itemsPerPage"
@@ -528,9 +538,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   {activeNav === "data" && (
                     <>
                       <SectionCard
-                        icon={<DatabaseIcon className="text-blue-600" />}
+                        icon={<DatabaseIcon className="text-emerald-600" />}
                         title="Item Retention Policy"
                         description="Define how long items are kept before they are automatically expired or archived."
+                        iconBg="bg-emerald-100" topBorder="border-t-emerald-500"
                       >
                         <div className="space-y-5">
                           <div>
@@ -551,7 +562,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                               <span className="text-sm text-gray-600 dark:text-gray-400">days</span>
                               <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-blue-500 rounded-full transition-all"
+                                  className="h-full bg-emerald-500 rounded-full transition-all"
                                   style={{ width: `${Math.min((settings.retentionDays / 365) * 100, 100)}%` }}
                                 />
                               </div>
@@ -570,7 +581,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                             checked={settings.autoArchive} onChange={handleChange} />
 
                           {settings.autoArchive && (
-                            <div className="pl-4 border-l-2 border-blue-100">
+                            <div className="pl-4 border-l-2 border-emerald-200">
                               <SelectField label="Archive After (days post-expiry)" name="archiveAfterDays"
                                 value={settings.archiveAfterDays} onChange={handleChange}
                                 hint="Items are archived this many days after their expiry date.">
@@ -585,9 +596,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       </SectionCard>
 
                       <SectionCard
-                        icon={<ExportIcon className="text-blue-600" />}
+                        icon={<ExportIcon className="text-emerald-600" />}
                         title="Data Export"
                         description="Download a snapshot of system data for backup or auditing."
+                        iconBg="bg-emerald-100" topBorder="border-t-emerald-500"
                       >
                         <div className="flex flex-col sm:flex-row gap-3">
                           {[
@@ -633,9 +645,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   {activeNav === "security" && (
                     <>
                       <SectionCard
-                        icon={<ShieldIcon className="text-blue-600" />}
+                        icon={<ShieldIcon className="text-red-600" />}
                         title="Session & Access"
                         description="Control how long admin sessions stay active and access policies."
+                        iconBg="bg-red-100" topBorder="border-t-red-500"
                       >
                         <div className="space-y-5">
                           <SelectField label="Session Timeout" name="sessionTimeout"
@@ -656,9 +669,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       </SectionCard>
 
                       <SectionCard
-                        icon={<LockIcon className="text-blue-600" />}
+                        icon={<LockIcon className="text-red-600" />}
                         title="Password Policy"
                         description="Set requirements for user and admin account passwords."
+                        iconBg="bg-red-100" topBorder="border-t-red-500"
                       >
                         <div className="space-y-5">
                           <SelectField label="Minimum Password Length" name="minPasswordLength"
@@ -717,9 +731,10 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   {/* ════════════════ ABOUT ════════════════ */}
                   {activeNav === "about" && (
                     <SectionCard
-                      icon={<InfoIcon className="w-5 h-5 text-blue-600" />}
+                      icon={<InfoIcon className="w-5 h-5 text-sky-600" />}
                       title="System Information"
                       description="Technical details about this Lost & Found installation."
+                      iconBg="bg-sky-100" topBorder="border-t-sky-500"
                     >
                       <dl className="divide-y divide-gray-50 dark:divide-gray-700">
                         {[

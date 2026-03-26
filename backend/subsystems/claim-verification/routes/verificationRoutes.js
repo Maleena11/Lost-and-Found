@@ -8,7 +8,9 @@ const {
   updateApprovalStages,
   deleteVerificationRequest,
   getVerificationRequestsByItem,
-  getVerificationRequestsByEmail
+  getVerificationRequestsByEmail,
+  confirmCollection,
+  regeneratePin
 } = require('../controllers/verificationController');
 
 // Create new verification request
@@ -34,5 +36,11 @@ router.get('/item/:itemId', getVerificationRequestsByItem);
 
 // Get verification requests by claimant email (user account page)
 router.get('/user/:email', getVerificationRequestsByEmail);
+
+// Confirm student collected item using their collection PIN
+router.post('/:id/confirm-collection', confirmCollection);
+
+// Regenerate collection PIN for an approved claim
+router.patch('/:id/regenerate-pin', regeneratePin);
 
 module.exports = router;

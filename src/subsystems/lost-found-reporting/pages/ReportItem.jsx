@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import axios from "axios";
 import { getTempUser } from "../../../shared/utils/tempUserAuth"; // Import the temp user utility
 
 export default function ReportItem() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     itemType: "lost", // Default to lost item
     itemName: "",
@@ -299,6 +301,8 @@ export default function ReportItem() {
         type: "success"
       });
 
+      setTimeout(() => navigate('/item-board'), 1500);
+
       // Reset the form after successful submission but keep user contact info
       setFormData({
         itemType: "lost",
@@ -333,18 +337,64 @@ export default function ReportItem() {
       <Header />
 
       {/* Page Banner */}
-      <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white py-8 px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-2 text-blue-200 text-sm mb-2">
-            <i className="fas fa-home text-xs"></i>
-            <span>Home</span>
-            <i className="fas fa-chevron-right text-xs"></i>
-            <span className="text-white font-medium">Report Item</span>
+      <div className="bg-gradient-to-r from-blue-800 via-blue-900 to-indigo-950 text-white py-12 px-6 relative overflow-hidden">
+        {/* Dot grid background */}
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        {/* Right fade overlay */}
+        <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-indigo-900/60 to-transparent hidden lg:block" />
+
+        <div className="max-w-7xl mx-auto relative">
+          <div className="flex items-center justify-between gap-8">
+
+            {/* Left: text content */}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-blue-300 text-xs mb-3">
+                <i className="fas fa-home text-xs"></i>
+                <span>Home</span>
+                <i className="fas fa-chevron-right text-xs"></i>
+                <span className="text-white font-medium">Report Item</span>
+              </div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-clipboard-list text-white text-lg"></i>
+                </div>
+                <h1 className="text-3xl font-extrabold tracking-tight">Lost & Found Report</h1>
+              </div>
+              <p className="text-blue-300 text-sm leading-relaxed max-w-xl">
+                Submit a report to help reunite lost items with their owners across campus.
+              </p>
+              {/* Step indicators */}
+              <div className="flex flex-wrap gap-3 mt-5">
+                {[
+                  { label: "Report Type", icon: "fa-flag" },
+                  { label: "Item Details", icon: "fa-tag" },
+                  { label: "Academic Info", icon: "fa-university" },
+                  { label: "Contact & Photos", icon: "fa-user" },
+                ].map((step, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
+                      <i className={`fas ${step.icon} text-blue-300`}></i>
+                      <span className="hidden sm:inline">{step.label}</span>
+                      <span className="sm:hidden">{idx + 1}</span>
+                    </div>
+                    {idx < 3 && <i className="fas fa-chevron-right text-blue-600 text-xs flex-shrink-0"></i>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: CTA Button */}
+            <div className="hidden lg:flex flex-shrink-0">
+              <Link
+                to="/item-board"
+                className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-lg"
+              >
+                <i className="fas fa-clipboard-list"></i>
+                View Item Catalogue
+              </Link>
+            </div>
+
           </div>
-          <h1 className="text-2xl font-bold mb-1">Lost & Found Report</h1>
-          <p className="text-blue-200 text-sm">
-            Submit a report to help reunite lost items with their owners across campus.
-          </p>
         </div>
       </div>
 
@@ -367,52 +417,57 @@ export default function ReportItem() {
 
             {/* Report Type Selection */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-base font-semibold text-gray-800 mb-1">What would you like to report?</h2>
-              <p className="text-xs text-gray-500 mb-4">Select whether you lost an item or found one on campus.</p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                <h2 className="text-base font-semibold text-gray-800">What would you like to report?</h2>
+              </div>
+              <p className="text-xs text-gray-500 mb-5 ml-7">Select whether you lost an item or found one on campus.</p>
               <div className="grid grid-cols-2 gap-4">
-                <label className={`flex flex-col items-center justify-center p-5 rounded-xl border-2 cursor-pointer transition-all ${
+                <label className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${
                   formData.itemType === 'lost'
-                    ? 'border-red-400 bg-red-50'
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                    ? 'border-red-400 bg-red-50 shadow-sm shadow-red-100'
+                    : 'border-gray-200 bg-gray-50 hover:border-red-200 hover:bg-red-50/50'
                 }`}>
-                  <input
-                    type="radio"
-                    name="itemType"
-                    value="lost"
-                    checked={formData.itemType === "lost"}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <i className={`fas fa-search-minus text-2xl mb-2 ${formData.itemType === 'lost' ? 'text-red-500' : 'text-gray-300'}`}></i>
-                  <span className={`font-semibold text-sm ${formData.itemType === 'lost' ? 'text-red-700' : 'text-gray-500'}`}>I Lost an Item</span>
-                  <span className="text-xs mt-1 text-gray-400 text-center">Report something you've lost</span>
+                  <input type="radio" name="itemType" value="lost" checked={formData.itemType === "lost"} onChange={handleChange} className="sr-only" />
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 transition-all ${formData.itemType === 'lost' ? 'bg-red-100' : 'bg-gray-100 group-hover:bg-red-50'}`}>
+                    <i className={`fas fa-search-minus text-2xl ${formData.itemType === 'lost' ? 'text-red-500' : 'text-gray-300 group-hover:text-red-300'}`}></i>
+                  </div>
+                  <span className={`font-bold text-sm ${formData.itemType === 'lost' ? 'text-red-700' : 'text-gray-500'}`}>I Lost an Item</span>
+                  <span className="text-xs mt-1.5 text-gray-400 text-center leading-relaxed">Report something you've lost on campus</span>
+                  {formData.itemType === 'lost' && (
+                    <div className="mt-3 flex items-center gap-1 text-red-500">
+                      <i className="fas fa-check-circle text-sm"></i>
+                      <span className="text-xs font-medium">Selected</span>
+                    </div>
+                  )}
                 </label>
 
-                <label className={`flex flex-col items-center justify-center p-5 rounded-xl border-2 cursor-pointer transition-all ${
+                <label className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${
                   formData.itemType === 'found'
-                    ? 'border-green-400 bg-green-50'
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                    ? 'border-green-400 bg-green-50 shadow-sm shadow-green-100'
+                    : 'border-gray-200 bg-gray-50 hover:border-green-200 hover:bg-green-50/50'
                 }`}>
-                  <input
-                    type="radio"
-                    name="itemType"
-                    value="found"
-                    checked={formData.itemType === "found"}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <i className={`fas fa-hand-holding text-2xl mb-2 ${formData.itemType === 'found' ? 'text-green-500' : 'text-gray-300'}`}></i>
-                  <span className={`font-semibold text-sm ${formData.itemType === 'found' ? 'text-green-700' : 'text-gray-500'}`}>I Found an Item</span>
-                  <span className="text-xs mt-1 text-gray-400 text-center">Report something you've found</span>
+                  <input type="radio" name="itemType" value="found" checked={formData.itemType === "found"} onChange={handleChange} className="sr-only" />
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 transition-all ${formData.itemType === 'found' ? 'bg-green-100' : 'bg-gray-100 group-hover:bg-green-50'}`}>
+                    <i className={`fas fa-hand-holding text-2xl ${formData.itemType === 'found' ? 'text-green-500' : 'text-gray-300 group-hover:text-green-300'}`}></i>
+                  </div>
+                  <span className={`font-bold text-sm ${formData.itemType === 'found' ? 'text-green-700' : 'text-gray-500'}`}>I Found an Item</span>
+                  <span className="text-xs mt-1.5 text-gray-400 text-center leading-relaxed">Report something you've found on campus</span>
+                  {formData.itemType === 'found' && (
+                    <div className="mt-3 flex items-center gap-1 text-green-500">
+                      <i className="fas fa-check-circle text-sm"></i>
+                      <span className="text-xs font-medium">Selected</span>
+                    </div>
+                  )}
                 </label>
               </div>
             </div>
 
             {/* Item Details Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 border-l-4 border-l-blue-500 border-r-4 border-r-blue-500">
               <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-                <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-tag text-blue-600 text-sm"></i>
+                <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-blue-200">
+                  <span className="text-white font-bold text-sm">2</span>
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-gray-800">Item Details</h2>
@@ -538,10 +593,10 @@ export default function ReportItem() {
             </div>
 
             {/* Academic Information Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 border-l-4 border-l-indigo-500 border-r-4 border-r-indigo-500">
               <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-                <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-university text-indigo-500 text-sm"></i>
+                <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-indigo-200">
+                  <span className="text-white font-bold text-sm">3</span>
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-gray-800">Academic Information</h2>
@@ -658,10 +713,10 @@ export default function ReportItem() {
             </div>
 
             {/* Contact Information Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 border-l-4 border-l-orange-400 border-r-4 border-r-orange-400">
               <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-                <div className="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-user text-orange-500 text-sm"></i>
+                <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-orange-200">
+                  <span className="text-white font-bold text-sm">4</span>
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-gray-800">Student Contact Information</h2>
@@ -672,58 +727,73 @@ export default function ReportItem() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block mb-1.5 text-sm font-medium text-gray-700">Full Name <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    name="contactInfo.name"
-                    value={formData.contactInfo.name}
-                    onChange={(e) => {
-                      const titled = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
-                      const regex = /^[a-zA-Z0-9 !@#$%^&*()_+={}\[\]:;"'<>.,?/-]*$/;
-                      if (regex.test(titled)) handleChange({ target: { name: e.target.name, value: titled } });
-                    }}
-                    placeholder="Your full name"
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactName ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <i className="fas fa-user text-gray-400 text-sm"></i>
+                    </div>
+                    <input
+                      type="text"
+                      name="contactInfo.name"
+                      value={formData.contactInfo.name}
+                      onChange={(e) => {
+                        const titled = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
+                        const regex = /^[a-zA-Z0-9 !@#$%^&*()_+={}\[\]:;"'<>.,?/-]*$/;
+                        if (regex.test(titled)) handleChange({ target: { name: e.target.name, value: titled } });
+                      }}
+                      placeholder="Your full name"
+                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactName ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
+                    />
+                  </div>
                   {errors.contactName && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactName}</p>}
                 </div>
                 <div>
                   <label className="block mb-1.5 text-sm font-medium text-gray-700">Phone Number <span className="text-red-500">*</span></label>
-                  <input
-                    type="tel"
-                    name="contactInfo.phone"
-                    value={formData.contactInfo.phone}
-                    onChange={(e) => {
-                      const regex = /^[0-9]{0,10}$/;
-                      if (regex.test(e.target.value)) handleChange(e);
-                    }}
-                    placeholder="07X XXX XXXX"
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactPhone ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <i className="fas fa-phone text-gray-400 text-sm"></i>
+                    </div>
+                    <input
+                      type="tel"
+                      name="contactInfo.phone"
+                      value={formData.contactInfo.phone}
+                      onChange={(e) => {
+                        const regex = /^[0-9]{0,10}$/;
+                        if (regex.test(e.target.value)) handleChange(e);
+                      }}
+                      placeholder="07X XXX XXXX"
+                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactPhone ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
+                    />
+                  </div>
                   {errors.contactPhone && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactPhone}</p>}
                 </div>
               </div>
               <div className="mt-5">
                 <label className="block mb-1.5 text-sm font-medium text-gray-700">University Email <span className="text-red-500">*</span></label>
-                <input
-                  type="email"
-                  name="contactInfo.email"
-                  value={formData.contactInfo.email}
-                  onChange={(e) => {
-                    const regex = /^[a-zA-Z0-9@.]*$/;
-                    if (regex.test(e.target.value)) handleChange(e);
-                  }}
-                  placeholder="it12345678@my.sliit.lk"
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactEmail ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <i className="fas fa-envelope text-gray-400 text-sm"></i>
+                  </div>
+                  <input
+                    type="email"
+                    name="contactInfo.email"
+                    value={formData.contactInfo.email}
+                    onChange={(e) => {
+                      const regex = /^[a-zA-Z0-9@.]*$/;
+                      if (regex.test(e.target.value)) handleChange(e);
+                    }}
+                    placeholder="it12345678@my.sliit.lk"
+                    className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactEmail ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
+                  />
+                </div>
                 {errors.contactEmail && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactEmail}</p>}
               </div>
             </div>
 
             {/* Image Upload Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 border-l-4 border-l-purple-500 border-r-4 border-r-purple-500">
               <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-                <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-camera text-purple-500 text-sm"></i>
+                <div className="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-purple-200">
+                  <i className="fas fa-camera text-white text-sm"></i>
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-gray-800">
@@ -736,70 +806,82 @@ export default function ReportItem() {
                       : 'Photos help identify the item faster — up to 2 (optional)'}
                   </p>
                 </div>
-                <span className="ml-auto text-xs font-medium text-gray-400">{formData.images.length}/2</span>
+                <span className={`ml-auto text-xs font-semibold px-2.5 py-1 rounded-full ${formData.images.length >= 2 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {formData.images.length}/2
+                </span>
               </div>
 
               {formData.images.length < 2 && (
-                <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all ${errors.images ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                  <i className="fas fa-cloud-upload-alt text-3xl text-gray-300 mb-2"></i>
-                  <span className="text-sm text-gray-500 font-medium">Click to upload photos</span>
-                  <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG supported · max 2 photos</span>
+                <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-200 ${errors.images ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50'}`}>
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${errors.images ? 'bg-red-100' : 'bg-gray-100'}`}>
+                    <i className={`fas fa-cloud-upload-alt text-xl ${errors.images ? 'text-red-400' : 'text-gray-400'}`}></i>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-600">Click to upload photos</span>
+                  <span className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG · max 2 photos</span>
+                  <span className="text-xs text-gray-300 mt-1">{2 - formData.images.length} slot{2 - formData.images.length !== 1 ? 's' : ''} remaining</span>
                   <input type="file" onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
                 </label>
               )}
               {errors.images && <p className="mt-2 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.images}</p>}
 
               {formData.images.length > 0 && (
-                <div className="mt-4 flex gap-3 flex-wrap">
-                  {formData.images.map((img, index) => (
-                    <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 group flex-shrink-0">
-                      <img
-                        src={img}
-                        alt={`Preview ${index + 1}`}
-                        className="h-full w-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                        <label className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center cursor-pointer hover:bg-white transition-colors" title="Replace image">
-                          <i className="fas fa-sync-alt text-blue-600 text-xs"></i>
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleReplaceImage(e, index)} />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(index)}
-                          className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
-                          title="Remove image"
-                        >
-                          <i className="fas fa-trash text-red-500 text-xs"></i>
-                        </button>
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Uploaded Photos</p>
+                  <div className="flex gap-3 flex-wrap">
+                    {formData.images.map((img, index) => (
+                      <div key={index} className="relative w-28 h-28 rounded-xl overflow-hidden border-2 border-gray-200 group flex-shrink-0 shadow-sm">
+                        <img src={img} alt={`Preview ${index + 1}`} className="h-full w-full object-cover" />
+                        <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <label className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center cursor-pointer hover:bg-white transition-colors shadow" title="Replace image">
+                            <i className="fas fa-sync-alt text-blue-600 text-xs"></i>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleReplaceImage(e, index)} />
+                          </label>
+                          <button type="button" onClick={() => handleRemoveImage(index)} className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow" title="Remove image">
+                            <i className="fas fa-trash text-red-500 text-xs"></i>
+                          </button>
+                        </div>
+                        <div className="absolute bottom-1.5 left-1.5 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-md font-medium">{index + 1}</div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                    <i className="fas fa-info-circle text-blue-400"></i>
+                    Hover over a photo to replace or remove it.
+                  </p>
                 </div>
               )}
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`w-full py-4 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm ${
-                formData.itemType === 'lost'
-                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {isSubmitting ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  Submitting Report...
-                </>
-              ) : (
-                <>
-                  <i className={`fas ${formData.itemType === 'lost' ? 'fa-search-minus' : 'fa-hand-holding'}`}></i>
-                  Submit {formData.itemType === 'lost' ? 'Lost' : 'Found'} Item Report
-                </>
-              )}
-            </button>
+            {/* Submit Section */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className={`flex items-start gap-3 p-4 rounded-xl mb-5 ${formData.itemType === 'lost' ? 'bg-red-50 border border-red-100' : 'bg-green-50 border border-green-100'}`}>
+                <i className={`fas fa-info-circle mt-0.5 flex-shrink-0 ${formData.itemType === 'lost' ? 'text-red-400' : 'text-green-400'}`}></i>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  By submitting this report, your contact information will be used solely to assist in reuniting you with the {formData.itemType === 'lost' ? 'lost' : 'found'} item. All information is handled in accordance with SLIIT's campus policies.
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2.5 text-sm ${
+                  formData.itemType === 'lost'
+                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-200'
+                    : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-green-200'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    Submitting Report...
+                  </>
+                ) : (
+                  <>
+                    <i className={`fas ${formData.itemType === 'lost' ? 'fa-search-minus' : 'fa-hand-holding'}`}></i>
+                    Submit {formData.itemType === 'lost' ? 'Lost' : 'Found'} Item Report
+                  </>
+                )}
+              </button>
+            </div>
 
           </form>
         </div>

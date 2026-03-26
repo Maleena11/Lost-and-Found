@@ -281,4 +281,231 @@ const sendClaimConfirmation = async (toEmail, { claimantName, claimRef, itemName
   }
 };
 
-module.exports = { sendNoticeNotification, sendArchiveNotification, sendClaimConfirmation };
+// Sent when a claim is approved — includes the 6-digit collection PIN
+const sendApprovalWithPin = async (toEmail, { claimantName, claimRef, itemName, collectionPin, expiryDate }) => {
+  const transport = await getTransporter();
+
+  const formattedExpiry = new Date(expiryDate).toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 24px; border-radius: 12px;">
+
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #059669, #047857); padding: 28px 32px; border-radius: 10px 10px 0 0; text-align: center;">
+        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+          <span style="font-size: 24px;">✓</span>
+        </div>
+        <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">Claim Approved!</h1>
+        <p style="color: #a7f3d0; margin: 6px 0 0 0; font-size: 13px;">SLIIT Lost &amp; Found — Student Services</p>
+      </div>
+
+      <!-- Body -->
+      <div style="background: white; padding: 32px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+
+        <p style="color: #374151; font-size: 15px; margin: 0 0 12px 0;">
+          Hi <strong>${claimantName}</strong>,
+        </p>
+        <p style="color: #4b5563; font-size: 14px; line-height: 1.7; margin: 0 0 24px 0;">
+          Great news! Your ownership claim for <strong>${itemName}</strong> has been <strong style="color: #059669;">approved</strong>.
+          Please visit the <strong>Student Services Office</strong> to collect your item.
+        </p>
+
+        <!-- Collection PIN box -->
+        <div style="background: linear-gradient(135deg, #065f46, #047857); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <p style="color: #a7f3d0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; margin: 0 0 8px 0;">
+            Your Collection PIN
+          </p>
+          <p style="color: white; font-size: 40px; font-family: 'Courier New', monospace; font-weight: 900; letter-spacing: 0.3em; margin: 0 0 8px 0;">
+            ${collectionPin}
+          </p>
+          <p style="color: #6ee7b7; font-size: 12px; margin: 0;">
+            Show this PIN to the office staff when collecting your item
+          </p>
+          <div style="margin-top: 12px; padding: 8px 16px; background: rgba(0,0,0,0.2); border-radius: 8px; display: inline-block;">
+            <p style="color: #fbbf24; font-size: 11px; margin: 0;">
+              ⏰ Expires on: <strong>${formattedExpiry}</strong>
+            </p>
+          </div>
+        </div>
+
+        <!-- Claim summary -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+          <tr>
+            <td style="padding: 10px 14px; background: #f1f5f9; border-radius: 6px 6px 0 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;" colspan="2">
+              Claim Details
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280; width: 40%;">Claim Reference</td>
+            <td style="padding: 10px 14px; font-size: 13px; color: #111827; font-weight: 600; font-family: monospace;">${claimRef}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280;">Item</td>
+            <td style="padding: 10px 14px; font-size: 13px; color: #111827; font-weight: 600;">${itemName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280;">Status</td>
+            <td style="padding: 10px 14px;">
+              <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase;">
+                Approved — Ready to Collect
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Instructions -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <p style="color: #166534; font-size: 13px; font-weight: 700; margin: 0 0 12px 0;">How to Collect Your Item</p>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="vertical-align: top; padding-bottom: 10px; width: 32px;">
+                <div style="width: 22px; height: 22px; background: #16a34a; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700;">1</div>
+              </td>
+              <td style="vertical-align: top; padding-bottom: 10px; padding-left: 10px; font-size: 13px; color: #14532d; line-height: 1.5;">
+                Visit the <strong>Student Services Office</strong> during office hours.
+              </td>
+            </tr>
+            <tr>
+              <td style="vertical-align: top; padding-bottom: 10px; width: 32px;">
+                <div style="width: 22px; height: 22px; background: #16a34a; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700;">2</div>
+              </td>
+              <td style="vertical-align: top; padding-bottom: 10px; padding-left: 10px; font-size: 13px; color: #14532d; line-height: 1.5;">
+                Bring your <strong>Student ID</strong> and this <strong>6-digit PIN</strong>.
+              </td>
+            </tr>
+            <tr>
+              <td style="vertical-align: top; width: 32px;">
+                <div style="width: 22px; height: 22px; background: #16a34a; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700;">3</div>
+              </td>
+              <td style="vertical-align: top; padding-left: 10px; font-size: 13px; color: #14532d; line-height: 1.5;">
+                Show the PIN to the staff to confirm handover of your item.
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0;">
+          Keep this PIN private — it is your proof of collection. If you did not submit this claim, please contact Student Services immediately.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="color: #9ca3af; font-size: 11px; margin: 0; text-align: center; line-height: 1.6;">
+          This is an automated message from the SLIIT Lost &amp; Found System.<br />
+          Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const info = await transport.sendMail({
+    from: `"SLIIT Lost & Found" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@lostfound.lk'}>`,
+    to: toEmail,
+    subject: `Claim Approved — Collect Your Item | ${claimRef}`,
+    html
+  });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Email] Approval+PIN preview for ${toEmail}: ${previewUrl}`);
+  }
+};
+
+// Sent to student after admin confirms they collected the item
+const sendCollectionReceipt = async (toEmail, { claimantName, claimRef, itemName, collectedAt }) => {
+  const transport = await getTransporter();
+
+  const formattedDate = new Date(collectedAt).toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 24px; border-radius: 12px;">
+
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #0369a1, #0284c7); padding: 28px 32px; border-radius: 10px 10px 0 0; text-align: center;">
+        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+          <span style="font-size: 24px;">📦</span>
+        </div>
+        <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">Item Successfully Collected</h1>
+        <p style="color: #bae6fd; margin: 6px 0 0 0; font-size: 13px;">SLIIT Lost &amp; Found — Collection Receipt</p>
+      </div>
+
+      <!-- Body -->
+      <div style="background: white; padding: 32px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+
+        <p style="color: #374151; font-size: 15px; margin: 0 0 12px 0;">
+          Hi <strong>${claimantName}</strong>,
+        </p>
+        <p style="color: #4b5563; font-size: 14px; line-height: 1.7; margin: 0 0 24px 0;">
+          This email confirms that your item has been <strong style="color: #0369a1;">successfully collected</strong> from the Student Services Office.
+          This serves as your official collection receipt.
+        </p>
+
+        <!-- Receipt box -->
+        <div style="background: linear-gradient(135deg, #0c4a6e, #0369a1); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <p style="color: #bae6fd; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; margin: 0 0 8px 0;">
+            Collection Confirmed
+          </p>
+          <p style="color: white; font-size: 20px; font-weight: 800; margin: 0 0 6px 0;">${itemName}</p>
+          <p style="color: #7dd3fc; font-size: 12px; margin: 0;">Collected on: <strong style="color: white;">${formattedDate}</strong></p>
+        </div>
+
+        <!-- Receipt details -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+          <tr>
+            <td style="padding: 10px 14px; background: #f1f5f9; border-radius: 6px 6px 0 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;" colspan="2">
+              Receipt Summary
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280; width: 40%;">Claim Reference</td>
+            <td style="padding: 10px 14px; font-size: 13px; color: #111827; font-weight: 600; font-family: monospace;">${claimRef}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280;">Item Collected</td>
+            <td style="padding: 10px 14px; font-size: 13px; color: #111827; font-weight: 600;">${itemName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280;">Collection Date</td>
+            <td style="padding: 10px 14px; font-size: 13px; color: #111827;">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 14px; font-size: 13px; color: #6b7280;">Case Status</td>
+            <td style="padding: 10px 14px;">
+              <span style="background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase;">
+                Closed — Returned to Owner
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0;">
+          Thank you for using the SLIIT Lost &amp; Found service. We hope you have a great day!
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="color: #9ca3af; font-size: 11px; margin: 0; text-align: center; line-height: 1.6;">
+          This is an automated collection receipt from the SLIIT Lost &amp; Found System.<br />
+          Please keep this email for your records. Do not reply to this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const info = await transport.sendMail({
+    from: `"SLIIT Lost & Found" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@lostfound.lk'}>`,
+    to: toEmail,
+    subject: `Collection Receipt — ${claimRef} | SLIIT Lost & Found`,
+    html
+  });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Email] Collection receipt preview for ${toEmail}: ${previewUrl}`);
+  }
+};
+
+module.exports = { sendNoticeNotification, sendArchiveNotification, sendClaimConfirmation, sendApprovalWithPin, sendCollectionReceipt };

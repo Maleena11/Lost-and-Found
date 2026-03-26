@@ -46,10 +46,50 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState("week"); // "week", "month", "year"
   const [recentFilter, setRecentFilter] = useState("all"); // "all", "lost", "found"
+  const [collapsedSections, setCollapsedSections] = useState({});
+  const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const [activeNav, setActiveNav] = useState('kpis');
+
+  const [systemStats, setSystemStats] = useState({
+    totalUsers: 0,
+    pendingVerifications: 0,
+    totalNotices: 0,
+    urgentNotices: 0,
+  });
 
   useEffect(() => {
     fetchDashboardData();
+    fetchSystemStats();
   }, [dateRange]);
+
+  useEffect(() => {
+    if (loading) return;
+    const sectionIds = ['kpis', 'analytics', 'performance', 'recent', 'locations', 'modules'];
+    const visible = new Set();
+    const observers = [];
+
+    const pickActive = () => {
+      for (const id of sectionIds) {
+        if (visible.has(id)) { setActiveNav(id); return; }
+      }
+    };
+
+    sectionIds.forEach(id => {
+      const el = document.getElementById(`section-${id}`);
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) visible.add(id); else visible.delete(id);
+          pickActive();
+        },
+        { threshold: 0.1, rootMargin: '-100px 0px 0px 0px' }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+
+    return () => observers.forEach(o => o.disconnect());
+  }, [loading]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -65,6 +105,31 @@ export default function Dashboard() {
       setError("Failed to load dashboard data. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSystemStats = async () => {
+    try {
+      const [usersRes, verRes, noticesRes] = await Promise.allSettled([
+        axios.get("http://localhost:3001/api/users"),
+        axios.get("http://localhost:3001/api/verification"),
+        axios.get("http://localhost:3001/api/notices"),
+      ]);
+      const users = usersRes.status === 'fulfilled'
+        ? (Array.isArray(usersRes.value.data) ? usersRes.value.data : []) : [];
+      const verifications = verRes.status === 'fulfilled'
+        ? (Array.isArray(verRes.value.data) ? verRes.value.data : (verRes.value.data?.data || [])) : [];
+      const notices = noticesRes.status === 'fulfilled'
+        ? (noticesRes.value.data?.data || noticesRes.value.data || []) : [];
+      setSystemStats({
+        totalUsers: users.length,
+        pendingVerifications: verifications.filter(v => v.status === 'pending').length,
+        totalNotices: Array.isArray(notices) ? notices.length : 0,
+        urgentNotices: Array.isArray(notices)
+          ? notices.filter(n => n.priority === 'urgent' || n.category === 'emergency').length : 0,
+      });
+    } catch (err) {
+      console.error("Error fetching system stats:", err);
     }
   };
 
@@ -322,6 +387,197 @@ export default function Dashboard() {
     ? Math.round(((stats.claimedItems + stats.returnedItems) / stats.totalItems) * 100)
     : 0;
 
+  // Today's activity
+  const todayStr = new Date().toDateString();
+  const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+  const todayItems = stats.rawItems.filter(i => new Date(i.createdAt).toDateString() === todayStr).length;
+  const yesterdayItems = stats.rawItems.filter(i => new Date(i.createdAt).toDateString() === yesterdayStr).length;
+  const todayTrend = todayItems - yesterdayItems;
+
+  // Overdue pending: pending items open for more than 30 days
+  const overduePending = stats.rawItems.filter(
+    i => i.status === 'pending' && Math.floor((Date.now() - new Date(i.createdAt)) / 86400000) > 30
+  ).length;
+
+  // Respect the saved date format from Settings
+  const savedDateFormat = (() => {
+    try { return JSON.parse(localStorage.getItem("adminSettings") || "{}").dateFormat || "MMM DD, YYYY"; }
+    catch { return "MMM DD, YYYY"; }
+  })();
+  const formatBannerDate = (fmt) => {
+    const d = new Date();
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+    const dd   = String(d.getDate()).padStart(2, '0');
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    switch (fmt) {
+      case 'DD/MM/YYYY': return `${weekday}, ${dd}/${mm}/${yyyy}`;
+      case 'MM/DD/YYYY': return `${weekday}, ${mm}/${dd}/${yyyy}`;
+      case 'YYYY-MM-DD': return `${weekday}, ${yyyy}-${mm}-${dd}`;
+      default:           return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+  };
+
+  // ── Export to CSV ──
+  const exportToCSV = () => {
+    const now = new Date();
+    const rows = [];
+
+    rows.push(['UniFind — Dashboard Report', '', `Generated: ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`]);
+    rows.push([]);
+
+    rows.push(['SUMMARY']);
+    rows.push(['Metric', 'Value']);
+    rows.push(['Total Items',           stats.totalItems]);
+    rows.push(['Lost Items',            stats.lostItems]);
+    rows.push(['Found Items',           stats.foundItems]);
+    rows.push(['Pending Items',         stats.pendingItems]);
+    rows.push(['Claimed Items',         stats.claimedItems]);
+    rows.push(['Returned Items',        stats.returnedItems]);
+    rows.push(['Expired Items',         stats.expiredItems]);
+    rows.push(['Recovery Rate',         `${recoveryRate}%`]);
+    rows.push(['Registered Users',      systemStats.totalUsers]);
+    rows.push(['Pending Verifications', systemStats.pendingVerifications]);
+    rows.push(['Active Notices',        systemStats.totalNotices]);
+    rows.push(['Overdue Pending Items', overduePending]);
+    rows.push([]);
+
+    rows.push(['CATEGORY BREAKDOWN']);
+    rows.push(['Category', 'Count', 'Percentage']);
+    Object.entries(stats.categoryBreakdown)
+      .sort(([, a], [, b]) => b - a)
+      .forEach(([cat, count]) => {
+        const pct = stats.totalItems ? Math.round((count / stats.totalItems) * 100) : 0;
+        rows.push([cat, count, `${pct}%`]);
+      });
+    rows.push([]);
+
+    rows.push(['MONTHLY STATISTICS (LAST 6 MONTHS)']);
+    rows.push(['Month', 'Lost', 'Found', 'Total']);
+    stats.monthlyStats.forEach(m => rows.push([m.month, m.lost, m.found, m.total]));
+    rows.push([]);
+
+    rows.push(['ALL ITEMS']);
+    rows.push(['Item Name', 'Type', 'Category', 'Status', 'Location', 'Date Reported']);
+    stats.rawItems.forEach(item => {
+      rows.push([
+        item.itemName  || '',
+        item.itemType  || '',
+        item.category  || '',
+        item.status    || '',
+        item.location  || '',
+        item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '',
+      ]);
+    });
+
+    const csv = rows
+      .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `unifind-report-${now.toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Print Report ──
+  const printReport = () => {
+    const now     = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const categoryRows = Object.entries(stats.categoryBreakdown)
+      .sort(([, a], [, b]) => b - a)
+      .map(([cat, count]) => {
+        const pct = stats.totalItems ? Math.round((count / stats.totalItems) * 100) : 0;
+        return `<tr>
+          <td style="padding:7px 14px;border-bottom:1px solid #e5e7eb;text-transform:capitalize">${cat}</td>
+          <td style="padding:7px 14px;border-bottom:1px solid #e5e7eb;text-align:right">${count}</td>
+          <td style="padding:7px 14px;border-bottom:1px solid #e5e7eb;text-align:right">${pct}%</td>
+        </tr>`;
+      }).join('');
+
+    const monthlyRows = stats.monthlyStats.map(m => `<tr>
+      <td style="padding:7px 14px;border-bottom:1px solid #e5e7eb">${m.month}</td>
+      <td style="padding:7px 14px;border-bottom:1px solid #e5e7eb;text-align:right">${m.lost}</td>
+      <td style="padding:7px 14px;border-bottom:1px solid #e5e7eb;text-align:right">${m.found}</td>
+      <td style="padding:7px 14px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${m.total}</td>
+    </tr>`).join('');
+
+    const kpi = (value, label) =>
+      `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px">
+        <div style="font-size:26px;font-weight:700;color:#111">${value}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">${label}</div>
+      </div>`;
+
+    const html = `<!DOCTYPE html><html><head><title>UniFind Dashboard Report</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: system-ui, -apple-system, sans-serif; color: #111; padding: 36px; line-height: 1.5; }
+      h1  { font-size: 22px; font-weight: 700; }
+      .sub { color: #6b7280; font-size: 13px; margin: 4px 0 28px; }
+      .section { margin-bottom: 28px; }
+      h2  { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+            color: #6b7280; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 14px; }
+      .grid { display: grid; gap: 10px; margin-bottom: 10px; }
+      .g4  { grid-template-columns: repeat(4, 1fr); }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th { text-align: left; padding: 7px 14px; background: #f3f4f6;
+           font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
+      @media print { body { padding: 16px; } }
+    </style></head><body>
+      <h1>UniFind — Dashboard Report</h1>
+      <p class="sub">Generated on ${dateStr}</p>
+
+      <div class="section">
+        <h2>Items Overview</h2>
+        <div class="grid g4">
+          ${kpi(stats.totalItems,   'Total Items')}
+          ${kpi(stats.lostItems,    'Lost Items')}
+          ${kpi(stats.foundItems,   'Found Items')}
+          ${kpi(stats.pendingItems, 'Pending')}
+          ${kpi(stats.claimedItems,  'Claimed')}
+          ${kpi(stats.returnedItems, 'Returned')}
+          ${kpi(stats.expiredItems,  'Expired')}
+          ${kpi(recoveryRate + '%',  'Recovery Rate')}
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>System Overview</h2>
+        <div class="grid g4">
+          ${kpi(systemStats.totalUsers,           'Registered Users')}
+          ${kpi(systemStats.pendingVerifications, 'Pending Verifications')}
+          ${kpi(systemStats.totalNotices,         'Active Notices')}
+          ${kpi(overduePending,                   'Overdue Pending Items')}
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Category Breakdown</h2>
+        <table>
+          <thead><tr><th>Category</th><th style="text-align:right">Count</th><th style="text-align:right">Share</th></tr></thead>
+          <tbody>${categoryRows}</tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Monthly Statistics — Last 6 Months</h2>
+        <table>
+          <thead><tr><th>Month</th><th style="text-align:right">Lost</th><th style="text-align:right">Found</th><th style="text-align:right">Total</th></tr></thead>
+          <tbody>${monthlyRows}</tbody>
+        </table>
+      </div>
+    </body></html>`;
+
+    const win = window.open('', '_blank', 'width=920,height=720');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
+
   return (
     <div className="flex">
       {/* Sidebar */}
@@ -341,6 +597,36 @@ export default function Dashboard() {
           subtitle="UniFind — University Lost & Found Management"
         />
 
+        {/* ── Sticky Section Nav ── */}
+        <nav className="sticky top-16 z-20 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm flex-shrink-0">
+          <div className="flex items-center overflow-x-auto px-4 lg:px-6" style={{ scrollbarWidth: 'none' }}>
+            {[
+              { id: 'kpis',        label: 'KPIs',        icon: 'fa-tachometer-alt' },
+              { id: 'analytics',   label: 'Analytics',   icon: 'fa-chart-bar'      },
+              { id: 'performance', label: 'Performance', icon: 'fa-chart-line'     },
+              { id: 'recent',      label: 'Recent Items',icon: 'fa-clock'          },
+              { id: 'locations',   label: 'Locations',   icon: 'fa-map-marker-alt' },
+              { id: 'modules',     label: 'Modules',     icon: 'fa-th-large'       },
+            ].map(({ id, label, icon }) => (
+              <button
+                key={id}
+                onClick={() => {
+                  document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  setActiveNav(id);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${
+                  activeNav === id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <i className={`fas ${icon} text-xs`}></i>
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
         <main className="flex-1 p-6 space-y-6">
 
           {/* ── Welcome Banner ── */}
@@ -350,23 +636,102 @@ export default function Dashboard() {
                 <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Admin Dashboard</p>
                 <h1 className="text-xl font-bold">UniFind — Lost &amp; Found System</h1>
                 <p className="text-blue-200 text-sm mt-1">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  {formatBannerDate(savedDateFormat)}
                 </p>
               </div>
               <div className="flex gap-3 flex-wrap">
                 {[
-                  { label: 'Total Items',    value: stats.totalItems,   accent: 'bg-white/10' },
-                  { label: 'Pending',        value: stats.pendingItems, accent: 'bg-yellow-500/25' },
-                  { label: 'Recovery Rate',  value: `${recoveryRate}%`, accent: 'bg-green-500/20' },
-                ].map(({ label, value, accent }) => (
+                  { label: 'Total Items',   value: stats.totalItems,   accent: 'bg-white/10' },
+                  { label: 'Pending',       value: stats.pendingItems, accent: 'bg-yellow-500/25' },
+                  { label: 'Recovery Rate', value: `${recoveryRate}%`, accent: 'bg-green-500/20' },
+                  { label: 'Today',         value: todayItems,         accent: 'bg-sky-500/20', trend: todayTrend },
+                ].map(({ label, value, accent, trend }) => (
                   <div key={label} className={`${accent} rounded-xl px-5 py-3 text-center min-w-[80px]`}>
                     <p className="text-2xl font-bold leading-tight">{value}</p>
                     <p className="text-blue-200 text-xs mt-0.5 whitespace-nowrap">{label}</p>
+                    {trend !== undefined && (
+                      <p className={`text-xs font-semibold mt-0.5 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-emerald-300' : 'text-blue-300'}`}>
+                        {trend > 0 ? `+${trend} vs yesterday` : trend < 0 ? `${trend} vs yesterday` : 'same as yesterday'}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           </div>
+
+          {/* ── Action Alerts ── */}
+          {(systemStats.pendingVerifications > 0 || overduePending > 0 || stats.expiredItems > 0 || systemStats.urgentNotices > 0) && (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Action Required</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {systemStats.pendingVerifications > 0 && (
+                  <button
+                    onClick={() => navigate('/admin/dashboard/verification')}
+                    className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 hover:bg-amber-100 transition-colors text-left group"
+                  >
+                    <span className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-200 transition-colors">
+                      <i className="fas fa-shield-alt text-amber-600"></i>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-amber-800">
+                        {systemStats.pendingVerifications} Pending Verification{systemStats.pendingVerifications !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-amber-600">Tap to review now</p>
+                    </div>
+                    <i className="fas fa-chevron-right text-amber-400 text-xs flex-shrink-0"></i>
+                  </button>
+                )}
+                {overduePending > 0 && (
+                  <button
+                    onClick={() => navigate('/admin/dashboard/allitems')}
+                    className="flex items-center gap-3 bg-rose-50 border border-rose-200 rounded-xl p-4 hover:bg-rose-100 transition-colors text-left group"
+                  >
+                    <span className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0 group-hover:bg-rose-200 transition-colors">
+                      <i className="fas fa-hourglass-end text-rose-600"></i>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-rose-800">
+                        {overduePending} Overdue Pending Item{overduePending !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-rose-600">Open &gt; 30 days — needs attention</p>
+                    </div>
+                    <i className="fas fa-chevron-right text-rose-400 text-xs flex-shrink-0"></i>
+                  </button>
+                )}
+                {systemStats.urgentNotices > 0 && (
+                  <button
+                    onClick={() => navigate('/admin/dashboard/notices')}
+                    className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4 hover:bg-purple-100 transition-colors text-left group"
+                  >
+                    <span className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
+                      <i className="fas fa-bullhorn text-purple-600"></i>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-purple-800">
+                        {systemStats.urgentNotices} Urgent Notice{systemStats.urgentNotices !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-purple-600">Emergency or high-priority</p>
+                    </div>
+                    <i className="fas fa-chevron-right text-purple-400 text-xs flex-shrink-0"></i>
+                  </button>
+                )}
+                {stats.expiredItems > 0 && (
+                  <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <span className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <i className="fas fa-calendar-times text-gray-500"></i>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-700">
+                        {stats.expiredItems} Expired Item{stats.expiredItems !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-gray-500">No longer active</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ── Quick Actions ── */}
           <div>
@@ -391,8 +756,32 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* ── Export & Reports ── */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-gray-100 rounded-xl px-5 py-3 shadow-sm">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Reports & Export</p>
+              <p className="text-xs text-gray-400">Download or print a summary of all current dashboard data</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 text-sm font-medium px-4 py-2 rounded-lg transition-all"
+              >
+                <i className="fas fa-file-csv text-emerald-600 text-sm"></i>
+                Export CSV
+              </button>
+              <button
+                onClick={printReport}
+                className="flex items-center gap-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-sm font-medium px-4 py-2 rounded-lg transition-all"
+              >
+                <i className="fas fa-print text-blue-600 text-sm"></i>
+                Print Report
+              </button>
+            </div>
+          </div>
+
           {/* ── KPI Cards ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div id="section-kpis" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { label: 'Total Items',    value: stats.totalItems,   sub: 'All reported items on campus',      icon: 'fa-layer-group',  iconBg: 'bg-blue-100',   iconColor: 'text-blue-600',   border: 'border-l-blue-500',   numColor: 'text-blue-700'   },
               { label: 'Lost Items',     value: stats.lostItems,    sub: 'Reported missing by students',      icon: 'fa-search',       iconBg: 'bg-red-100',    iconColor: 'text-red-500',    border: 'border-l-red-400',    numColor: 'text-red-600'    },
@@ -412,12 +801,39 @@ export default function Dashboard() {
             ))}
           </div>
 
+          {/* ── System Overview KPIs ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: 'Registered Users',  value: systemStats.totalUsers,            sub: 'All accounts',           icon: 'fa-users',        iconBg: 'bg-slate-100',  iconColor: 'text-slate-600',  border: 'border-l-slate-400',  numColor: 'text-slate-700',  path: '/admin/dashboard/users' },
+              { label: 'Pending Reviews',   value: systemStats.pendingVerifications,  sub: 'Verification queue',     icon: 'fa-shield-alt',   iconBg: systemStats.pendingVerifications > 0 ? 'bg-amber-100' : 'bg-gray-100', iconColor: systemStats.pendingVerifications > 0 ? 'text-amber-600' : 'text-gray-400', border: systemStats.pendingVerifications > 0 ? 'border-l-amber-400' : 'border-l-gray-300', numColor: systemStats.pendingVerifications > 0 ? 'text-amber-700' : 'text-gray-500', path: '/admin/dashboard/verification' },
+              { label: 'Active Notices',    value: systemStats.totalNotices,          sub: 'Campus announcements',   icon: 'fa-bullhorn',     iconBg: 'bg-purple-100', iconColor: 'text-purple-600', border: 'border-l-purple-400', numColor: 'text-purple-700', path: '/admin/dashboard/notices' },
+              { label: 'Items Returned',    value: stats.returnedItems,               sub: 'Successfully recovered', icon: 'fa-check-double', iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   border: 'border-l-teal-400',   numColor: 'text-teal-700',   path: '/admin/dashboard/allitems' },
+            ].map(({ label, value, sub, icon, iconBg, iconColor, border, numColor, path }) => (
+              <button
+                key={label}
+                onClick={() => navigate(path)}
+                className={`bg-white rounded-xl shadow-sm border-l-4 ${border} border border-gray-100 p-4 flex items-center gap-3 hover:shadow-md transition-all text-left cursor-pointer`}
+              >
+                <div className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
+                  <i className={`fas ${icon} ${iconColor} text-sm`}></i>
+                </div>
+                <div>
+                  <p className={`text-xl font-bold leading-tight ${numColor}`}>{value}</p>
+                  <p className="text-xs font-semibold text-gray-600">{label}</p>
+                  <p className="text-xs text-gray-400">{sub}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
           {/* ── Analytics Overview ── */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
+          <div id="section-analytics">
+            <div className="flex items-center gap-3 mb-4 cursor-pointer select-none" onClick={() => toggleSection('analytics')}>
               <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest">Analytics Overview</h2>
+              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex-1">Analytics Overview</h2>
+              <i className={`fas fa-chevron-${collapsedSections.analytics ? 'down' : 'up'} text-gray-400 text-xs`}></i>
             </div>
+            {!collapsedSections.analytics && (<>
 
             {/* Row 1: Status Distribution + Monthly Statistics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -573,14 +989,17 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+            </>)}
           </div>
 
           {/* ── Performance Metrics ── */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
+          <div id="section-performance">
+            <div className="flex items-center gap-3 mb-4 cursor-pointer select-none" onClick={() => toggleSection('performance')}>
               <div className="w-1 h-5 bg-indigo-500 rounded-full"></div>
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest">Performance Metrics</h2>
+              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex-1">Performance Metrics</h2>
+              <i className={`fas fa-chevron-${collapsedSections.performance ? 'down' : 'up'} text-gray-400 text-xs`}></i>
             </div>
+            {!collapsedSections.performance && (<>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {[
@@ -651,28 +1070,44 @@ export default function Dashboard() {
                   Category Breakdown
                 </h3>
                 <div className="space-y-4">
-                  {Object.entries(stats.categoryBreakdown)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([category, count]) => {
-                      const pct = stats.totalItems ? Math.round((count / stats.totalItems) * 100) : 0;
-                      return (
-                        <div key={category}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-sm text-gray-700 capitalize">{category}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-400">{count} items</span>
-                              <span className="text-sm font-bold text-blue-600 w-10 text-right">{pct}%</span>
+                  {(() => {
+                    const CAT_COLORS = [
+                      { bar: 'bg-indigo-500', text: 'text-indigo-600', dot: 'bg-indigo-500' },
+                      { bar: 'bg-emerald-500', text: 'text-emerald-600', dot: 'bg-emerald-500' },
+                      { bar: 'bg-amber-500',  text: 'text-amber-600',  dot: 'bg-amber-500'  },
+                      { bar: 'bg-red-500',    text: 'text-red-600',    dot: 'bg-red-500'    },
+                      { bar: 'bg-blue-500',   text: 'text-blue-600',   dot: 'bg-blue-500'   },
+                      { bar: 'bg-pink-500',   text: 'text-pink-600',   dot: 'bg-pink-500'   },
+                      { bar: 'bg-gray-500',   text: 'text-gray-600',   dot: 'bg-gray-500'   },
+                    ];
+                    return Object.entries(stats.categoryBreakdown)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([category, count], idx) => {
+                        const pct = stats.totalItems ? Math.round((count / stats.totalItems) * 100) : 0;
+                        const { bar, text, dot } = CAT_COLORS[idx % CAT_COLORS.length];
+                        return (
+                          <div key={category}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dot}`}></span>
+                                <span className="text-sm text-gray-700 capitalize">{category}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400">{count} items</span>
+                                <span className={`text-sm font-bold w-10 text-right ${text}`}>{pct}%</span>
+                              </div>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                              <div className={`${bar} h-2 rounded-full transition-all duration-700`} style={{ width: `${pct}%` }}></div>
                             </div>
                           </div>
-                          <div className="w-full bg-gray-100 rounded-full h-2">
-                            <div className="bg-blue-500 h-2 rounded-full transition-all duration-700" style={{ width: `${pct}%` }}></div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                  })()}
                 </div>
               </div>
             </div>
+            </>)}
           </div>
 
           {/* ── Recent Items ── */}
@@ -681,7 +1116,7 @@ export default function Dashboard() {
               ? stats.recentItems
               : stats.recentItems.filter(i => i.itemType === recentFilter);
             return (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div id="section-recent" className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -861,11 +1296,13 @@ export default function Dashboard() {
             .slice(0, 5);
 
           return (
-            <div>
-              <div className="flex items-center gap-3 mb-4">
+            <div id="section-locations">
+              <div className="flex items-center gap-3 mb-4 cursor-pointer select-none" onClick={() => toggleSection('location')}>
                 <div className="w-1 h-5 bg-violet-500 rounded-full"></div>
-                <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest">Location &amp; Trend Analytics</h2>
+                <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex-1">Location &amp; Trend Analytics</h2>
+                <i className={`fas fa-chevron-${collapsedSections.location ? 'down' : 'up'} text-gray-400 text-xs`}></i>
               </div>
+              {!collapsedSections.location && (
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
@@ -965,21 +1402,23 @@ export default function Dashboard() {
                 </div>
 
               </div>
+              )}
             </div>
           );
         })()}
 
           {/* ── Module Stats ── */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
+          <div id="section-modules">
+            <div className="flex items-center gap-3 mb-4 cursor-pointer select-none" onClick={() => toggleSection('modules')}>
               <div className="w-1 h-5 bg-slate-400 rounded-full"></div>
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest">Module Statistics</h2>
+              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex-1">Module Statistics</h2>
+              <i className={`fas fa-chevron-${collapsedSections.modules ? 'down' : 'up'} text-gray-400 text-xs`}></i>
             </div>
+            {!collapsedSections.modules && (<>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ItemsStats />
               <NoticeStats />
             </div>
-          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <UserStats />
@@ -989,6 +1428,8 @@ export default function Dashboard() {
           <TopReporters />
 
           <PotentialMatches />
+            </>)}
+          </div>
 
         </main>
       </div>

@@ -1,7 +1,24 @@
+function getDateFormat() {
+  try { return JSON.parse(localStorage.getItem("adminSettings") || "{}").dateFormat || "MMM DD, YYYY"; }
+  catch { return "MMM DD, YYYY"; }
+}
+
+function formatTopBarDate(fmt) {
+  const d = new Date();
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+  const dd  = String(d.getDate()).padStart(2, '0');
+  const mm  = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  switch (fmt) {
+    case 'DD/MM/YYYY': return `${weekday}, ${dd}/${mm}/${yyyy}`;
+    case 'MM/DD/YYYY': return `${weekday}, ${mm}/${dd}/${yyyy}`;
+    case 'YYYY-MM-DD': return `${weekday}, ${yyyy}-${mm}-${dd}`;
+    default:           return d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  }
+}
+
 export default function TopBar({ sidebarOpen, setSidebarOpen, title, subtitle }) {
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
-  });
+  const today = formatTopBarDate(getDateFormat());
 
   return (
     <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">

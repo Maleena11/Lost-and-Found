@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../Hero.css";
-import BackgroundCarousel from "./BackgroundCarousel";
 
 export default function Hero() {
   const navigate = useNavigate();

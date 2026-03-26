@@ -157,6 +157,16 @@ const DEFAULTS = {
   minPasswordLength:   "8",
   requireSpecialChars: true,
   twoFactorAuth:       false,
+  maxLoginAttempts:    "5",
+  // General extras
+  websiteUrl:          "",
+  officeLocation:      "Main Building, Room 101",
+  officeHours:         "Mon–Fri, 8:00 AM – 5:00 PM",
+  // Display extras
+  defaultItemView:     "table",
+  showItemThumbnails:  true,
+  // Notifications extras
+  digestFrequency:     "daily",
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -182,6 +192,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
   const [isSaving, setIsSaving]   = useState(false);
   const [toasts, setToasts]       = useState([]);
   const [exportLoading, setExportLoading] = useState({});
+  const [apiStatus, setApiStatus]         = useState(null); // null | "checking" | "online" | "offline"
   const contentRef = useRef(null);
 
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(saved);
@@ -240,6 +251,20 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
       setExportLoading(prev => ({ ...prev, [type]: false }));
     }
   }, [addToast]);
+
+  // ── API health check ───────────────────────────────────────────────────────
+  const checkApiHealth = useCallback(async () => {
+    setApiStatus("checking");
+    try {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 5000);
+      await fetch("http://localhost:3001/api/lost-found", { signal: ctrl.signal });
+      clearTimeout(tid);
+      setApiStatus("online");
+    } catch {
+      setApiStatus("offline");
+    }
+  }, []);
 
   // ── Change handler ─────────────────────────────────────────────────────────
   const handleChange = useCallback(e => {
@@ -426,6 +451,28 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                           </SelectField>
                         </div>
                       </SectionCard>
+
+                      <SectionCard
+                        icon={<LocationIcon className="text-blue-600" />}
+                        title="Contact & Location"
+                        description="Physical office details shown on public pages and outgoing emails."
+                        iconBg="bg-blue-100" topBorder="border-t-blue-500"
+                      >
+                        <div className="space-y-5">
+                          <InputField label="Website URL" type="url" name="websiteUrl"
+                            value={settings.websiteUrl} onChange={handleChange}
+                            placeholder="https://university.edu/lost-found"
+                            hint="Link to the public Lost & Found information page." />
+                          <InputField label="Office Location" name="officeLocation"
+                            value={settings.officeLocation} onChange={handleChange}
+                            placeholder="e.g. Main Building, Room 101"
+                            hint="Physical location where students can collect items." />
+                          <InputField label="Office Hours" name="officeHours"
+                            value={settings.officeHours} onChange={handleChange}
+                            placeholder="e.g. Mon–Fri, 8:00 AM – 5:00 PM"
+                            hint="Displayed on public pages and notification emails." />
+                        </div>
+                      </SectionCard>
                     </>
                   )}
 
@@ -474,6 +521,21 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                       </SectionCard>
 
                       <WhatsAppAlertsPanel />
+
+                      <SectionCard
+                        icon={<BellIcon className="text-amber-600" />}
+                        title="Summary Digest"
+                        description="Receive a periodic email summary of system activity."
+                        iconBg="bg-amber-100" topBorder="border-t-amber-500"
+                      >
+                        <SelectField label="Digest Frequency" name="digestFrequency"
+                          value={settings.digestFrequency} onChange={handleChange}
+                          hint="How often to email a summary of new items, claims, and verifications.">
+                          <option value="never">Never</option>
+                          <option value="daily">Daily (sent each morning)</option>
+                          <option value="weekly">Weekly (sent every Monday)</option>
+                        </SelectField>
+                      </SectionCard>
                     </>
                   )}
 
@@ -504,6 +566,36 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                           <option value="MM/DD/YYYY">01/01/2025 (US)</option>
                           <option value="YYYY-MM-DD">2025-01-01 (ISO)</option>
                         </SelectField>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Default Item View</label>
+                          <div className="flex gap-3">
+                            {[
+                              { value: "table", label: "Table", icon: "☰" },
+                              { value: "grid",  label: "Grid",  icon: "⊞" },
+                            ].map(opt => (
+                              <label key={opt.value}
+                                className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition
+                                  ${settings.defaultItemView === opt.value
+                                    ? "border-violet-500 bg-violet-50 dark:bg-violet-900/30"
+                                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-700"}`}>
+                                <input type="radio" name="defaultItemView" value={opt.value}
+                                  checked={settings.defaultItemView === opt.value} onChange={handleChange}
+                                  className="sr-only" />
+                                <span className="text-2xl">{opt.icon}</span>
+                                <span className={`text-xs font-medium ${settings.defaultItemView === opt.value ? "text-violet-700 dark:text-violet-400" : "text-gray-600 dark:text-gray-400"}`}>
+                                  {opt.label}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Applied when opening item lists across the dashboard.</p>
+                        </div>
+
+                        <ToggleRow label="Show Image Thumbnails in Lists"
+                          name="showItemThumbnails"
+                          description="Display item photo thumbnails in table rows for quicker identification."
+                          checked={settings.showItemThumbnails} onChange={handleChange} />
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Theme</label>
@@ -661,6 +753,15 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                             <option value="480">8 hours (never timeout)</option>
                           </SelectField>
 
+                          <SelectField label="Max Login Attempts" name="maxLoginAttempts"
+                            value={settings.maxLoginAttempts} onChange={handleChange}
+                            hint="Account is temporarily locked after this many consecutive failed login attempts.">
+                            <option value="3">3 attempts (strict)</option>
+                            <option value="5">5 attempts (recommended)</option>
+                            <option value="10">10 attempts</option>
+                            <option value="0">Unlimited (no lockout)</option>
+                          </SelectField>
+
                           <ToggleRow label="Two-Factor Authentication"
                             name="twoFactorAuth"
                             description="Require a one-time code in addition to password for admin logins."
@@ -730,30 +831,95 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
 
                   {/* ════════════════ ABOUT ════════════════ */}
                   {activeNav === "about" && (
-                    <SectionCard
-                      icon={<InfoIcon className="w-5 h-5 text-sky-600" />}
-                      title="System Information"
-                      description="Technical details about this Lost & Found installation."
-                      iconBg="bg-sky-100" topBorder="border-t-sky-500"
-                    >
-                      <dl className="divide-y divide-gray-50 dark:divide-gray-700">
-                        {[
-                          { label: "Application",     value: "UniFind Lost & Found" },
-                          { label: "Version",         value: "1.0.0" },
-                          { label: "Environment",     value: "Production" },
-                          { label: "Database",        value: "MongoDB Atlas" },
-                          { label: "Backend Runtime", value: "Node.js + Express" },
-                          { label: "Frontend",        value: "React 19 + Vite + Tailwind CSS" },
-                          { label: "API Base URL",    value: "http://localhost:3001/api" },
-                          { label: "Last Deploy",     value: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
-                        ].map(row => (
-                          <div key={row.label} className="flex justify-between py-3 gap-4">
-                            <dt className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{row.label}</dt>
-                            <dd className="text-sm font-medium text-gray-800 dark:text-gray-100 text-right break-all">{row.value}</dd>
+                    <>
+                      <SectionCard
+                        icon={<InfoIcon className="w-5 h-5 text-sky-600" />}
+                        title="System Information"
+                        description="Technical details about this Lost & Found installation."
+                        iconBg="bg-sky-100" topBorder="border-t-sky-500"
+                      >
+                        <dl className="divide-y divide-gray-50 dark:divide-gray-700">
+                          {[
+                            { label: "Application",     value: "UniFind Lost & Found" },
+                            { label: "Version",         value: "1.0.0" },
+                            { label: "Environment",     value: "Production" },
+                            { label: "Database",        value: "MongoDB Atlas" },
+                            { label: "Backend Runtime", value: "Node.js + Express" },
+                            { label: "Frontend",        value: "React 19 + Vite + Tailwind CSS" },
+                            { label: "API Base URL",    value: "http://localhost:3001/api" },
+                            { label: "Last Deploy",     value: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
+                          ].map(row => (
+                            <div key={row.label} className="flex justify-between py-3 gap-4">
+                              <dt className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{row.label}</dt>
+                              <dd className="text-sm font-medium text-gray-800 dark:text-gray-100 text-right break-all">{row.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </SectionCard>
+
+                      <SectionCard
+                        icon={<ShieldIcon className="text-sky-600" />}
+                        title="System Health"
+                        description="Check live connectivity to backend services."
+                        iconBg="bg-sky-100" topBorder="border-t-sky-500"
+                      >
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-4 py-1">
+                            <div className="flex items-center gap-3">
+                              <span className={`w-3 h-3 rounded-full flex-shrink-0 transition-colors ${
+                                apiStatus === "online"   ? "bg-green-500" :
+                                apiStatus === "offline"  ? "bg-red-500" :
+                                apiStatus === "checking" ? "bg-yellow-400 animate-pulse" :
+                                "bg-gray-300 dark:bg-gray-600"
+                              }`} />
+                              <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">API Server</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {apiStatus === "online"   ? "Connected and responding normally" :
+                                   apiStatus === "offline"  ? "Unreachable — verify the backend is running" :
+                                   apiStatus === "checking" ? "Checking connectivity…" :
+                                   "Not yet checked"}
+                                </p>
+                              </div>
+                            </div>
+                            <button type="button" onClick={checkApiHealth}
+                              disabled={apiStatus === "checking"}
+                              className="flex-shrink-0 px-3.5 py-1.5 text-xs font-medium rounded-xl border border-sky-200 dark:border-sky-700 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                              {apiStatus === "checking" ? "Checking…" : "Check Now"}
+                            </button>
                           </div>
-                        ))}
-                      </dl>
-                    </SectionCard>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 pt-3 border-t border-gray-50 dark:border-gray-700">
+                            Pings <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-gray-600 dark:text-gray-300">http://localhost:3001/api</code> with a 5-second timeout.
+                          </p>
+                        </div>
+                      </SectionCard>
+
+                      <SectionCard
+                        icon={<CogIcon className="text-sky-600" />}
+                        title="Quick Navigation"
+                        description="Jump to key sections of the admin panel."
+                        iconBg="bg-sky-100" topBorder="border-t-sky-500"
+                      >
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {[
+                            { label: "All Items",    path: "/admin/dashboard/allitems",     icon: "fa-boxes" },
+                            { label: "Verification", path: "/admin/dashboard/verification", icon: "fa-shield-alt" },
+                            { label: "Users",        path: "/admin/dashboard/users",        icon: "fa-users" },
+                            { label: "Notices",      path: "/admin/dashboard/notices",      icon: "fa-bullhorn" },
+                            { label: "Dashboard",    path: "/admin/dashboard",              icon: "fa-chart-pie" },
+                            { label: "Report Item",  path: "/report-item",                  icon: "fa-plus-circle" },
+                          ].map(link => (
+                            <a key={link.label} href={link.path}
+                              className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/20 dark:hover:border-sky-700 transition text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-sky-700 dark:hover:text-sky-400 group">
+                              <span className="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center flex-shrink-0 group-hover:bg-sky-100 dark:group-hover:bg-sky-900/50 transition">
+                                <i className={`fas ${link.icon} text-sky-500 text-xs`}></i>
+                              </span>
+                              {link.label}
+                            </a>
+                          ))}
+                        </div>
+                      </SectionCard>
+                    </>
                   )}
 
                   {/* ── Sticky save footer (shown for all tabs except About) ── */}
@@ -911,6 +1077,16 @@ function SaveIcon({ className = "w-4 h-4" }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+    </svg>
+  );
+}
+function LocationIcon({ className = "w-4 h-4" }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   );
 }

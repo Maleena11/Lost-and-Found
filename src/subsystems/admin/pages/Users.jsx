@@ -87,12 +87,32 @@ function SkeletonRow() {
   return (
     <tr className="animate-pulse">
       <td className="pl-4 pr-2 py-4"><div className="w-4 h-4 bg-gray-200 rounded" /></td>
-      {[...Array(7)].map((_, i) => (
+      {[...Array(8)].map((_, i) => (
         <td key={i} className="px-6 py-4">
           <div className="h-4 bg-gray-200 rounded w-3/4" />
         </td>
       ))}
     </tr>
+  );
+}
+
+// ─── Sort Icon ────────────────────────────────────────────────────────────────
+function SortIcon({ field, sortField, sortDir }) {
+  if (sortField !== field) {
+    return (
+      <svg className="w-3 h-3 text-gray-300 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      </svg>
+    );
+  }
+  return sortDir === "asc" ? (
+    <svg className="w-3 h-3 text-blue-500 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    </svg>
+  ) : (
+    <svg className="w-3 h-3 text-blue-500 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
   );
 }
 
@@ -118,6 +138,11 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
   // ── Pagination ──
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize]       = useState(PAGE_SIZE);
+
+  // ── Sorting ──
+  const [sortField, setSortField] = useState("name");
+  const [sortDir, setSortDir]     = useState("asc");
 
   // ── Report generation ──
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -185,7 +210,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
     setIsEditFormValid(Object.keys(errs).length === 0);
   }, [editUser]);
 
-  // ── Filtered / Paginated list ─────────────────────────────────────────────
+  // ── Filtered / Sorted / Paginated list ───────────────────────────────────
   const filteredUsers = users.filter(u => {
     const matchSearch =
       !search ||
@@ -196,12 +221,37 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
     return matchSearch && matchRole && matchStatus;
   });
 
-  const totalPages  = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
-  const safePage    = Math.min(currentPage, totalPages);
-  const pagedUsers  = filteredUsers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    let aVal, bVal;
+    if (sortField === "joined") {
+      aVal = new Date(a.createdAt || 0);
+      bVal = new Date(b.createdAt || 0);
+      return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    const fieldMap = { name: "name", email: "email", role: "role", status: "status" };
+    const key = fieldMap[sortField] || "name";
+    aVal = (a[key] || "").toLowerCase();
+    bVal = (b[key] || "").toLowerCase();
+    if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
 
-  // Reset to page 1 on filter change; also clear selection
-  useEffect(() => { setCurrentPage(1); setSelectedIds(new Set()); }, [search, filterRole, filterStatus]);
+  const handleSort = field => {
+    if (sortField === field) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const totalPages  = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const safePage    = Math.min(currentPage, totalPages);
+  const pagedUsers  = sortedUsers.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  // Reset to page 1 on filter/pageSize change; also clear selection
+  useEffect(() => { setCurrentPage(1); setSelectedIds(new Set()); }, [search, filterRole, filterStatus, pageSize]);
 
   // ── Bulk selection derived ──
   const pagedIds        = pagedUsers.map(u => u._id || u.id);
@@ -571,6 +621,19 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                   </button>
                 )}
 
+                {/* Page size */}
+                <select
+                  value={pageSize}
+                  onChange={e => setPageSize(Number(e.target.value))}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  title="Rows per page"
+                >
+                  <option value={8}>8 / page</option>
+                  <option value={16}>16 / page</option>
+                  <option value={24}>24 / page</option>
+                  <option value={32}>32 / page</option>
+                </select>
+
                 <div className="w-px h-6 bg-gray-200 hidden sm:block" />
 
                 {/* Generate Report button */}
@@ -723,12 +786,23 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                         className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
+                    {[
+                      { label: "User",   field: "name"   },
+                      { label: "Email",  field: "email"  },
+                      { label: "Phone",  field: null     },
+                      { label: "Role",   field: "role"   },
+                      { label: "Status", field: "status" },
+                      { label: "Joined", field: "joined" },
+                    ].map(col => (
+                      <th
+                        key={col.label}
+                        onClick={col.field ? () => handleSort(col.field) : undefined}
+                        className={`px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider select-none ${col.field ? "cursor-pointer hover:bg-gray-100 transition-colors" : ""}`}
+                      >
+                        {col.label}
+                        {col.field && <SortIcon field={col.field} sortField={sortField} sortDir={sortDir} />}
+                      </th>
+                    ))}
                     <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -815,6 +889,17 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-1">
                             <button
+                              onClick={() => handleOpenView(user._id || user.id)}
+                              title="View user profile"
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View
+                            </button>
+                            <button
                               onClick={() => handleOpenEdit(user._id || user.id)}
                               title="Edit user"
                               className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition"
@@ -844,10 +929,10 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
             </div>
 
             {/* ── Pagination ── */}
-            {!loading && filteredUsers.length > PAGE_SIZE && (
+            {!loading && filteredUsers.length > pageSize && (
               <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                 <p className="text-xs text-gray-500">
-                  Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} users
+                  Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filteredUsers.length)} of {filteredUsers.length} users
                 </p>
                 <div className="flex items-center gap-1">
                   <button

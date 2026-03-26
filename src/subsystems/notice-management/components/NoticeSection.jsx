@@ -342,19 +342,6 @@ export default function NoticeSection() {
   return (
     <section className="mt-12 pb-8">
 
-      {/* Section Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl px-4 sm:px-6 py-4 sm:py-5 mb-6 shadow-lg shadow-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
-            <i className="fas fa-bullhorn text-white text-base sm:text-lg"></i>
-          </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">University Notices</h2>
-            <p className="text-xs sm:text-sm text-blue-100 mt-0.5">Official announcements from campus administration</p>
-          </div>
-        </div>
-      </div>
-
       {/* Smart Search Bar */}
       <div>
         {/* Smart Search Bar */}

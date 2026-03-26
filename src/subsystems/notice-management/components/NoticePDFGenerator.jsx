@@ -393,35 +393,18 @@ const NoticePDFGenerator = ({ notices, filterSummary = "" }) => {
     <button
       onClick={generatePdf}
       disabled={isGenerating}
-      className="relative flex items-center gap-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 border border-white/25 shadow-sm hover:shadow-md disabled:opacity-60 overflow-hidden group"
+      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors disabled:opacity-50"
+      style={{ background: "transparent", border: "none", color: "#ffffff" }}
+      onMouseEnter={e => { if (!isGenerating) e.currentTarget.style.background = "rgba(59,130,246,0.12)"; }}
+      onMouseLeave={e => { if (!isGenerating) e.currentTarget.style.background = "transparent"; }}
     >
-      {/* Subtle shimmer on hover */}
-      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
-
-      {isGenerating ? (
-        <>
-          <div className="relative w-4 h-4 flex-shrink-0">
-            <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </div>
-          <span className="flex flex-col items-start leading-none">
-            <span className="text-xs font-bold">Generating...</span>
-            <span className="text-[10px] text-white/60 font-normal">Please wait</span>
-          </span>
-        </>
-      ) : (
-        <>
-          <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
-            <i className="fas fa-file-download text-sm"></i>
-          </div>
-          <span className="flex flex-col items-start leading-none">
-            <span className="text-xs font-bold tracking-wide">Generate Report</span>
-            <span className="text-[10px] text-white/60 font-normal">Export as PDF</span>
-          </span>
-        </>
-      )}
+      <span className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0" style={{ background: "rgba(59,130,246,0.2)" }}>
+        {isGenerating
+          ? <svg className="animate-spin w-3.5 h-3.5" style={{ color: "#60a5fa" }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          : <i className="fas fa-file-download text-xs" style={{ color: "#60a5fa" }}></i>
+        }
+      </span>
+      <span>{isGenerating ? "Generating..." : "Export PDF"}</span>
     </button>
   );
 };

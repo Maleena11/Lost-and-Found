@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from './Sidebar';
@@ -25,11 +25,19 @@ export default function AdminNotices() {
   const [searchTerm, setSearchTerm]           = useState('');
   const [cleanupStatus, setCleanupStatus]     = useState(null);
   const [cleanupLoading, setCleanupLoading]   = useState(false);
+  const [showMoreMenu, setShowMoreMenu]       = useState(false);
+  const moreMenuRef                           = useRef(null);
   const [archivedNotices, setArchivedNotices] = useState([]);
   const [showArchived, setShowArchived]       = useState(false);
   const [archivedLoading, setArchivedLoading] = useState(false);
 
-  useEffect(() => { fetchNotices(); }, []);
+  useEffect(() => { fetchNotices(); fetchArchivedNotices(); }, []);
+
+  useEffect(() => {
+    const handler = (e) => { if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) setShowMoreMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const fetchNotices = async () => {
     setLoading(true);
@@ -190,72 +198,129 @@ export default function AdminNotices() {
 
         <main className="flex-1 p-4 sm:p-6">
 
-          {/* Page Header Banner */}
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl px-5 py-5 mb-6 shadow-lg shadow-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
-                <i className="fas fa-bullhorn text-white text-lg"></i>
+          {/* Action Toolbar */}
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-16 h-16 rounded-2xl" style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                <i className="fas fa-bullhorn text-3xl" style={{ color: "#3b82f6" }}></i>
               </div>
               <div>
-                <h2 className="text-xl font-extrabold text-white tracking-tight">Notice Management</h2>
-                <p className="text-xs text-blue-100 mt-0.5">Manage all university notices from one place</p>
+                <h2 className="font-extrabold text-3xl leading-tight" style={{ color: "#2a4d7a" }}>All Notices</h2>
+                <p className="text-base text-gray-400 leading-none mt-1">University announcements & updates</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <button
-                onClick={handleCleanupExpired}
-                disabled={cleanupLoading}
-                className="relative flex items-center gap-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 border border-white/25 shadow-sm hover:shadow-md disabled:opacity-60 overflow-hidden group"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
-                {cleanupLoading ? (
-                  <>
-                    <div className="relative w-4 h-4 flex-shrink-0">
-                      <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
-                    </div>
-                    <span className="flex flex-col items-start leading-none">
-                      <span className="text-xs font-bold">Cleaning...</span>
-                      <span className="text-[10px] text-white/60 font-normal">Please wait</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* More Actions Dropdown */}
+              <div className="relative" ref={moreMenuRef}>
+                <button
+                  onClick={() => setShowMoreMenu(p => !p)}
+                  className="flex items-center gap-0 px-0 py-0 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95 shadow-sm overflow-hidden"
+                  style={{ background: showMoreMenu ? "#2a4d7a" : "#3a6496", border: "1px solid rgba(255,255,255,0.08)", color: "#ffffff" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#2a4d7a"}
+                  onMouseLeave={e => { if (!showMoreMenu) e.currentTarget.style.background = "#3a6496"; }}
+                  onMouseDown={e => e.currentTarget.style.background = "#162d4a"}
+                  onMouseUp={e => e.currentTarget.style.background = "#2a4d7a"}
+                >
+                  {/* Left: icon + label */}
+                  <span className="flex items-center gap-2.5 px-3.5 py-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0" style={{ background: "rgba(59,130,246,0.2)" }}>
+                      <i className="fas fa-sliders-h text-xs" style={{ color: "#60a5fa" }}></i>
                     </span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
-                      <i className="fas fa-broom text-sm"></i>
+                    <span>Actions</span>
+                  </span>
+                  {/* Divider + chevron section */}
+                  <span className="flex items-center self-stretch px-2.5" style={{ borderLeft: "1px solid rgba(255,255,255,0.15)", background: showMoreMenu ? "rgba(0,0,0,0.1)" : "rgba(0,0,0,0.08)" }}>
+                    <i className={`fas fa-chevron-down text-xs transition-transform duration-200 ${showMoreMenu ? 'rotate-180' : ''}`} style={{ color: "#93c5fd" }}></i>
+                  </span>
+                </button>
+
+                {showMoreMenu && (
+                  <div className="absolute right-0 mt-1.5 w-52 rounded-xl shadow-xl z-20 overflow-hidden" style={{ background: "#1e3a5f", border: "1px solid rgba(59,130,246,0.2)" }}>
+                    {/* Clean Expired */}
+                    <button
+                      onClick={() => { handleCleanupExpired(); setShowMoreMenu(false); }}
+                      disabled={cleanupLoading}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors disabled:opacity-50"
+                      style={{ color: "#ffffff" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.12)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >
+                      <span className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0" style={{ background: "rgba(59,130,246,0.2)" }}>
+                        {cleanupLoading
+                          ? <svg className="animate-spin w-3.5 h-3.5" style={{ color: "#60a5fa" }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                          : <i className="fas fa-broom text-xs" style={{ color: "#60a5fa" }}></i>
+                        }
+                      </span>
+                      {cleanupLoading ? "Cleaning..." : "Clean Expired"}
+                    </button>
+                    {/* Divider */}
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
+                    {/* Export PDF */}
+                    <div onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.12)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"} style={{ transition: "background 0.15s" }}>
+                      <NoticePDFGenerator notices={filteredNotices} filterSummary={getFilterSummary()} />
                     </div>
-                    <span className="flex flex-col items-start leading-none">
-                      <span className="text-xs font-bold tracking-wide">Clean Expired</span>
-                      <span className="text-[10px] text-white/60 font-normal">Remove outdated</span>
-                    </span>
-                  </>
+                  </div>
                 )}
-              </button>
-              <NoticePDFGenerator notices={filteredNotices} filterSummary={getFilterSummary()} />
+              </div>
+
+              {/* Archived */}
               <button
                 onClick={toggleArchived}
-                className={`relative flex items-center gap-2.5 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 border shadow-sm hover:shadow-md overflow-hidden group ${showArchived ? 'bg-white/30 border-white/40' : 'bg-white/15 hover:bg-white/25 border-white/25'}`}
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95 shadow-sm"
+                style={{
+                  background: showArchived ? "#2a4d7a" : "#3a6496",
+                  border: showArchived ? "1px solid rgba(59,130,246,0.35)" : "1px solid rgba(255,255,255,0.08)",
+                  color: showArchived ? "#93c5fd" : "#ffffff"
+                }}
+                onMouseEnter={e => { if (!showArchived) e.currentTarget.style.background = "#2a4d7a"; }}
+                onMouseLeave={e => { if (!showArchived) e.currentTarget.style.background = "#3a6496"; }}
+                onMouseDown={e => e.currentTarget.style.background = "#162d4a"}
+                onMouseUp={e => e.currentTarget.style.background = "#2a4d7a"}
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
-                <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
-                  <i className="fas fa-archive text-sm"></i>
-                </div>
-                <span className="flex flex-col items-start leading-none">
-                  <span className="text-xs font-bold tracking-wide">Archived</span>
-                  <span className="text-[10px] text-white/60 font-normal">{archivedNotices.length > 0 ? `${archivedNotices.length} records` : 'View history'}</span>
+                <span className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0" style={{ background: "rgba(59,130,246,0.2)" }}>
+                  <i className="fas fa-archive text-xs" style={{ color: "#60a5fa" }}></i>
                 </span>
+                <span>Archived</span>
+                {archivedNotices.length > 0 && (
+                  <span className="text-sm font-bold" style={{ color: "#ffffff" }}>
+                    {archivedNotices.length}
+                  </span>
+                )}
               </button>
+
+              {/* Create Notice — primary action */}
               <Link
                 to="/create-notice"
-                className="relative flex items-center gap-2.5 bg-white text-blue-700 hover:bg-blue-100 active:scale-95 text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 shadow-md overflow-hidden group"
+                className="relative flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-300 active:scale-95 overflow-hidden group"
+                style={{
+                  background: "linear-gradient(135deg, #1d6fce 0%, #1a56a8 50%, #1e3a5f 100%)",
+                  border: "1px solid rgba(99,160,255,0.5)",
+                  color: "#ffffff",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)"
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #2979d8 0%, #1d6fce 50%, #2a4d7a 100%)";
+                  e.currentTarget.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.2)";
+                  e.currentTarget.style.borderColor = "rgba(99,160,255,0.8)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #1d6fce 0%, #1a56a8 50%, #1e3a5f 100%)";
+                  e.currentTarget.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.15)";
+                  e.currentTarget.style.borderColor = "rgba(99,160,255,0.5)";
+                }}
+                onMouseDown={e => e.currentTarget.style.background = "linear-gradient(135deg, #1a56a8 0%, #1043a0 50%, #162d4a 100%)"}
+                onMouseUp={e => e.currentTarget.style.background = "linear-gradient(135deg, #2979d8 0%, #1d6fce 50%, #2a4d7a 100%)"}
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/60 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"></span>
-                <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner">
-                  <i className="fas fa-plus text-sm text-blue-700"></i>
-                </div>
-                <span className="flex flex-col items-start leading-none">
-                  <span className="text-xs font-bold tracking-wide">Create Notice</span>
-                  <span className="text-[10px] text-blue-400 font-normal">Post new notice</span>
+                {/* Diagonal gloss */}
+                <span className="absolute inset-0 opacity-20 pointer-events-none"
+                  style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)" }} />
+                {/* Shimmer sweep */}
+                <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
+                  style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
+                <span className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0" style={{ background: "rgba(255,255,255,0.2)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)" }}>
+                  <i className="fas fa-plus text-xs text-white"></i>
                 </span>
+                <span style={{ color: "#ffffff", textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>Create Notice</span>
               </Link>
             </div>
           </div>
@@ -297,7 +362,7 @@ export default function AdminNotices() {
                 </div>
                 <div>
                   <p className={`text-4xl font-black ${textColor} leading-none`}>{value}</p>
-                  <p className={`text-sm ${subColor} font-semibold mt-1`}>{label}</p>
+                  <p className={`text-sm ${textColor} font-bold mt-1`}>{label}</p>
                 </div>
               </div>
             ))}
@@ -459,7 +524,7 @@ export default function AdminNotices() {
               </div>
             </div>
             {filteredNotices.length !== notices.length && (
-              <div className="px-4 py-2 bg-blue-100 border-t border-blue-100 text-xs text-blue-600 font-medium flex items-center gap-1.5">
+              <div className="px-4 py-2 text-xs font-medium flex items-center gap-1.5 border-t" style={{ background: "rgba(30,58,95,0.06)", borderColor: "rgba(30,58,95,0.1)", color: "#2a4d7a" }}>
                 <i className="fas fa-info-circle"></i>
                 Showing <strong>{filteredNotices.length}</strong> of <strong>{notices.length}</strong> notices
               </div>

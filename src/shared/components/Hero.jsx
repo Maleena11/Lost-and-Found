@@ -1,8 +1,18 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../../Hero.css";
 import BackgroundCarousel from "./BackgroundCarousel";
 
 export default function Hero() {
-  // Background images for the carousel
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+
+  const handleSearch = () => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    navigate(`/notice?q=${encodeURIComponent(trimmed)}`);
+  };
+
   const backgroundImages = [
     '/pic4.jpg',
     '/pic5.webp',
@@ -11,9 +21,9 @@ export default function Hero() {
 
   return (
     <section className="relative h-[500px]">
-      <BackgroundCarousel 
+      <BackgroundCarousel
         images={backgroundImages}
-        autoSlideInterval={6000} // Change image every 6 seconds
+        autoSlideInterval={6000}
         className="absolute inset-0"
       >
         <div className="h-full flex items-center justify-center text-center text-white">
@@ -25,10 +35,16 @@ export default function Hero() {
             <div className="flex max-w-xl mx-auto">
               <input
                 type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSearch()}
                 placeholder="Describe what you lost..."
                 className="flex-1 p-3 rounded-l text-black"
               />
-              <button className="bg-orange-500 px-6 rounded-r hover:bg-orange-600">
+              <button
+                onClick={handleSearch}
+                className="bg-orange-500 px-6 rounded-r hover:bg-orange-600 transition-colors"
+              >
                 <i className="fas fa-search"></i> Search
               </button>
             </div>

@@ -54,6 +54,26 @@ export default function NoticeSection() {
     fetchNotices();
   }, []);
 
+  // Auto-trigger search if ?q= param is present (e.g. from Hero search)
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && notices.length > 0) {
+      setSearchQuery(q);
+      const { keywords } = parseQuery(q);
+      if (keywords) {
+        const kws = keywords.split(/\s+/);
+        const matched = notices.filter(n =>
+          kws.some(k =>
+            n.title?.toLowerCase().includes(k) ||
+            n.content?.toLowerCase().includes(k) ||
+            n.itemType?.toLowerCase().includes(k)
+          )
+        );
+        setFilteredNotices(matched);
+      }
+    }
+  }, [searchParams, notices]);
+
   const [highlightedNoticeId, setHighlightedNoticeId] = useState(null);
 
   // Auto-scroll and highlight notice if noticeId is in URL (from notification click)

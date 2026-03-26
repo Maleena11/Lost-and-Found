@@ -5,7 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const errorHandler = require("./middleware/errorHandler");
 const logger = require("./middleware/logger");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const alertRoutes = require("./subsystems/admin/routes/alerts");
 

@@ -12,6 +12,7 @@ export default function NoticeSection() {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [tempUser, setTempUser] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [noticeToDelete, setNoticeToDelete] = useState(null);
@@ -52,6 +53,26 @@ export default function NoticeSection() {
     setTempUser(user);
     fetchNotices();
   }, []);
+
+  // Auto-trigger search if ?q= param is present (e.g. from Hero search)
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && notices.length > 0) {
+      setSearchQuery(q);
+      const { keywords } = parseQuery(q);
+      if (keywords) {
+        const kws = keywords.split(/\s+/);
+        const matched = notices.filter(n =>
+          kws.some(k =>
+            n.title?.toLowerCase().includes(k) ||
+            n.content?.toLowerCase().includes(k) ||
+            n.itemType?.toLowerCase().includes(k)
+          )
+        );
+        setFilteredNotices(matched);
+      }
+    }
+  }, [searchParams, notices]);
 
   const [highlightedNoticeId, setHighlightedNoticeId] = useState(null);
 
@@ -341,19 +362,6 @@ export default function NoticeSection() {
 
   return (
     <section className="mt-12 pb-8">
-
-      {/* Section Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl px-4 sm:px-6 py-4 sm:py-5 mb-6 shadow-lg shadow-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
-            <i className="fas fa-bullhorn text-white text-base sm:text-lg"></i>
-          </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">University Notices</h2>
-            <p className="text-xs sm:text-sm text-blue-100 mt-0.5">Official announcements from campus administration</p>
-          </div>
-        </div>
-      </div>
 
       {/* Smart Search Bar */}
       <div>
@@ -807,15 +815,26 @@ export default function NoticeSection() {
           <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl">
 
             {/* Image header (if available) */}
-            {selectedNotice.attachments && selectedNotice.attachments.some(att => isBase64Image(att)) && (
-              <div className="relative h-52 w-full overflow-hidden rounded-t-2xl">
+            {selectedNotice.attachments && selectedNotice.attachments.some(att => isBase64Image(att)) ? (
+              <div className="relative h-72 w-full overflow-hidden rounded-t-2xl">
                 <img
                   src={selectedNotice.attachments.find(att => isBase64Image(att))}
                   alt="Notice header"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 rounded-t-2xl"></div>
+                {/* Gradient overlay so text/button always readable */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/10 to-black/60 rounded-t-2xl" />
+                {/* Close button — on image, always visible with dark circle */}
+                <button
+                  onClick={closeModal}
+                  className="absolute top-3 right-3 w-9 h-9 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-lg"
+                >
+                  <i className="fas fa-times text-white text-sm"></i>
+                </button>
               </div>
+            ) : (
+              /* No image — close button sits in header row */
+              null
             )}
 
             {/* Modal Header */}
@@ -846,12 +865,15 @@ export default function NoticeSection() {
                 <h3 className="text-xl font-bold text-gray-900">{selectedNotice.title}</h3>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Show close button in header only when there is no image */}
+                {(!selectedNotice.attachments || !selectedNotice.attachments.some(att => isBase64Image(att))) && (
                 <button
                   onClick={closeModal}
                   className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
                 >
                   <i className="fas fa-times text-gray-500 text-sm"></i>
                 </button>
+                )}
               </div>
             </div>
 
@@ -901,17 +923,25 @@ export default function NoticeSection() {
                 <div className="mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                     <i className="fas fa-images"></i> Attached Images
+                    <span className="text-gray-400 font-normal normal-case tracking-normal">(click to enlarge)</span>
                   </p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {selectedNotice.attachments
                       .filter(att => isBase64Image(att))
                       .map((imageUrl, index) => (
-                        <div key={index} className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+                        <div
+                          key={index}
+                          onClick={() => setLightboxImage(imageUrl)}
+                          className="rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-zoom-in hover:shadow-md hover:border-blue-200 transition-all group relative"
+                        >
                           <img
                             src={imageUrl}
                             alt={`Image ${index + 1}`}
-                            className="w-full h-36 object-cover"
+                            className="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-300"
                           />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+                            <i className="fas fa-search-plus text-white text-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg"></i>
+                          </div>
                         </div>
                       ))}
                   </div>
@@ -981,6 +1011,36 @@ export default function NoticeSection() {
       )}
 
       </div>
+
+      {/* Lightbox overlay */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+          >
+            <i className="fas fa-times text-white text-lg"></i>
+          </button>
+
+          {/* Image */}
+          <img
+            src={lightboxImage}
+            alt="Enlarged view"
+            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+
+          {/* Hint */}
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
+            Click anywhere outside to close
+          </p>
+        </div>
+      )}
+
     </section>
   );
 }

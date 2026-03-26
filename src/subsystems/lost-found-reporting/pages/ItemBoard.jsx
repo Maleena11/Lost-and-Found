@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
@@ -23,6 +23,7 @@ const CATEGORIES = {
 };
 
 export default function ItemBoard() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +34,13 @@ export default function ItemBoard() {
   const [tempUser, setTempUser] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Password confirmation modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null); // 'edit' | 'delete'
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
     const user = getTempUser();
@@ -66,8 +74,6 @@ export default function ItemBoard() {
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
-
     setDeleteLoading(true);
     try {
       await axios.delete(`http://localhost:3001/api/lost-found/${itemId}`, {
@@ -80,6 +86,57 @@ export default function ItemBoard() {
       alert("Failed to delete item. " + (error.response?.data?.error || ""));
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const openPasswordModal = (action) => {
+    setPendingAction(action);
+    setPasswordInput("");
+    setPasswordError("");
+    setShowPasswordModal(true);
+  };
+
+  const closePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPendingAction(null);
+    setPasswordInput("");
+    setPasswordError("");
+  };
+
+  const handlePasswordConfirm = async () => {
+    if (!passwordInput) {
+      setPasswordError("Please enter your password.");
+      return;
+    }
+    const authUser = (() => {
+      try { return JSON.parse(localStorage.getItem("unifind_user")); } catch { return null; }
+    })();
+    if (!authUser?.email) {
+      setPasswordError("Could not identify your account. Please log in again.");
+      return;
+    }
+    // Ensure the logged-in user is the reporter of this item
+    if (!selectedItem || !tempUser || selectedItem.userId !== tempUser.id) {
+      setPasswordError("You can only edit or delete items that you reported.");
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordError("");
+    try {
+      await axios.post("http://localhost:3001/api/users/login", {
+        email: authUser.email,
+        password: passwordInput,
+      });
+      closePasswordModal();
+      if (pendingAction === "edit") {
+        navigate(`/edit-item/${selectedItem._id}`);
+      } else if (pendingAction === "delete") {
+        handleDeleteItem(selectedItem._id);
+      }
+    } catch (err) {
+      setPasswordError(err.response?.data?.error || "Incorrect password. Please try again.");
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -397,21 +454,18 @@ export default function ItemBoard() {
                     {/* Owner actions */}
                     {userOwnsItem(selectedItem) && (
                       <div className="mt-4 flex gap-2">
-                        <Link
-                          to={`/edit-item/${selectedItem._id}`}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openPasswordModal("edit"); }}
                           className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
                         >
                           <i className="fas fa-pen text-xs"></i> Edit
-                        </Link>
+                        </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteItem(selectedItem._id); }}
+                          onClick={(e) => { e.stopPropagation(); openPasswordModal("delete"); }}
                           disabled={deleteLoading}
                           className="flex-1 flex items-center justify-center gap-1.5 bg-red-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
                         >
-                          {deleteLoading
-                            ? <><i className="fas fa-spinner fa-spin text-xs"></i> Deleting...</>
-                            : <><i className="fas fa-trash text-xs"></i> Delete</>
-                          }
+                          <i className="fas fa-trash text-xs"></i> Delete
                         </button>
                       </div>
                     )}
@@ -525,6 +579,67 @@ export default function ItemBoard() {
             </div>
           </div>
         )}
+
+      {/* Password Confirmation Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingAction === "delete" ? "bg-red-100" : "bg-blue-100"}`}>
+                <i className={`fas fa-lock text-sm ${pendingAction === "delete" ? "text-red-600" : "text-blue-600"}`}></i>
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">Confirm Your Identity</h3>
+                <p className="text-xs text-gray-500">
+                  Enter your account password to {pendingAction === "delete" ? "delete" : "edit"} this item
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                Account Password
+              </label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handlePasswordConfirm()}
+                placeholder="Enter your password"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              {passwordError && (
+                <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                  <i className="fas fa-exclamation-circle"></i> {passwordError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={closePasswordModal}
+                disabled={passwordLoading}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePasswordConfirm}
+                disabled={passwordLoading}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 ${
+                  pendingAction === "delete" ? "bg-red-500 hover:bg-red-600" : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {passwordLoading
+                  ? <><i className="fas fa-spinner fa-spin text-xs"></i> Verifying...</>
+                  : <><i className={`fas ${pendingAction === "delete" ? "fa-trash" : "fa-pen"} text-xs`}></i> {pendingAction === "delete" ? "Delete" : "Edit"}</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </main>
 

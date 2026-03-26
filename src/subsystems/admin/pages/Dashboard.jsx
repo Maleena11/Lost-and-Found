@@ -344,7 +344,7 @@ export default function Dashboard() {
         <main className="flex-1 p-6 space-y-6">
 
           {/* ── Welcome Banner ── */}
-          <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Admin Dashboard</p>

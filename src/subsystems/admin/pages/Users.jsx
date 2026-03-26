@@ -68,15 +68,15 @@ function UserAvatar({ name, size = "sm" }) {
 }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon, color }) {
+function StatCard({ label, value, icon, color, border, numColor }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+    <div className={`bg-white rounded-xl border border-gray-100 border-l-4 ${border} shadow-sm p-5 flex items-center gap-4`}>
       <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
         {icon}
       </div>
       <div>
         <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-bold text-gray-800 mt-0.5">{value}</p>
+        <p className={`text-2xl font-bold mt-0.5 ${numColor}`}>{value}</p>
       </div>
     </div>
   );
@@ -469,7 +469,7 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
         <main className="flex-1 p-6 space-y-6">
 
           {/* Page Header Banner */}
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl px-5 py-5 mb-6 shadow-lg shadow-blue-200 flex items-center gap-4">
+          <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 rounded-2xl px-5 py-5 mb-6 shadow-lg shadow-indigo-200 flex items-center gap-4">
             <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
               <i className="fas fa-users text-white text-lg"></i>
             </div>
@@ -484,25 +484,33 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
             <StatCard
               label="Total Users"
               value={totalUsers}
-              color="bg-blue-50"
+              color="bg-blue-100"
+              border="border-l-blue-500"
+              numColor="text-blue-700"
               icon={<svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
             />
             <StatCard
               label="Active Users"
               value={activeUsers}
-              color="bg-green-50"
-              icon={<svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+              color="bg-emerald-100"
+              border="border-l-emerald-500"
+              numColor="text-emerald-700"
+              icon={<svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
             />
             <StatCard
               label="Admins"
               value={adminUsers}
-              color="bg-purple-50"
+              color="bg-purple-100"
+              border="border-l-purple-500"
+              numColor="text-purple-700"
               icon={<svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
             />
             <StatCard
               label="Inactive"
               value={inactiveUsers}
-              color="bg-red-50"
+              color="bg-red-100"
+              border="border-l-red-400"
+              numColor="text-red-600"
               icon={<svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>}
             />
           </div>
@@ -923,89 +931,95 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
       {/* ── View User Modal ── */}
       {showViewModal && viewingUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">User Profile</h2>
-              <button onClick={() => setShowViewModal(false)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            {/* Gradient hero header */}
+            <div className={`relative bg-gradient-to-br ${viewingUser.role === "Admin" ? "from-purple-700 via-indigo-700 to-blue-600" : "from-slate-700 via-indigo-700 to-blue-600"} px-6 pt-6 pb-14`}>
+              <button onClick={() => setShowViewModal(false)}
+                className="absolute top-4 right-4 p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
+              <p className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-1">User Profile</p>
+              <h2 className="text-lg font-bold text-white truncate">{viewingUser.name}</h2>
+              <p className="text-sm text-indigo-200 truncate mt-0.5">{viewingUser.email}</p>
             </div>
 
-            {/* Avatar + name hero */}
-            <div className="px-6 pt-6 pb-4 flex items-center gap-4">
-              <UserAvatar name={viewingUser.name} size="xl" />
-              <div className="flex-1 min-w-0">
-                <p className="text-lg font-bold text-gray-900 truncate">{viewingUser.name}</p>
-                <p className="text-sm text-gray-500 truncate">{viewingUser.email}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    viewingUser.role === "Admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
-                  }`}>
-                    {viewingUser.role === "Admin" && (
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                    )}
-                    {viewingUser.role}
-                  </span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    viewingUser.status === "Active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${viewingUser.status === "Active" ? "bg-green-500" : "bg-red-500"}`} />
-                    {viewingUser.status}
-                  </span>
+            {/* Avatar floating over hero */}
+            <div className="relative px-6 -mt-10 mb-3 flex items-end justify-between">
+              <div className="w-20 h-20 rounded-2xl border-4 border-white shadow-lg overflow-hidden flex-shrink-0"
+                style={{ background: viewingUser.role === "Admin" ? "linear-gradient(135deg,#7c3aed,#4f46e5)" : "linear-gradient(135deg,#3b82f6,#1d4ed8)" }}>
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-2xl font-bold text-white">{viewingUser.name?.charAt(0).toUpperCase()}</span>
                 </div>
               </div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm ${
+                  viewingUser.role === "Admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                }`}>
+                  {viewingUser.role === "Admin" && (
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  )}
+                  {viewingUser.role}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm ${
+                  viewingUser.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${viewingUser.status === "Active" ? "bg-emerald-500" : "bg-red-500"}`} />
+                  {viewingUser.status}
+                </span>
+              </div>
             </div>
 
-            {/* Details */}
-            <div className="px-6 pb-4 space-y-2.5">
-              <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">User ID</span>
-                <span className="text-sm font-mono text-gray-600">#{(viewingUser._id || viewingUser.id).toString().slice(-10)}</span>
+            {/* Details grid */}
+            <div className="px-6 pb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-indigo-500"></div>
+                <span className="text-xs font-semibold text-indigo-600 uppercase tracking-widest">Account Details</span>
               </div>
-              <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Email</span>
-                <span className="text-sm text-gray-700">{viewingUser.email}</span>
-              </div>
-              <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Phone</span>
-                <span className="text-sm text-gray-700">{viewingUser.phonenumber || "—"}</span>
-              </div>
-              <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Role</span>
-                <span className="text-sm text-gray-700">{viewingUser.role}</span>
-              </div>
-              <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Status</span>
-                <span className="text-sm text-gray-700">{viewingUser.status}</span>
-              </div>
-              <div className="flex items-center justify-between py-2.5 border-t border-gray-50">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Joined</span>
-                <span className="text-sm text-gray-700">{formatDate(viewingUser.createdAt)}</span>
+              <div className="bg-gray-50 rounded-2xl overflow-hidden divide-y divide-gray-100">
+                {[
+                  { icon: "fa-fingerprint", label: "User ID",  value: `#${(viewingUser._id || viewingUser.id).toString().slice(-10)}`, mono: true, color: "text-indigo-500" },
+                  { icon: "fa-envelope",    label: "Email",    value: viewingUser.email,                    color: "text-blue-500"    },
+                  { icon: "fa-phone",       label: "Phone",    value: viewingUser.phonenumber || "—",       color: "text-emerald-500" },
+                  { icon: "fa-user-tag",    label: "Role",     value: viewingUser.role,                     color: "text-purple-500"  },
+                  { icon: "fa-calendar",    label: "Joined",   value: formatDate(viewingUser.createdAt),    color: "text-amber-500"   },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0">
+                      <i className={`fas ${row.icon} text-xs ${row.color}`}></i>
+                    </div>
+                    <span className="text-xs font-medium text-gray-400 w-16 flex-shrink-0 uppercase tracking-wide">{row.label}</span>
+                    <span className={`text-sm font-medium text-gray-800 truncate flex-1 text-right ${row.mono ? "font-mono" : ""}`}>{row.value}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Activity summary */}
-            <div className="px-6 pb-6">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Activity Summary</p>
+            <div className="px-6 pb-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-4 rounded-full bg-violet-500"></div>
+                <span className="text-xs font-semibold text-violet-600 uppercase tracking-widest">Activity Summary</span>
+              </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-blue-50 rounded-xl p-4 text-center">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 text-center">
                   {loadingViewStats ? (
-                    <div className="h-7 w-8 mx-auto bg-blue-200 rounded animate-pulse mb-1" />
+                    <div className="h-8 w-10 mx-auto bg-blue-200 rounded-lg animate-pulse mb-1" />
                   ) : (
-                    <p className="text-2xl font-bold text-blue-700">{viewStats.itemsReported}</p>
+                    <p className="text-3xl font-extrabold text-blue-700">{viewStats.itemsReported}</p>
                   )}
-                  <p className="text-xs text-blue-500 font-medium mt-0.5">Items Reported</p>
+                  <p className="text-xs text-blue-500 font-semibold mt-1 uppercase tracking-wide">Items Reported</p>
                 </div>
-                <div className="bg-purple-50 rounded-xl p-4 text-center">
+                <div className="bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100 rounded-2xl p-4 text-center">
                   {loadingViewStats ? (
-                    <div className="h-7 w-8 mx-auto bg-purple-200 rounded animate-pulse mb-1" />
+                    <div className="h-8 w-10 mx-auto bg-purple-200 rounded-lg animate-pulse mb-1" />
                   ) : (
-                    <p className="text-2xl font-bold text-purple-700">{viewStats.claimsSubmitted}</p>
+                    <p className="text-3xl font-extrabold text-purple-700">{viewStats.claimsSubmitted}</p>
                   )}
-                  <p className="text-xs text-purple-500 font-medium mt-0.5">Claims Submitted</p>
+                  <p className="text-xs text-purple-500 font-semibold mt-1 uppercase tracking-wide">Claims Submitted</p>
                 </div>
               </div>
             </div>
@@ -1013,17 +1027,17 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
             {/* Footer */}
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
               <button
-                onClick={() => { setShowViewModal(false); handleOpenEdit(viewingUser._id || viewingUser.id); }}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                Edit
+                onClick={() => setShowViewModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
+                Close
               </button>
               <button
-                onClick={() => setShowViewModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
-              >
-                Close
+                onClick={() => { setShowViewModal(false); handleOpenEdit(viewingUser._id || viewingUser.id); }}
+                className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 rounded-xl shadow-sm shadow-indigo-200 transition">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Profile
               </button>
             </div>
           </div>
@@ -1032,38 +1046,54 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
       {/* ── Add User Modal ── */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+            {/* Gradient header */}
+            <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 px-6 py-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">Add New User</h2>
-                  <p className="text-xs text-gray-500">Fill in the details to create a new account</p>
+                  <h2 className="text-base font-bold text-white tracking-tight">Add New User</h2>
+                  <p className="text-xs text-indigo-200 mt-0.5">Fill in the details to create a new account</p>
                 </div>
               </div>
-              <button onClick={() => setShowAddForm(false)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <button onClick={() => setShowAddForm(false)}
+                className="p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
             <form onSubmit={handleAddUser} className="px-6 py-5 space-y-4">
-              {/* Name & Email */}
+
+              {/* Section label: Basic Info */}
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full bg-indigo-500"></div>
+                <span className="text-xs font-semibold text-indigo-600 uppercase tracking-widest">Basic Information</span>
+              </div>
+
+              {/* Name & Role */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Full Name <span className="text-red-500">*</span></label>
                   <input type="text" name="name" value={newUser.name} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
                     placeholder="Nimali Perera"
                     className={getFieldClassName("name", newUserTouched, newUserErrors)} />
                   {showFieldError("name", newUserTouched, newUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{newUserErrors.name}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {newUserErrors.name}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Role <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Role <span className="text-red-500">*</span></label>
                   <select name="role" value={newUser.role} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
                     className={getFieldClassName("role", newUserTouched, newUserErrors)}>
                     <option value="">Select role</option>
@@ -1071,7 +1101,10 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                     <option value="Admin">Admin</option>
                   </select>
                   {showFieldError("role", newUserTouched, newUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{newUserErrors.role}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {newUserErrors.role}
+                    </p>
                   )}
                 </div>
               </div>
@@ -1079,16 +1112,19 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
               {/* Email & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Email Address <span className="text-red-500">*</span></label>
                   <input type="email" name="email" value={newUser.email} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
                     placeholder="it23624859@my.sliit.lk"
                     className={getFieldClassName("email", newUserTouched, newUserErrors)} />
                   {showFieldError("email", newUserTouched, newUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{newUserErrors.email}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {newUserErrors.email}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Status <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Status <span className="text-red-500">*</span></label>
                   <select name="status" value={newUser.status} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
                     className={getFieldClassName("status", newUserTouched, newUserErrors)}>
                     <option value="">Select status</option>
@@ -1096,69 +1132,97 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                     <option value="Inactive">Inactive</option>
                   </select>
                   {showFieldError("status", newUserTouched, newUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{newUserErrors.status}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {newUserErrors.status}
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Phone Number <span className="text-red-500">*</span></label>
                 <input type="tel" name="phone" value={newUser.phone} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
                   placeholder="0712365852"
                   className={getFieldClassName("phone", newUserTouched, newUserErrors)} />
                 {showFieldError("phone", newUserTouched, newUserErrors) && (
-                  <p className="mt-1 text-xs text-red-600">{newUserErrors.phone}</p>
+                  <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                    {newUserErrors.phone}
+                  </p>
                 )}
+              </div>
+
+              {/* Section label: Security */}
+              <div className="flex items-center gap-2 pt-1">
+                <div className="w-1 h-4 rounded-full bg-violet-500"></div>
+                <span className="text-xs font-semibold text-violet-600 uppercase tracking-widest">Security</span>
               </div>
 
               {/* Password */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Password <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Password <span className="text-red-500">*</span></label>
                   <input type="password" name="password" value={newUser.password} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
                     placeholder="Min. 8 characters"
                     className={getFieldClassName("password", newUserTouched, newUserErrors)} />
                   {showFieldError("password", newUserTouched, newUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{newUserErrors.password}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {newUserErrors.password}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Confirm Password <span className="text-red-500">*</span></label>
                   <input type="password" name="confirmPassword" value={newUser.confirmPassword} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
                     placeholder="Re-enter password"
                     className={getFieldClassName("confirmPassword", newUserTouched, newUserErrors)} />
                   {showFieldError("confirmPassword", newUserTouched, newUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{newUserErrors.confirmPassword}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {newUserErrors.confirmPassword}
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Footer actions */}
-              <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-                <button type="button" onClick={() => { setShowAddForm(false); setNewUser({ name: "", email: "", phone: "", password: "", confirmPassword: "", role: "", status: "" }); setNewUserTouched({}); }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
-                  Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting || !isFormValid}
-                  className={`flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-lg transition text-white ${
-                    isSubmitting || !isFormValid ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                  }`}>
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                      </svg>
-                      Creating…
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      Create User
-                    </>
-                  )}
-                </button>
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-400">
+                  <span className="text-red-400">*</span> Required fields
+                </p>
+                <div className="flex gap-3">
+                  <button type="button"
+                    onClick={() => { setShowAddForm(false); setNewUser({ name: "", email: "", phone: "", password: "", confirmPassword: "", role: "", status: "" }); setNewUserTouched({}); }}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isSubmitting || !isFormValid}
+                    className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl transition text-white shadow-sm ${
+                      isSubmitting || !isFormValid
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-indigo-200"
+                    }`}>
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Creating…
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create User
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1237,98 +1301,170 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
       {/* ── Edit User Modal ── */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+            {/* Gradient header */}
+            <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 px-6 py-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <UserAvatar name={editingUser?.name} size="lg" />
+                <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner flex-shrink-0">
+                  <span className="text-lg font-bold text-white">{editingUser?.name?.charAt(0).toUpperCase()}</span>
+                </div>
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">Edit User</h2>
-                  <p className="text-xs text-gray-500">{editingUser?.email}</p>
+                  <h2 className="text-base font-bold text-white tracking-tight">Edit User</h2>
+                  <p className="text-xs text-indigo-200 mt-0.5 truncate max-w-[180px]">{editingUser?.email}</p>
                 </div>
               </div>
-              <button onClick={() => setShowEditModal(false)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <button onClick={() => setShowEditModal(false)}
+                className="p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
             <form onSubmit={handleUpdateUser} className="px-6 py-5 space-y-4">
+
+              {/* Section: Personal Info */}
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full bg-indigo-500"></div>
+                <span className="text-xs font-semibold text-indigo-600 uppercase tracking-widest">Personal Information</span>
+              </div>
+
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
                 <input type="text" name="name" value={editUser.name} onChange={handleEditUserChange} onBlur={handleEditUserBlur}
                   className={getFieldClassName("name", editUserTouched, editUserErrors)} />
                 {showFieldError("name", editUserTouched, editUserErrors) && (
-                  <p className="mt-1 text-xs text-red-600">{editUserErrors.name}</p>
+                  <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                    {editUserErrors.name}
+                  </p>
                 )}
               </div>
 
-              {/* Email */}
+              {/* Email (read-only) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-                <input type="email" name="email" value={editUser.email} readOnly
-                  className="w-full p-2 border border-gray-200 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed" />
-                <p className="mt-1 text-xs text-gray-400">Email address cannot be changed.</p>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Email Address</label>
+                <div className="relative">
+                  <input type="email" name="email" value={editUser.email} readOnly
+                    className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-400 cursor-not-allowed pr-10" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <i className="fas fa-lock text-gray-300 text-xs"></i>
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-gray-400 flex items-center gap-1">
+                  <i className="fas fa-info-circle text-blue-300"></i>
+                  Email address cannot be changed.
+                </p>
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
                 <input type="tel" name="phone" value={editUser.phone} onChange={handleEditUserChange} onBlur={handleEditUserBlur}
                   placeholder="0712365852"
                   className={getFieldClassName("phone", editUserTouched, editUserErrors)} />
                 {showFieldError("phone", editUserTouched, editUserErrors) && (
-                  <p className="mt-1 text-xs text-red-600">{editUserErrors.phone}</p>
+                  <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                    {editUserErrors.phone}
+                  </p>
                 )}
               </div>
 
-              {/* Role & Status in a row */}
+              {/* Section: Access Control */}
+              <div className="flex items-center gap-2 pt-1">
+                <div className="w-1 h-4 rounded-full bg-violet-500"></div>
+                <span className="text-xs font-semibold text-violet-600 uppercase tracking-widest">Access Control</span>
+              </div>
+
+              {/* Role & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Role</label>
                   <select name="role" value={editUser.role} onChange={handleEditUserChange} onBlur={handleEditUserBlur}
                     className={getFieldClassName("role", editUserTouched, editUserErrors)}>
                     <option value="User">User</option>
                     <option value="Admin">Admin</option>
                   </select>
                   {showFieldError("role", editUserTouched, editUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{editUserErrors.role}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {editUserErrors.role}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Status</label>
                   <select name="status" value={editUser.status} onChange={handleEditUserChange} onBlur={handleEditUserBlur}
                     className={getFieldClassName("status", editUserTouched, editUserErrors)}>
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
                   {showFieldError("status", editUserTouched, editUserErrors) && (
-                    <p className="mt-1 text-xs text-red-600">{editUserErrors.status}</p>
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      {editUserErrors.status}
+                    </p>
                   )}
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
-                  Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting || !isEditFormValid}
-                  className={`flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-lg text-white transition ${
-                    isSubmitting || !isEditFormValid ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                  }`}>
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                      </svg>
-                      Saving…
-                    </>
-                  ) : "Save Changes"}
-                </button>
+              {/* Role badge preview */}
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <span className="text-xs text-gray-400 font-medium">Preview:</span>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  editUser.role === "Admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                }`}>
+                  {editUser.role === "Admin" && <i className="fas fa-shield-alt text-xs"></i>}
+                  {editUser.role}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  editUser.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${editUser.status === "Active" ? "bg-emerald-500" : "bg-red-500"}`}></span>
+                  {editUser.status}
+                </span>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-400"><span className="text-red-400">*</span> Required fields</p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isSubmitting || !isEditFormValid}
+                    className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl text-white shadow-sm transition ${
+                      isSubmitting || !isEditFormValid
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-indigo-200"
+                    }`}>
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Saving…
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

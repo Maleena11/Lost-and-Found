@@ -32,7 +32,8 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
     {
       label: "Administration",
       items: [
-        { id: "users", label: "Users", icon: "fa-users", path: "/admin/dashboard/users" },
+        { id: "users", label: "User Management", icon: "fa-users", path: "/admin/dashboard/users" },
+        { id: "settings", label: "Settings", icon: "fa-cog", path: "/admin/dashboard/settings" },
         { id: "report", label: "Report Item", icon: "fa-plus-circle", path: "/report-item" },
       ]
     },

@@ -420,138 +420,115 @@ export default function NoticeSection() {
             </div>
           </button>
 
-          {/* Children — shown when panel is open */}
+          {/* Priority — shown only when filter panel is open */}
           {showFilterPanel && (
             <div className="border-t border-gray-200">
-
-          {/* Section 1 — Priority Level */}
-          <div className="border-b border-gray-100">
-            <button
-              onClick={() => toggleFilterSection('priority')}
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${openFilterSections.priority ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'}`}>
-                  <i className={`fas fa-flag text-sm transition-colors ${openFilterSections.priority ? 'text-blue-500' : 'text-gray-400'}`}></i>
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-700">Priority Level</p>
-                  <p className="text-xs text-gray-400">Filter by urgency</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {filterPriority && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 capitalize">{filterPriority}</span>
-                )}
-                <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200 ${openFilterSections.priority ? 'rotate-180' : ''}`}></i>
-              </div>
-            </button>
-
-            {openFilterSections.priority && (
-              <div className="px-3 sm:px-4 pb-4 pt-1 grid grid-cols-3 gap-2 sm:gap-2.5 bg-gray-50/50">
-                {[
-                  { value: 'urgent', label: 'Urgent', icon: 'fas fa-exclamation-circle',
-                    active: 'bg-red-50 text-red-600 border-red-400',
-                    inactive: 'bg-white text-red-400 border-red-200 hover:border-red-300 hover:bg-red-50',
-                    dot: 'bg-red-500 animate-ping', activeDot: 'bg-red-500 animate-ping',
-                    count: notices.filter(n => n.priority === 'urgent').length },
-                  { value: 'medium', label: 'Medium', icon: 'fas fa-minus-circle',
-                    active: 'bg-green-50 text-green-700 border-green-400',
-                    inactive: 'bg-white text-green-500 border-green-200 hover:border-green-300 hover:bg-green-50',
-                    dot: 'bg-green-400', activeDot: 'bg-green-500',
-                    count: notices.filter(n => n.priority === 'medium').length },
-                  { value: 'low', label: 'Low', icon: 'fas fa-arrow-circle-down',
-                    active: 'bg-yellow-50 text-yellow-700 border-yellow-400',
-                    inactive: 'bg-white text-yellow-500 border-yellow-200 hover:border-yellow-300 hover:bg-yellow-50',
-                    dot: 'bg-yellow-400', activeDot: 'bg-yellow-500',
-                    count: notices.filter(n => n.priority === 'low').length },
-                ].map(({ value, label, icon, active, inactive, dot, activeDot, count }) => (
-                  <button
-                    key={value}
-                    onClick={() => setFilterPriority(filterPriority === value ? null : value)}
-                    className={`relative flex flex-col items-center gap-2 py-3 sm:py-4 px-2 sm:px-3 rounded-2xl border-2 font-semibold transition-all duration-200 ${filterPriority === value ? active : inactive}`}
-                  >
-                    {filterPriority === value && (
-                      <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-white rounded-full border border-current flex items-center justify-center">
-                        <i className="fas fa-check" style={{ fontSize: '8px' }}></i>
-                      </div>
-                    )}
-                    <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${filterPriority === value ? activeDot : dot}`}></span>
-                    <i className={`${icon} text-xl sm:text-2xl`}></i>
-                    <span className="text-xs sm:text-sm font-extrabold tracking-wide">{label}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-white border border-gray-200 text-gray-500">
-                      {count}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div className="mx-4 border-t border-dashed border-gray-200"></div>
-
-          {/* Section 2 — Lost / Found Item */}
-          <div>
-            <button
-              onClick={() => toggleFilterSection('category')}
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${openFilterSections.category ? 'bg-orange-100' : 'bg-gray-100 group-hover:bg-orange-50'}`}>
-                  <i className={`fas fa-tag text-sm transition-colors ${openFilterSections.category ? 'text-orange-500' : 'text-gray-400'}`}></i>
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-700">Lost / Found Item</p>
-                  <p className="text-xs text-gray-400">Filter by item type</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {filterCategory && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 capitalize">{filterCategory.replace('-', ' ')}</span>
-                )}
-                <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200 ${openFilterSections.category ? 'rotate-180' : ''}`}></i>
-              </div>
-            </button>
-
-            {openFilterSections.category && (
-              <div className="px-4 pb-4 pt-1 grid grid-cols-2 gap-3 bg-gray-50/50">
-                {[
-                  { value: 'lost-item', label: 'Lost Item', icon: 'fas fa-search', desc: 'Items being searched',
-                    active: 'bg-orange-50 text-orange-700 border-orange-400',
-                    inactive: 'bg-white text-orange-500 border-orange-200 hover:border-orange-300 hover:bg-orange-50',
-                    count: notices.filter(n => n.category === 'lost-item').length },
-                  { value: 'found-item', label: 'Found Item', icon: 'fas fa-hand-holding', desc: 'Items recovered',
-                    active: 'bg-cyan-50 text-cyan-700 border-cyan-400',
-                    inactive: 'bg-white text-cyan-500 border-cyan-200 hover:border-cyan-300 hover:bg-cyan-50',
-                    count: notices.filter(n => n.category === 'found-item').length },
-                ].map(({ value, label, icon, desc, active, inactive, count }) => (
-                  <button
-                    key={value}
-                    onClick={() => setFilterCategory(filterCategory === value ? null : value)}
-                    className={`relative flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${filterCategory === value ? active : inactive}`}
-                  >
-                    {filterCategory === value && (
-                      <div className="absolute top-2 right-2 w-4 h-4 bg-white rounded-full border border-current flex items-center justify-center">
-                        <i className="fas fa-check" style={{ fontSize: '8px' }}></i>
-                      </div>
-                    )}
-                    <i className={`${icon} text-xl ${filterCategory === value ? 'animate-bounce' : ''}`}></i>
-                    <div className="text-left">
-                      <p className="font-bold leading-tight">{label}</p>
-                      <p className="text-xs mt-0.5 text-gray-400">{desc}</p>
-                      <span className="inline-block text-xs mt-1 px-2 py-0.5 rounded-full font-bold bg-white border border-gray-200 text-gray-500">
-                        {count} notices
-                      </span>
+              <div className="border-b border-gray-100">
+                <button
+                  onClick={() => toggleFilterSection('priority')}
+                  className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${openFilterSections.priority ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'}`}>
+                      <i className={`fas fa-flag text-sm transition-colors ${openFilterSections.priority ? 'text-blue-500' : 'text-gray-400'}`}></i>
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+                    <div className="text-left">
+                      <p className="text-sm font-semibold text-gray-700">Priority Level</p>
+                      <p className="text-xs text-gray-400">Filter by urgency</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {filterPriority && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 capitalize">{filterPriority}</span>
+                    )}
+                    <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200 ${openFilterSections.priority ? 'rotate-180' : ''}`}></i>
+                  </div>
+                </button>
 
+                {openFilterSections.priority && (
+                  <div className="px-3 sm:px-4 pb-4 pt-1 grid grid-cols-3 gap-2 sm:gap-2.5 bg-gray-50/50">
+                    {[
+                      { value: 'urgent', label: 'Urgent', icon: 'fas fa-exclamation-circle',
+                        active: 'bg-red-50 text-red-600 border-red-400',
+                        inactive: 'bg-white text-red-400 border-red-200 hover:border-red-300 hover:bg-red-50',
+                        dot: 'bg-red-500 animate-ping', activeDot: 'bg-red-500 animate-ping',
+                        count: notices.filter(n => n.priority === 'urgent').length },
+                      { value: 'medium', label: 'Medium', icon: 'fas fa-minus-circle',
+                        active: 'bg-green-50 text-green-700 border-green-400',
+                        inactive: 'bg-white text-green-500 border-green-200 hover:border-green-300 hover:bg-green-50',
+                        dot: 'bg-green-400', activeDot: 'bg-green-500',
+                        count: notices.filter(n => n.priority === 'medium').length },
+                      { value: 'low', label: 'Low', icon: 'fas fa-arrow-circle-down',
+                        active: 'bg-yellow-50 text-yellow-700 border-yellow-400',
+                        inactive: 'bg-white text-yellow-500 border-yellow-200 hover:border-yellow-300 hover:bg-yellow-50',
+                        dot: 'bg-yellow-400', activeDot: 'bg-yellow-500',
+                        count: notices.filter(n => n.priority === 'low').length },
+                    ].map(({ value, label, icon, active, inactive, dot, activeDot, count }) => (
+                      <button
+                        key={value}
+                        onClick={() => setFilterPriority(filterPriority === value ? null : value)}
+                        className={`relative flex flex-col items-center gap-2 py-3 sm:py-4 px-2 sm:px-3 rounded-2xl border-2 font-semibold transition-all duration-200 ${filterPriority === value ? active : inactive}`}
+                      >
+                        {filterPriority === value && (
+                          <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-white rounded-full border border-current flex items-center justify-center">
+                            <i className="fas fa-check" style={{ fontSize: '8px' }}></i>
+                          </div>
+                        )}
+                        <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${filterPriority === value ? activeDot : dot}`}></span>
+                        <i className={`${icon} text-xl sm:text-2xl`}></i>
+                        <span className="text-xs sm:text-sm font-extrabold tracking-wide">{label}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-white border border-gray-200 text-gray-500">
+                          {count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
+
+          {/* Lost / Found — always visible */}
+          <div className="border-t border-gray-200 px-4 pb-4 pt-3">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center">
+                <i className="fas fa-tag text-orange-500 text-xs"></i>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Lost / Found Item</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { value: 'lost-item',  label: 'Lost Item',  icon: 'fas fa-search',      desc: 'Items being searched',
+                  active: 'bg-orange-50 text-orange-700 border-orange-400',
+                  inactive: 'bg-white text-orange-500 border-orange-200 hover:border-orange-300 hover:bg-orange-50',
+                  count: notices.filter(n => n.category === 'lost-item').length },
+                { value: 'found-item', label: 'Found Item', icon: 'fas fa-hand-holding', desc: 'Items recovered',
+                  active: 'bg-cyan-50 text-cyan-700 border-cyan-400',
+                  inactive: 'bg-white text-cyan-500 border-cyan-200 hover:border-cyan-300 hover:bg-cyan-50',
+                  count: notices.filter(n => n.category === 'found-item').length },
+              ].map(({ value, label, icon, desc, active, inactive, count }) => (
+                <button
+                  key={value}
+                  onClick={() => setFilterCategory(filterCategory === value ? null : value)}
+                  className={`relative flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${filterCategory === value ? active : inactive}`}
+                >
+                  {filterCategory === value && (
+                    <div className="absolute top-2 right-2 w-4 h-4 bg-white rounded-full border border-current flex items-center justify-center">
+                      <i className="fas fa-check" style={{ fontSize: '8px' }}></i>
+                    </div>
+                  )}
+                  <i className={`${icon} text-xl ${filterCategory === value ? 'animate-bounce' : ''}`}></i>
+                  <div className="text-left">
+                    <p className="font-bold leading-tight">{label}</p>
+                    <p className="text-xs mt-0.5 text-gray-400">{desc}</p>
+                    <span className="inline-block text-xs mt-1 px-2 py-0.5 rounded-full font-bold bg-white border border-gray-200 text-gray-500">
+                      {count} notices
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Filter active banner */}
@@ -601,7 +578,9 @@ export default function NoticeSection() {
                         <span className="text-xs text-gray-400 uppercase font-semibold">{n.priority}</span>
                       </div>
                       <p className="text-sm font-semibold text-gray-800 truncate">{n.title}</p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{n.content?.substring(0, 80)}...</p>
+                      {n.category !== 'found-item' && (
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{n.content?.substring(0, 80)}...</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -621,6 +600,7 @@ export default function NoticeSection() {
       </div>
 
       {/* Content */}
+      <div className="mt-8">
       {loading ? (
         <div className="flex flex-col justify-center items-center h-48 gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
@@ -785,9 +765,11 @@ export default function NoticeSection() {
                 }`}>
                   {notice.title}
                 </h3>
-                <p className="text-gray-500 text-xs flex-1 leading-relaxed line-clamp-3">
-                  {notice.content.length > 120 ? `${notice.content.substring(0, 120)}...` : notice.content}
-                </p>
+                {notice.category !== 'found-item' && (
+                  <p className="text-gray-500 text-xs flex-1 leading-relaxed line-clamp-3">
+                    {notice.content.length > 120 ? `${notice.content.substring(0, 120)}...` : notice.content}
+                  </p>
+                )}
               </div>
 
               {/* Footer strip */}
@@ -895,9 +877,24 @@ export default function NoticeSection() {
               </div>
 
               {/* Content */}
-              <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed mb-6">
-                {selectedNotice.content}
-              </p>
+              {selectedNotice.category === 'found-item' ? (
+                <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-4 mb-6">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i className="fas fa-shield-alt text-blue-500 text-sm"></i>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-blue-800">Description hidden</p>
+                    <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                      The description for found item notices is restricted to prevent fraudulent claims.
+                      If you believe this item belongs to you, please contact the notice poster directly using the contact details below.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed mb-6">
+                  {selectedNotice.content}
+                </p>
+              )}
 
               {/* Image gallery */}
               {selectedNotice.attachments && selectedNotice.attachments.some(att => isBase64Image(att)) && (
@@ -983,6 +980,7 @@ export default function NoticeSection() {
         </div>
       )}
 
+      </div>
     </section>
   );
 }

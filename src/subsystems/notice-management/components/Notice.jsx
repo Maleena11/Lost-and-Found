@@ -25,8 +25,8 @@ export default function Notice() {
                 <span className="text-white font-medium">Notice Board</span>
               </div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-14 h-14 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-bullhorn text-white text-2xl"></i>
+                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-bullhorn text-white text-lg"></i>
                 </div>
                 <h1 className="text-3xl font-extrabold tracking-tight">Notice Board</h1>
               </div>

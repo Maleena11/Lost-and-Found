@@ -44,7 +44,7 @@ export default function HowItWorks() {
         {/* Steps */}
         <div className="relative">
           {/* Connection Line - Hidden on mobile */}
-          <div className="hidden lg:block absolute top-24 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-600"></div>
+          <div className="hidden lg:block absolute top-24 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-300 via-blue-600 to-blue-900"></div>
           
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s, index) => (
@@ -53,7 +53,7 @@ export default function HowItWorks() {
                 <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center shadow-lg hover:shadow-xl transition-shadow duration-300 relative z-10">
                   {/* Step Number Circle */}
                   <div className="relative mb-6">
-                    <div className="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full mx-auto mb-4 font-bold text-xl shadow-lg">
+                    <div className="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-blue-700 to-blue-900 text-white rounded-full mx-auto mb-4 font-bold text-xl shadow-lg">
                       {s.step}
                     </div>
                     {/* Icon */}
@@ -80,8 +80,8 @@ export default function HowItWorks() {
                 {/* Arrow connector - Hidden on last item and mobile */}
                 {index < steps.length - 1 && (
                   <div className="hidden lg:block absolute top-24 -right-4 z-20">
-                    <div className="w-8 h-8 bg-white border-2 border-blue-400 rounded-full flex items-center justify-center">
-                      <i className="fas fa-arrow-right text-blue-600 text-sm"></i>
+                    <div className="w-8 h-8 bg-white border-2 border-blue-700 rounded-full flex items-center justify-center">
+                      <i className="fas fa-arrow-right text-blue-800 text-sm"></i>
                     </div>
                   </div>
                 )}

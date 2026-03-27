@@ -69,7 +69,7 @@ return (
                     >
                         {/* Icon */}
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-                            <i className={`${service.icon} text-2xl text-blue-600`}></i>
+                            <i className={`${service.icon} text-2xl text-blue-800`}></i>
                         </div>
 
                         {/* Title and Description */}
@@ -91,7 +91,7 @@ return (
 
             {/* Call to Action */}
             <div className="text-center mt-16">
-                <div className="bg-blue-600 rounded-2xl p-8 text-white">
+                <div className="bg-gradient-to-r from-blue-700 to-blue-900 rounded-2xl p-8 text-white">
                     <h3 className="text-2xl font-bold mb-4">Ready to Get Started?</h3>
                     <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
                         Join thousands of students who have successfully recovered their lost items through our platform.

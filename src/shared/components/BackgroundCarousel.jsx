@@ -61,7 +61,7 @@ const BackgroundCarousel = ({
       ))}
 
       {/* Dark Overlay */}
-      <div className="absolute inset-0 w-full h-full bg-black opacity-60"></div>
+      <div className="absolute inset-0 w-full h-full bg-black opacity-10"></div>
 
       {/* Navigation Arrows - Only show if more than 1 image */}
       {images.length > 1 && (

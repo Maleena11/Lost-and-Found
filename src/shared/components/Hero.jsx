@@ -14,9 +14,9 @@ export default function Hero() {
   };
 
   const backgroundImages = [
-    '/pic4.jpg',
-    '/pic5.webp',
-    '/pic1.webp'
+    '/slide_1.png',
+    '/slide_2.png',
+    '/slide_3.png'
   ];
 
   return (
@@ -26,12 +26,9 @@ export default function Hero() {
         autoSlideInterval={6000}
         className="absolute inset-0"
       >
-        <div className="h-full flex items-center justify-center text-center text-white">
-          <div className="max-w-2xl mx-auto p-4">
-            <h2 className="text-4xl font-bold mb-4">Lost Something on Campus?</h2>
-            <p className="mb-6 text-lg">
-              We help reunite lost items with their owners across our university campus
-            </p>
+        <div className="absolute top-4 right-4">
+          <div className="p-2">
+            
             <div className="flex max-w-xl mx-auto">
               <input
                 type="text"

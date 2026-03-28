@@ -43,6 +43,10 @@ const lostFoundItemSchema = new mongoose.Schema({
     type: String, // Base64 string
     required: false
   }],
+  thumbnail: {
+    type: String, // Small compressed base64 for list views
+    required: false
+  },
   location: {
     type: String,
     required: true

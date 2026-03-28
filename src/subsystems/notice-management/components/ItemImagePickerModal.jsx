@@ -6,6 +6,7 @@ export default function ItemImagePickerModal({ onSelect, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState([]);
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     axios
@@ -33,6 +34,28 @@ export default function ItemImagePickerModal({ onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors"
+            onClick={() => setLightbox(null)}
+          >
+            <i className="fas fa-times"></i>
+          </button>
+          <img
+            src={lightbox}
+            alt="Full view"
+            className="max-w-lg w-full mx-6 rounded-2xl shadow-2xl object-contain max-h-[80vh]"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -86,7 +109,7 @@ export default function ItemImagePickerModal({ onSelect, onClose }) {
                         <div
                           key={idx}
                           onClick={() => toggleImage(img)}
-                          className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                          className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all group/img ${
                             isSelected
                               ? "border-blue-500 ring-2 ring-blue-300"
                               : "border-gray-200 hover:border-blue-300"
@@ -104,6 +127,14 @@ export default function ItemImagePickerModal({ onSelect, onClose }) {
                               </div>
                             </div>
                           )}
+                          {/* Zoom button */}
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); setLightbox(img); }}
+                            className="absolute bottom-1 right-1 w-6 h-6 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                          >
+                            <i className="fas fa-search-plus text-[10px]"></i>
+                          </button>
                         </div>
                       );
                     })}

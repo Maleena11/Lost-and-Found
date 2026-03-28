@@ -364,15 +364,14 @@ const searchNotices = async (req, res) => {
 
     // Build a regex for each keyword
     const keywords = q.trim().split(/\s+/).filter(w => w.length > 1);
-    const regexList = keywords.map(k => new RegExp(k, 'i'));
 
-    const filter = {
-      $or: [
-        { title:    { $in: regexList } },
-        { content:  { $in: regexList } },
-        { itemType: { $in: regexList } }
-      ]
-    };
+    const keywordConditions = keywords.flatMap(k => [
+      { title:    { $regex: k, $options: 'i' } },
+      { content:  { $regex: k, $options: 'i' } },
+      { itemType: { $regex: k, $options: 'i' } },
+    ]);
+
+    const filter = { $or: keywordConditions };
 
     if (category) filter.category = category;
 

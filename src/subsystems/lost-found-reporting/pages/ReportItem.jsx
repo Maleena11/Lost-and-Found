@@ -696,8 +696,7 @@ export default function ReportItem() {
                     <option value="Year 2">Year 2</option>
                     <option value="Year 3">Year 3</option>
                     <option value="Year 4">Year 4</option>
-                    <option value="Postgraduate">Postgraduate</option>
-                    <option value="Staff">Staff / Faculty</option>
+                    
                   </select>
                   {errors.building && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.building}</p>}
                 </div>

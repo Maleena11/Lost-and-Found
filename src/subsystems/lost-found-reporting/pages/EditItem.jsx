@@ -190,7 +190,7 @@ export default function EditItem() {
       await axios.put(`http://localhost:3001/api/lost-found/${id}`, updateData);
 
       setMessage({ text: "Item updated successfully!", type: "success" });
-      setTimeout(() => navigate('/notice'), 2000);
+      setTimeout(() => navigate('/item-board'), 2000);
     } catch (err) {
       setMessage({
         text: err.response?.data?.error || err.message || "Failed to update item",

@@ -917,7 +917,7 @@ export default function Verification() {
                     <i className="fas fa-user-circle text-blue-500 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-blue-700">
                       <span className="font-semibold">Auto-filled from your account.</span>{" "}
-                      Your name and email have been pre-populated. Please verify they are correct before submitting.
+                      Your name, student ID, and email have been locked and cannot be edited.
                     </p>
                   </div>
                 )}
@@ -928,29 +928,32 @@ export default function Verification() {
                   <Field
                     label="Full Name"
                     required
-                    hint="Letters only — as it appears on your Student ID card"
+                    hint={!user?.name ? "Letters only — as it appears on your Student ID card" : undefined}
                     error={errors.name}
-                    touched={touched.name}
+                    touched={!user?.name && touched.name}
                   >
                     <div className="relative">
                       <input
                         type="text"
                         name="name"
                         value={formData.name}
-                        onChange={handleNameChange}
-                        onBlur={handleBlur}
+                        onChange={user?.name ? undefined : handleNameChange}
+                        onBlur={user?.name ? undefined : handleBlur}
+                        readOnly={!!user?.name}
                         placeholder="e.g. Kavindu Perera"
                         maxLength={60}
-                        className={inputClass("name")}
+                        className={`${inputClass("name")}${user?.name ? " bg-gray-100 cursor-not-allowed text-gray-500" : ""}`}
                       />
-                      {touched.name && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                          {errors.name
-                            ? <i className="fas fa-times-circle text-red-400 text-sm" />
-                            : <i className="fas fa-check-circle text-green-400 text-sm" />
-                          }
-                        </span>
-                      )}
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {user?.name
+                          ? <i className="fas fa-lock text-blue-400 text-xs" title="From your account" />
+                          : touched.name && (
+                            errors.name
+                              ? <i className="fas fa-times-circle text-red-400 text-sm" />
+                              : <i className="fas fa-check-circle text-green-400 text-sm" />
+                          )
+                        }
+                      </span>
                     </div>
                   </Field>
 
@@ -958,9 +961,9 @@ export default function Verification() {
                   <Field
                     label="Student ID Number"
                     required
-                    hint={!touched.studentId ? 'Format: IT followed by 8 digits — e.g. IT21123456' : undefined}
+                    hint={!user?.email && !touched.studentId ? 'Format: IT followed by 8 digits — e.g. IT21123456' : undefined}
                     error={errors.studentId}
-                    touched={touched.studentId}
+                    touched={!user?.email && touched.studentId}
                   >
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
@@ -972,56 +975,54 @@ export default function Verification() {
                         type="text"
                         name="studentId"
                         value={formData.studentId}
-                        onChange={handleStudentIdChange}
-                        onBlur={handleBlur}
+                        onChange={user?.email ? undefined : handleStudentIdChange}
+                        onBlur={user?.email ? undefined : handleBlur}
+                        readOnly={!!user?.email}
                         placeholder="IT21123456"
                         maxLength={10}
-                        className={`${inputClass("studentId")} pl-14 font-mono tracking-wider`}
+                        className={`${inputClass("studentId")} pl-14 font-mono tracking-wider${user?.email ? " bg-gray-100 cursor-not-allowed text-gray-500" : ""}`}
                       />
-                      {touched.studentId && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                          {errors.studentId
-                            ? <i className="fas fa-times-circle text-red-400 text-sm" />
-                            : <i className="fas fa-check-circle text-green-400 text-sm" />
-                          }
-                        </span>
-                      )}
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {user?.email
+                          ? <i className="fas fa-lock text-blue-400 text-xs" title="From your account" />
+                          : touched.studentId && (
+                            errors.studentId
+                              ? <i className="fas fa-times-circle text-red-400 text-sm" />
+                              : <i className="fas fa-check-circle text-green-400 text-sm" />
+                          )
+                        }
+                      </span>
                     </div>
-                    {!touched.studentId && (
-                      <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                        <i className="fas fa-info-circle text-blue-400" />
-                        Your Student ID always starts with <span className="font-bold text-blue-600">IT</span>
-                      </p>
-                    )}
                   </Field>
 
                   {/* University Email */}
                   <Field
                     label="University Email"
                     required
-                    hint={!touched.email ? "Use your official university email (e.g. it21xxxxxx@my.sliit.lk)" : undefined}
+                    hint={!user?.email && !touched.email ? "Use your official university email (e.g. it21xxxxxx@my.sliit.lk)" : undefined}
                     error={errors.email}
-                    touched={touched.email}
+                    touched={!user?.email && touched.email}
                   >
                     <div className="relative">
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
+                        onChange={user?.email ? undefined : handleChange}
+                        onBlur={user?.email ? undefined : handleBlur}
+                        readOnly={!!user?.email}
                         placeholder="it21xxxxxx@my.sliit.lk"
-                        className={inputClass("email")}
+                        className={`${inputClass("email")}${user?.email ? " bg-gray-100 cursor-not-allowed text-gray-500" : ""}`}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                        {user?.email && formData.email === user.email && (
-                          <i className="fas fa-lock text-blue-400 text-xs" title="From your account" />
-                        )}
-                        {touched.email && (
-                          errors.email
-                            ? <i className="fas fa-times-circle text-red-400 text-sm" />
-                            : <i className="fas fa-check-circle text-green-400 text-sm" />
-                        )}
+                        {user?.email
+                          ? <i className="fas fa-lock text-blue-400 text-xs" title="From your account" />
+                          : touched.email && (
+                            errors.email
+                              ? <i className="fas fa-times-circle text-red-400 text-sm" />
+                              : <i className="fas fa-check-circle text-green-400 text-sm" />
+                          )
+                        }
                       </span>
                     </div>
                   </Field>
@@ -1258,7 +1259,7 @@ export default function Verification() {
                       onChange={handleChange}
                       rows="3"
                       placeholder="e.g. I lost it on the 104 bus from Malabe to Colombo on Tuesday morning around 8:30 AM..."
-                      className="w-full border border-gray-200 bg-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      className="w-full border-2 border-gray-300 bg-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 resize-none"
                     />
                   </Field>
 
@@ -1293,7 +1294,7 @@ export default function Verification() {
                     )}
 
                     {claimantImages.length < MAX_IMAGES && (
-                      <label className="flex flex-col items-center justify-center gap-2 w-full py-6 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors">
+                      <label className="flex flex-col items-center justify-center gap-2 w-full py-6 border-2 border-dashed border-gray-400 rounded-xl bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors">
                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-200 shadow-sm">
                           <i className="fas fa-camera text-blue-500 text-base" />
                         </div>

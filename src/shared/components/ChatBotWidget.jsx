@@ -30,13 +30,13 @@ export default function ChatBot() {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 w-80 bg-white border rounded-lg shadow-lg flex flex-col z-50">
+    <div className="fixed bottom-5 right-5 w-80 bg-white border-2 border-gray-400 rounded-lg shadow-lg flex flex-col z-50">
       <div className="p-3 flex-1 overflow-y-auto max-h-96 space-y-2">
         {messages.map((msg, idx) => (
           <div
             key={idx}
             className={`p-2 rounded-md ${
-              msg.sender === "bot" ? "bg-gray-200 text-black text-left" : "bg-blue-600 text-white text-right"
+              msg.sender === "bot" ? "bg-gray-200 text-black text-left" : "bg-gray-800 text-white text-right"
             }`}
           >
             {msg.text}
@@ -44,18 +44,18 @@ export default function ChatBot() {
         ))}
       </div>
 
-      <div className="flex border-t">
+      <div className="flex border-t border-gray-200">
         <input
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 p-2 outline-none rounded-l-md"
+          className="flex-1 p-2 outline-none rounded-l-md bg-white text-gray-800 placeholder-gray-400"
           onKeyDown={e => e.key === "Enter" && handleSend()}
         />
         <button
           onClick={handleSend}
-          className="bg-blue-600 text-white px-4 rounded-r-md hover:bg-blue-700 transition"
+          className="bg-gray-900 text-white px-4 rounded-r-md hover:bg-gray-700 transition"
           disabled={loading}
         >
           {loading ? "..." : "Send"}

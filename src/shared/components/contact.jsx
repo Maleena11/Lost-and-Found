@@ -114,49 +114,66 @@ export default function Contact() {
       <Header />
 
       {/* Page Banner */}
-      <div className="bg-gradient-to-r from-blue-800 via-blue-900 to-indigo-950 text-white py-12 px-6 relative overflow-hidden">
-        {/* Dot grid background */}
-        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-        {/* Right fade overlay */}
-        <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-indigo-900/60 to-transparent hidden lg:block" />
+      <div className="relative overflow-hidden text-white" style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}>
+        <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #34d399, #60a5fa, #a78bfa, #f472b6, #34d399)", backgroundSize: "200% 100%", animation: "shimmer 4s linear infinite" }} />
+        <style>{`@keyframes shimmer { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }`}</style>
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        <div className="absolute inset-0 opacity-[0.04]" style={{ background: "linear-gradient(120deg, transparent 30%, white 50%, transparent 70%)" }} />
 
-        <div className="max-w-7xl mx-auto relative">
+        <div className="max-w-7xl mx-auto px-6 py-10 relative">
           <div className="flex items-center justify-between gap-8">
-
-            {/* Left: text content */}
             <div className="flex-1">
-              <div className="flex items-center gap-2 text-blue-300 text-xs mb-3">
-                <i className="fas fa-home text-xs"></i>
+              <div className="flex items-center gap-1.5 text-blue-300 text-xs mb-4">
+                <i className="fas fa-home text-[10px]"></i>
                 <span>Home</span>
-                <i className="fas fa-chevron-right text-xs"></i>
-                <span className="text-white font-medium">Contact</span>
+                <i className="fas fa-chevron-right text-[10px]"></i>
+                <span className="text-white font-semibold">Contact</span>
               </div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-headset text-white text-lg"></i>
-                </div>
-                <h1 className="text-3xl font-extrabold tracking-tight">Contact Us</h1>
+              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-blue-200 mb-3 backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                Student Services
               </div>
-              <p className="text-blue-300 text-sm leading-relaxed max-w-xl">
+              <h1 className="text-4xl font-extrabold mb-2 tracking-tight leading-tight">
+                Get in<br />
+                <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #6ee7b7, #5eead4)" }}>
+                  Touch
+                </span>
+              </h1>
+              <p className="text-blue-200 text-sm max-w-xl leading-relaxed mt-1">
                 Have a question or need help? We're here for you. Reach out and our team will respond promptly.
               </p>
-              {/* Info chips */}
-              <div className="flex flex-wrap gap-3 mt-5">
+              <div className="flex flex-wrap gap-2.5 mt-5">
                 {[
-                  { label: "Visit Us", icon: "fa-map-marker-alt" },
-                  { label: "Call Us", icon: "fa-phone" },
-                  { label: "Email Us", icon: "fa-envelope" },
-                  { label: "Office Hours", icon: "fa-clock" },
-                ].map((chip, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
-                    <i className={`fas ${chip.icon} text-blue-300`}></i>
-                    <span className="hidden sm:inline">{chip.label}</span>
-                    <span className="sm:hidden">{idx + 1}</span>
+                  { icon: "fa-map-marker-alt", text: "Visit Us",     color: "text-amber-300"  },
+                  { icon: "fa-phone",          text: "Call Us",      color: "text-blue-300"   },
+                  { icon: "fa-envelope",       text: "Email Us",     color: "text-emerald-300"},
+                  { icon: "fa-clock",          text: "Office Hours", color: "text-violet-300" },
+                ].map(({ icon, text, color }) => (
+                  <div key={text} className="flex items-center gap-2 bg-white/10 hover:bg-white/[0.15] transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
+                    <i className={`fas ${icon} ${color} text-[11px]`}></i>
+                    <span className="text-white/90">{text}</span>
                   </div>
                 ))}
               </div>
             </div>
 
+            <div className="hidden lg:flex flex-col items-center gap-4 flex-shrink-0">
+              <div className="relative">
+                <div className="w-36 h-36 rounded-3xl flex items-center justify-center border border-white/20 shadow-2xl shadow-black/40 backdrop-blur-sm" style={{ background: "rgba(255,255,255,0.08)" }}>
+                  <i className="fas fa-headset text-white/80 text-5xl"></i>
+                </div>
+                <div className="absolute -top-2 -right-2 w-9 h-9 bg-green-400 rounded-full flex items-center justify-center shadow-lg border-2 border-green-300">
+                  <i className="fas fa-check text-white text-sm"></i>
+                </div>
+                <div className="absolute -bottom-2 -left-2 w-7 h-7 bg-amber-400 rounded-full flex items-center justify-center shadow-md border-2 border-amber-300">
+                  <i className="fas fa-star text-white text-[10px]"></i>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-blue-300 text-[11px] font-bold tracking-widest uppercase">We're Here to Help</p>
+                <p className="text-white/50 text-[10px] mt-0.5">Mon – Fri, 8am – 5pm</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

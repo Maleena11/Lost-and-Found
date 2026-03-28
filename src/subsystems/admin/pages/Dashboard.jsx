@@ -630,32 +630,53 @@ export default function Dashboard() {
         <main className="flex-1 p-6 space-y-6">
 
           {/* ── Welcome Banner ── */}
-          <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Admin Dashboard</p>
-                <h1 className="text-xl font-bold">UniFind — Lost &amp; Found System</h1>
-                <p className="text-blue-200 text-sm mt-1">
-                  {formatBannerDate(savedDateFormat)}
-                </p>
-              </div>
-              <div className="flex gap-3 flex-wrap">
-                {[
-                  { label: 'Total Items',   value: stats.totalItems,   accent: 'bg-white/10' },
-                  { label: 'Pending',       value: stats.pendingItems, accent: 'bg-yellow-500/25' },
-                  { label: 'Recovery Rate', value: `${recoveryRate}%`, accent: 'bg-green-500/20' },
-                  { label: 'Today',         value: todayItems,         accent: 'bg-sky-500/20', trend: todayTrend },
-                ].map(({ label, value, accent, trend }) => (
-                  <div key={label} className={`${accent} rounded-xl px-5 py-3 text-center min-w-[80px]`}>
-                    <p className="text-2xl font-bold leading-tight">{value}</p>
-                    <p className="text-blue-200 text-xs mt-0.5 whitespace-nowrap">{label}</p>
-                    {trend !== undefined && (
-                      <p className={`text-xs font-semibold mt-0.5 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-emerald-300' : 'text-blue-300'}`}>
-                        {trend > 0 ? `+${trend} vs yesterday` : trend < 0 ? `${trend} vs yesterday` : 'same as yesterday'}
-                      </p>
-                    )}
+          <div className="relative overflow-hidden rounded-2xl text-white shadow-xl shadow-black/20" style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}>
+            {/* Shimmer line */}
+            <div className="h-[3px] w-full" style={{ background: "linear-gradient(90deg, #34d399, #60a5fa, #a78bfa, #f472b6, #34d399)", backgroundSize: "200% 100%", animation: "shimmer 4s linear infinite" }} />
+            <style>{`@keyframes shimmer { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }`}</style>
+            {/* Dot grid overlay */}
+            <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+            {/* Gloss overlay */}
+            <div className="absolute inset-0 opacity-[0.04]" style={{ background: "linear-gradient(120deg, transparent 30%, white 50%, transparent 70%)" }} />
+
+            <div className="relative px-6 py-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-blue-200 mb-3 backdrop-blur-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+                    Admin Dashboard
                   </div>
-                ))}
+                  <h1 className="text-2xl font-extrabold tracking-tight leading-tight">
+                    UniFind —{" "}
+                    <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #5eead4, #67e8f9)" }}>
+                      Lost &amp; Found System
+                    </span>
+                  </h1>
+                  <p className="text-blue-300 text-sm mt-1.5 flex items-center gap-1.5">
+                    <i className="fas fa-calendar-alt text-[11px] text-teal-400"></i>
+                    {formatBannerDate(savedDateFormat)}
+                  </p>
+                </div>
+
+                <div className="flex gap-3 flex-wrap">
+                  {[
+                    { label: 'Total Items',   value: stats.totalItems,   icon: 'fa-boxes',          accent: 'bg-white/10 border-white/15' },
+                    { label: 'Pending',       value: stats.pendingItems, icon: 'fa-hourglass-half',  accent: 'bg-amber-500/20 border-amber-400/30' },
+                    { label: 'Recovery Rate', value: `${recoveryRate}%`, icon: 'fa-chart-line',      accent: 'bg-teal-500/20 border-teal-400/30' },
+                    { label: 'Today',         value: todayItems,         icon: 'fa-calendar-day',    accent: 'bg-sky-500/20 border-sky-400/30', trend: todayTrend },
+                  ].map(({ label, value, icon, accent, trend }) => (
+                    <div key={label} className={`${accent} border rounded-xl px-4 py-3 text-center min-w-[84px] backdrop-blur-sm`}>
+                      <i className={`fas ${icon} text-blue-300 text-[11px] mb-1 block`}></i>
+                      <p className="text-2xl font-bold leading-tight">{value}</p>
+                      <p className="text-blue-300 text-[11px] mt-0.5 whitespace-nowrap">{label}</p>
+                      {trend !== undefined && (
+                        <p className={`text-[10px] font-semibold mt-0.5 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-emerald-300' : 'text-blue-300'}`}>
+                          {trend > 0 ? `+${trend} vs yesterday` : trend < 0 ? `${trend} vs yesterday` : 'same as yesterday'}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

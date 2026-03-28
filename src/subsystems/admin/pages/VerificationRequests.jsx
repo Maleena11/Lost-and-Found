@@ -348,6 +348,13 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   // Collection confirmation modal
   const [collectionModal, setCollectionModal] = useState({ open: false, request: null, pin: '', loading: false, error: '' });
 
+  // Delete state: id of the request awaiting confirmation, or null
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(null);
+
+  // Quick-action confirm popup: { id, status, name } or null
+  const [quickConfirm, setQuickConfirm] = useState(null);
+
   useEffect(() => {
     fetchVerificationRequests();
   }, []);
@@ -559,8 +566,8 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     return true;
   });
 
-  // Reset to page 1, clear compare + bulk selection whenever filters change
-  useEffect(() => { setCurrentPage(1); setCompareIds([]); setBulkSelected(new Set()); setBulkConfirm(false); }, [selectedFoundItemId, statusFilter, categoryFilter, searchTerm, dateFilter, sortOrder]);
+  // Reset to page 1, clear compare + bulk + quick-confirm selection whenever filters change
+  useEffect(() => { setCurrentPage(1); setCompareIds([]); setBulkSelected(new Set()); setBulkConfirm(false); setQuickConfirm(null); }, [selectedFoundItemId, statusFilter, categoryFilter, searchTerm, dateFilter, sortOrder]);
 
   const toggleBulkSelect = (id) => {
     setBulkSelected(prev => {
@@ -588,6 +595,22 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
       setError('Bulk reject failed. Please try again.');
     } finally {
       setBulkLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (deleteConfirm !== id) { setDeleteConfirm(id); return; }
+    setDeleteLoading(id);
+    setDeleteConfirm(null);
+    try {
+      await axios.delete(`http://localhost:3001/api/verification/${id}`);
+      setVerificationRequests(prev => prev.filter(r => r._id !== id));
+      setSuccess('Record deleted successfully.');
+      closeModal();
+    } catch {
+      setError('Failed to delete record. Please try again.');
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -735,6 +758,18 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     <div className="flex min-h-screen bg-gradient-to-br from-slate-100 via-blue-50/40 to-indigo-50/30">
       {/* Print styles */}
       <style>{`
+        /* Dark select dropdown options */
+        .dark-select option {
+          background-color: #0d1f40;
+          color: rgba(255, 255, 255, 0.85);
+        }
+        .dark-select option:hover,
+        .dark-select option:focus,
+        .dark-select option:checked {
+          background-color: #1a3a6e;
+          color: #fff;
+        }
+
         @media print {
           /* ── Reset & base ── */
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -783,38 +818,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             display: block !important;
           }
 
-          /* ── Left pane: items summary table ── */
-          .w-72.shrink-0 {
-            width: 100% !important;
-            max-height: none !important;
-            position: static !important;
-            border: 1.5px solid #e2e8f0 !important;
-            border-radius: 12px !important;
-            background: #f8fafc !important;
-            box-shadow: none !important;
-            backdrop-filter: none !important;
-            margin-bottom: 28px !important;
-            overflow: visible !important;
-          }
-          .w-72.shrink-0 .overflow-y-auto {
-            overflow: visible !important;
-            max-height: none !important;
-          }
-          /* Hide "All Claims" button in left pane */
-          .w-72.shrink-0 button:first-child { display: none !important; }
-          .w-72.shrink-0 .h-px { display: none !important; }
-          /* Style item rows as table-like strips */
-          .w-72.shrink-0 button {
-            display: flex !important;
-            border-radius: 8px !important;
-            background: #fff !important;
-            border: 1px solid #f1f5f9 !important;
-            box-shadow: none !important;
-            margin-bottom: 4px !important;
-            page-break-inside: avoid;
-          }
-          .w-72.shrink-0 button p { color: #1e293b !important; }
-          .w-72.shrink-0 button span { color: #475569 !important; }
+          /* Left pane removed — item filter is now a dropdown */
 
           /* ── Right pane: claims list ── */
           .flex-1.min-w-0 { width: 100% !important; }
@@ -934,171 +938,183 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
           )}
 
           {/* Stats Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 no-print">
-            {/* Pending */}
-            <div className="relative overflow-hidden bg-white rounded-2xl shadow-sm border border-amber-100/80 p-5 group hover:shadow-md transition-shadow">
-              <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-amber-400/10 group-hover:bg-amber-400/15 transition-colors"></div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-amber-600/70 uppercase tracking-widest mb-1">Pending</p>
-                  <p className="text-4xl font-extrabold text-amber-500 leading-none">
-                    {verificationRequests.filter(r => r.status === 'pending').length}
+          <div className="no-print mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              {
+                label: 'Pending',
+                count: verificationRequests.filter(r => r.status === 'pending').length,
+                icon: 'fa-hourglass-half',
+                accent: '#d97706',
+                accentLight: 'rgba(251,191,36,0.12)',
+                accentBg: 'rgba(254,243,199,0.7)',
+                accentBorder: 'rgba(251,191,36,0.5)',
+                barGrad: 'linear-gradient(90deg,#fbbf24,#f97316)',
+              },
+              {
+                label: 'Approved',
+                count: verificationRequests.filter(r => r.status === 'approved').length,
+                icon: 'fa-check',
+                accent: '#059669',
+                accentLight: 'rgba(52,211,153,0.12)',
+                accentBg: 'rgba(209,250,229,0.7)',
+                accentBorder: 'rgba(52,211,153,0.5)',
+                barGrad: 'linear-gradient(90deg,#34d399,#10b981)',
+              },
+              {
+                label: 'Rejected',
+                count: verificationRequests.filter(r => r.status === 'rejected').length,
+                icon: 'fa-times',
+                accent: '#e11d48',
+                accentLight: 'rgba(251,113,133,0.12)',
+                accentBg: 'rgba(255,228,230,0.7)',
+                accentBorder: 'rgba(251,113,133,0.5)',
+                barGrad: 'linear-gradient(90deg,#fb7185,#f43f5e)',
+              },
+              {
+                label: 'Total',
+                count: verificationRequests.length,
+                icon: 'fa-layer-group',
+                isTotal: true,
+              },
+            ].map(({ label, count, icon, accent, accentLight, accentBg, accentBorder, barGrad, isTotal }) => (
+              <div
+                key={label}
+                className="relative overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:scale-[1.025] cursor-default"
+                style={{
+                  background: isTotal ? 'rgba(238,242,255,0.8)' : accentBg,
+                  boxShadow: '0 2px 14px rgba(0,0,0,0.06)',
+                  border: isTotal ? '2px solid rgba(99,102,241,0.45)' : `2px solid ${accentBorder}`,
+                }}
+              >
+
+                <div className="relative">
+                  <div className="flex items-start justify-between mb-4">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.15em]"
+                      style={{color: isTotal ? '#6366f1' : accent}}>
+                      {label}
+                    </p>
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                      style={isTotal
+                        ? {background: 'rgba(99,102,241,0.12)', border: '1.5px solid rgba(99,102,241,0.3)'}
+                        : {background: accentLight, border: `1.5px solid ${accentBorder}`}}>
+                      <i className={`fas ${icon} text-xs`} style={{color: isTotal ? '#6366f1' : accent}}></i>
+                    </div>
+                  </div>
+
+                  <p className="text-4xl font-black leading-none tracking-tight"
+                    style={{color: isTotal ? '#6366f1' : accent}}>
+                    {count}
                   </p>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center shadow-md shadow-amber-200">
-                  <i className="fas fa-hourglass-half text-white text-sm"></i>
-                </div>
-              </div>
-              <div className="mt-3 h-1 w-full bg-amber-50 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full" style={{ width: `${verificationRequests.length ? (verificationRequests.filter(r=>r.status==='pending').length/verificationRequests.length)*100 : 0}%` }}></div>
-              </div>
-            </div>
-            {/* Approved */}
-            <div className="relative overflow-hidden bg-white rounded-2xl shadow-sm border border-emerald-100/80 p-5 group hover:shadow-md transition-shadow">
-              <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-emerald-400/10 group-hover:bg-emerald-400/15 transition-colors"></div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-emerald-600/70 uppercase tracking-widest mb-1">Approved</p>
-                  <p className="text-4xl font-extrabold text-emerald-500 leading-none">
-                    {verificationRequests.filter(r => r.status === 'approved').length}
-                  </p>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-md shadow-emerald-200">
-                  <i className="fas fa-check text-white text-sm"></i>
+
+                  {!isTotal && (
+                    <div className="mt-4 h-[3px] w-full rounded-full overflow-hidden" style={{background:'rgba(0,0,0,0.1)'}}>
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${verificationRequests.length ? (count / verificationRequests.length) * 100 : 0}%`,
+                          background: barGrad,
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {isTotal && (
+                    <p className="mt-3 text-xs font-medium" style={{color:'rgba(99,102,241,0.6)'}}>
+                      All verification requests
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="mt-3 h-1 w-full bg-emerald-50 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-400 to-green-500 rounded-full" style={{ width: `${verificationRequests.length ? (verificationRequests.filter(r=>r.status==='approved').length/verificationRequests.length)*100 : 0}%` }}></div>
-              </div>
-            </div>
-            {/* Rejected */}
-            <div className="relative overflow-hidden bg-white rounded-2xl shadow-sm border border-rose-100/80 p-5 group hover:shadow-md transition-shadow">
-              <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-rose-400/10 group-hover:bg-rose-400/15 transition-colors"></div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-rose-600/70 uppercase tracking-widest mb-1">Rejected</p>
-                  <p className="text-4xl font-extrabold text-rose-500 leading-none">
-                    {verificationRequests.filter(r => r.status === 'rejected').length}
-                  </p>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-400 to-red-500 flex items-center justify-center shadow-md shadow-rose-200">
-                  <i className="fas fa-times text-white text-sm"></i>
-                </div>
-              </div>
-              <div className="mt-3 h-1 w-full bg-rose-50 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-rose-400 to-red-500 rounded-full" style={{ width: `${verificationRequests.length ? (verificationRequests.filter(r=>r.status==='rejected').length/verificationRequests.length)*100 : 0}%` }}></div>
-              </div>
-            </div>
-            {/* Total */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-sm border border-blue-500/30 p-5 group hover:shadow-md transition-shadow">
-              <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10 group-hover:bg-white/15 transition-colors"></div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-blue-200 uppercase tracking-widest mb-1">Total</p>
-                  <p className="text-4xl font-extrabold text-white leading-none">
-                    {verificationRequests.length}
-                  </p>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
-                  <i className="fas fa-layer-group text-white text-sm"></i>
-                </div>
-              </div>
-              <p className="mt-3 text-sm text-blue-200/80">All verification requests</p>
-            </div>
+            ))}
           </div>
 
           {/* Filters and Search */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 mb-6 p-5 no-print">
-            {/* Panel header */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center">
-                <i className="fas fa-filter text-blue-500 text-[10px]"></i>
-              </div>
-              <span className="text-sm font-semibold text-gray-700">Filter & Search</span>
-            </div>
-
-            <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+          <div className="rounded-xl shadow-md mb-5 no-print" style={{background:'linear-gradient(135deg,#1e2d4a 0%,#1e3461 100%)',border:'1px solid rgba(147,197,253,0.15)'}}>
+            {/* Top row: search + selects + dates + actions */}
+            <div className="flex flex-wrap items-end gap-2 p-3">
               {/* Search */}
-              <div className="flex-1">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Search</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Name, email, item, location…"
-                    className="w-full pl-9 pr-4 py-2.5 text-base border border-gray-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white placeholder-gray-400 text-gray-700 transition-all shadow-sm"
-                  />
-                  <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-                </div>
+              <div className="relative flex-1 min-w-[180px]">
+                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs"></i>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Name, email, item, location..."
+                  className="w-full pl-8 pr-3 py-2 text-sm border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-transparent bg-white/10 placeholder-white/35 text-white/85 transition-all"
+                />
               </div>
 
               {/* Status Filter */}
-              <div className="min-w-[150px]">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50/80 text-gray-700 transition-all"
-                >
-                  <option value="all">All Requests</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="processed">Processed</option>
-                </select>
-              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="processed">Processed</option>
+              </select>
 
               {/* Category Filter */}
-              <div className="min-w-[150px]">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Category</label>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50/80 text-gray-700 transition-all"
-                >
-                  <option value="all">All Categories</option>
-                  {availableCategories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+              >
+                <option value="all">All Categories</option>
+                {availableCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+
+              {/* Item Filter Dropdown */}
+              <select
+                value={selectedFoundItemId || 'all'}
+                onChange={(e) => setSelectedFoundItemId(e.target.value === 'all' ? null : e.target.value)}
+                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+              >
+                <option value="all">All Items ({verificationRequests.length})</option>
+                {foundItemGroups.map(group => {
+                  const pendingCount = group.claims.filter(c => c.status === 'pending').length;
+                  return (
+                    <option key={group.itemId} value={group.itemId}>
+                      {group.itemName}{pendingCount > 0 ? ` (${pendingCount} pending)` : ` (${group.claims.length} claims)`}
+                    </option>
+                  );
+                })}
+              </select>
 
               {/* From Date */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">From</label>
-                <input
-                  type="date"
-                  value={dateFilter.startDate}
-                  onChange={(e) => setDateFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50/80 text-gray-700 transition-all"
-                />
-              </div>
+              <input
+                type="date"
+                value={dateFilter.startDate}
+                onChange={(e) => setDateFilter(prev => ({ ...prev, startDate: e.target.value }))}
+                className="border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all [color-scheme:dark]"
+              />
 
               {/* To Date */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">To</label>
-                <input
-                  type="date"
-                  value={dateFilter.endDate}
-                  onChange={(e) => setDateFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50/80 text-gray-700 transition-all"
-                />
-              </div>
+              <input
+                type="date"
+                value={dateFilter.endDate}
+                onChange={(e) => setDateFilter(prev => ({ ...prev, endDate: e.target.value }))}
+                className="border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all [color-scheme:dark]"
+              />
 
               {/* Action Buttons */}
-              <div className="flex gap-2 shrink-0">
-                {(dateFilter.startDate || dateFilter.endDate || searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') && (
+              <div className="flex gap-1.5 ml-auto shrink-0">
+                {(dateFilter.startDate || dateFilter.endDate || searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' || selectedFoundItemId) && (
                   <button
                     onClick={() => {
                       setDateFilter({ startDate: '', endDate: '' });
                       setSearchTerm('');
                       setStatusFilter('all');
                       setCategoryFilter('all');
+                      setSelectedFoundItemId(null);
                     }}
-                    className="px-3 py-2.5 border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                    className="px-3 py-2 border border-white/20 text-white/60 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-1.5 text-sm font-medium"
                   >
-                    <i className="fas fa-times"></i>
+                    <i className="fas fa-times text-xs"></i>
                     Clear
                   </button>
                 )}
@@ -1106,180 +1122,89 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   data={csvData}
                   headers={csvHeaders}
                   filename={`verification-requests-${new Date().toISOString().split('T')[0]}.csv`}
-                  className="px-3 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center gap-1.5 text-sm font-semibold shadow-sm shadow-emerald-200"
+                  className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-semibold"
                 >
-                  <i className="fas fa-download"></i>
+                  <i className="fas fa-download text-xs"></i>
                   Export
                 </CSVLink>
                 <button
                   onClick={() => window.print()}
-                  className="px-3 py-2.5 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-xl hover:from-slate-700 hover:to-slate-800 transition-all flex items-center gap-1.5 text-sm font-semibold shadow-sm"
+                  className="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-semibold"
                 >
-                  <i className="fas fa-print"></i>
+                  <i className="fas fa-print text-xs"></i>
                   Print
                 </button>
               </div>
             </div>
 
-            {/* Results Summary */}
-            <div className="mt-4 pt-3.5 border-t border-gray-100/80 text-sm text-gray-400 flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-full text-xs">
-                <i className="fas fa-list-ul text-[11px]"></i>
+            {/* Results Summary bar */}
+            <div className="px-3 py-2 border-t border-white/10 bg-white/[0.04] rounded-b-xl flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+                <i className="fas fa-list-ul text-[10px]"></i>
                 {filteredRequests.length} result{filteredRequests.length !== 1 ? 's' : ''}
               </span>
               {searchTerm && (
-                <span className="text-gray-400">matching <span className="text-blue-500 font-medium">"{searchTerm}"</span></span>
+                <span className="text-xs text-white/40">matching <span className="text-blue-300 font-medium">"{searchTerm}"</span></span>
               )}
               {statusFilter !== 'all' && (
-                <span className="text-gray-400">· status: <span className="font-medium text-gray-600 capitalize">{statusFilter}</span></span>
+                <span className="text-xs text-white/40">· status: <span className="font-medium text-white/70 capitalize">{statusFilter}</span></span>
               )}
               {categoryFilter !== 'all' && (
-                <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 font-semibold px-2.5 py-1 rounded-full text-xs">
-                  <i className="fas fa-tag text-[10px]"></i>
+                <span className="inline-flex items-center gap-1 bg-indigo-400/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+                  <i className="fas fa-tag text-[9px]"></i>
                   {categoryFilter}
-                  <button onClick={() => setCategoryFilter('all')} className="ml-0.5 hover:text-indigo-800">
-                    <i className="fas fa-times text-[9px]"></i>
+                  <button onClick={() => setCategoryFilter('all')} className="ml-0.5 hover:text-white">
+                    <i className="fas fa-times text-[8px]"></i>
+                  </button>
+                </span>
+              )}
+              {selectedFoundItemId && (
+                <span className="inline-flex items-center gap-1 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+                  <i className="fas fa-box text-[9px]"></i>
+                  {foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Item'}
+                  <button onClick={() => setSelectedFoundItemId(null)} className="ml-0.5 hover:text-white">
+                    <i className="fas fa-times text-[8px]"></i>
                   </button>
                 </span>
               )}
             </div>
           </div>
 
-          {/* Two-Pane Layout */}
-          <div className="flex gap-4 items-start">
+          {/* Claims List */}
+          <div>
+            <div className="w-full">
 
-            {/* ── Left Pane: Found Items ── */}
-            <div
-              className="w-72 shrink-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 flex flex-col overflow-hidden"
-              style={{ position: 'sticky', top: '24px', maxHeight: 'calc(100vh - 96px)' }}
-            >
-              <div className="px-4 py-3.5 border-b border-gray-100 bg-slate-50/70 shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md bg-blue-100 flex items-center justify-center">
-                    <i className="fas fa-boxes text-blue-500 text-[9px]"></i>
+              {/* Claims sub-header */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-4 px-5 py-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">
+                      {selectedFoundItemId
+                        ? (foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Claims')
+                        : 'All Claims'}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {filteredRequests.length} claim{filteredRequests.length !== 1 ? 's' : ''}
+                      {selectedFoundItemId ? ' for this item' : ' across all items'}
+                    </p>
                   </div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Found Items</p>
-                </div>
-                <p className="text-xs text-slate-400 mt-1 ml-7">
-                  {loading ? '…' : `${foundItemGroups.length} item${foundItemGroups.length !== 1 ? 's' : ''} with claims`}
-                </p>
-              </div>
-              {loading ? (
-                <div className="flex items-center justify-center py-10">
-                  <i className="fas fa-spinner fa-spin text-blue-400 text-lg"></i>
-                </div>
-              ) : (
-                <div className="overflow-y-auto flex-1 p-2 space-y-0.5">
-                  <button
-                    onClick={() => setSelectedFoundItemId(null)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center justify-between gap-2 ${
-                      !selectedFoundItemId
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-sm shadow-blue-200'
-                        : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <i className={`fas fa-layer-group text-xs shrink-0 ${!selectedFoundItemId ? 'text-blue-200' : 'text-slate-400'}`}></i>
-                      <span className={`text-sm font-semibold truncate ${!selectedFoundItemId ? 'text-white' : 'text-slate-700'}`}>All Claims</span>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${!selectedFoundItemId ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                      {verificationRequests.length}
-                    </span>
-                  </button>
-                  <div className="h-px bg-slate-100 mx-2 my-1"></div>
-                  {foundItemGroups.map(group => {
-                    const pendingCount = group.claims.filter(c => c.status === 'pending').length;
-                    const approvedCount = group.claims.filter(c => c.status === 'approved').length;
-                    const isSelected = selectedFoundItemId === group.itemId;
-                    return (
-                      <button
-                        key={group.itemId}
-                        onClick={() => setSelectedFoundItemId(group.itemId)}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl transition-all ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-sm shadow-blue-200'
-                            : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-semibold truncate leading-tight ${isSelected ? 'text-white' : 'text-slate-800'}`}>
-                              {group.itemName}
-                            </p>
-                            {(group.category || group.location) && (
-                              <p className={`text-xs truncate mt-0.5 ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
-                                {[group.category, group.location].filter(Boolean).join(' · ')}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            {(() => {
-                              const n = group.claims.length;
-                              const color = isSelected
-                                ? 'bg-white/20 text-white'
-                                : n >= 3
-                                  ? 'bg-rose-50 text-rose-600 border border-rose-200'
-                                  : n === 2
-                                    ? 'bg-amber-50 text-amber-600 border border-amber-200'
-                                    : 'bg-slate-100 text-slate-500';
-                              return (
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex items-center gap-1 ${color}`}>
-                                  {n >= 2 && <i className="fas fa-fire text-[9px]"></i>}
-                                  {n} claim{n !== 1 ? 's' : ''}
-                                </span>
-                              );
-                            })()}
-                            {pendingCount > 0 && (
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${isSelected ? 'bg-amber-400/30 text-amber-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
-                                {pendingCount} pending
-                              </span>
-                            )}
-                            {approvedCount > 0 && pendingCount === 0 && (
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${isSelected ? 'bg-emerald-400/30 text-emerald-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
-                                resolved
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* ── Right Pane: Claims ── */}
-            <div className="flex-1 min-w-0">
-
-              {/* Right pane sub-header */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 mb-3 px-5 py-3.5 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">
-                    {selectedFoundItemId
-                      ? (foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Claims')
-                      : 'All Claims'}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {filteredRequests.length} claim{filteredRequests.length !== 1 ? 's' : ''}
-                    {selectedFoundItemId ? ' for this item' : ' across all items'}
-                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Sort toggle */}
                   <button
                     onClick={() => setSortOrder(o => o === 'oldest' ? 'newest' : 'oldest')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                     title={sortOrder === 'oldest' ? 'Showing oldest first — click for newest first' : 'Showing newest first — click for oldest first'}
                   >
-                    <i className={`fas fa-sort-amount-${sortOrder === 'oldest' ? 'up' : 'down'} text-[10px] text-blue-500`}></i>
+                    <i className={`fas fa-sort-amount-${sortOrder === 'oldest' ? 'up' : 'down'} text-xs text-slate-400`}></i>
                     {sortOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
                   </button>
                   {selectedFoundItemId && (
                     <button
                       onClick={() => setSelectedFoundItemId(null)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                     >
-                      <i className="fas fa-times text-[10px]"></i>
+                      <i className="fas fa-times text-xs"></i>
                       Show All
                     </button>
                   )}
@@ -1287,19 +1212,19 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
 
           {loading ? (
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 p-16 text-center">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center shadow-inner">
-                  <i className="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <i className="fas fa-spinner fa-spin text-xl text-blue-500"></i>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-600">Loading verification requests</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Please wait a moment…</p>
+                  <p className="text-sm font-semibold text-slate-600">Loading verification requests</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Please wait a moment…</p>
                 </div>
               </div>
             </div>
           ) : filteredRequests.length === 0 ? (
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60 p-16 text-center">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-100 to-slate-100 flex items-center justify-center shadow-inner">
                   <i className="fas fa-inbox text-2xl text-gray-300"></i>
@@ -1333,7 +1258,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 const pendingOnPage = currentRequests.filter(r => r.status === 'pending');
                 const allOnPageSelected = pendingOnPage.length > 0 && pendingOnPage.every(r => bulkSelected.has(r._id));
                 return (
-                  <div className="mb-2 flex items-center gap-3 px-4 py-3 bg-rose-50 border border-rose-200 rounded-2xl shadow-sm">
+                  <div className="mb-2 flex items-center gap-3 px-4 py-2.5 bg-rose-50 border border-rose-200 rounded-xl shadow-sm">
                     {/* Select-all checkbox */}
                     <input
                       type="checkbox"
@@ -1415,21 +1340,34 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         ? 'bg-amber-50 text-amber-600 border-amber-200'
                         : 'bg-emerald-50 text-emerald-600 border-emerald-200';
 
+                  const accentBorder = {
+                    pending:   'border-l-blue-400',
+                    approved:  'border-l-emerald-400',
+                    rejected:  'border-l-rose-400',
+                    processed: 'border-l-sky-400',
+                  }[request.status] || 'border-l-slate-300';
+
+                  const accentRing = {
+                    pending:   'border-blue-300 shadow-blue-100',
+                    approved:  'border-emerald-300 shadow-emerald-100',
+                    rejected:  'border-rose-300 shadow-rose-100',
+                    processed: 'border-sky-300 shadow-sky-100',
+                  }[request.status] || 'border-slate-200 shadow-slate-100';
+
                   return (
                     <div
                       key={request._id}
-                      className={`backdrop-blur-sm rounded-2xl px-5 py-4 shadow-sm hover:shadow-md transition-all group ${
+                      className={`rounded-xl border-l-4 border-2 transition-all shadow-sm hover:shadow-md ${accentBorder} ${
                         bulkSelected.has(request._id)
-                          ? 'bg-rose-50/80 border border-rose-300 ring-1 ring-rose-200/60'
-                          : isStale
-                            ? 'bg-white/90 border border-orange-300 ring-1 ring-orange-200/60'
-                            : 'bg-white/90 border border-white/60 hover:border-blue-100'
+                          ? 'bg-rose-50/60 border-rose-300 ring-1 ring-rose-300'
+                          : `bg-white ${accentRing} hover:shadow-md`
                       }`}
                     >
-                      {/* ── Row 1: checkbox · avatar · name · status ── */}
-                      <div className="flex items-start gap-3">
-                        {/* Checkbox (pending only) — aligned with avatar */}
-                        <div className="flex items-center shrink-0 pt-3">
+                      {/* ── Single compact row ── */}
+                      <div className="flex items-center gap-3 px-4 py-3">
+
+                        {/* Checkbox */}
+                        <div className="shrink-0">
                           {request.status === 'pending' ? (
                             <input
                               type="checkbox"
@@ -1444,139 +1382,142 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         </div>
 
                         {/* Avatar */}
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 shadow-sm text-white text-sm font-bold mt-0.5`}>
+                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm`}>
                           {initials}
                         </div>
 
-                        {/* Name + address — grows to fill */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate leading-tight">{request.claimantInfo.name}</p>
-                          {request.claimantInfo.address && (
-                            <p className="text-xs text-slate-400 truncate mt-0.5">{request.claimantInfo.address}</p>
-                          )}
+                        {/* Claimant info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-slate-800 leading-tight truncate">{request.claimantInfo.name}</p>
+                            {request.claimantInfo.address && (
+                              <span className="text-xs text-slate-400 truncate hidden lg:block">{request.claimantInfo.address}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5">
+                            <span className="text-xs text-slate-400 flex items-center gap-1">
+                              <i className="fas fa-envelope text-slate-300 text-[10px]"></i>
+                              {request.claimantInfo.email}
+                            </span>
+                            <span className="text-xs text-slate-400 flex items-center gap-1">
+                              <i className="fas fa-phone text-slate-300 text-[10px]"></i>
+                              {request.claimantInfo.phone}
+                            </span>
+                          </div>
                         </div>
 
-                        {/* Status badge — pinned right */}
-                        <div className="shrink-0 text-right">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusStyles[request.status] || statusStyles.processed}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
-                            {badge}
-                          </span>
-                          <p className={`text-xs mt-1 font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
-                        </div>
-                      </div>
-
-                      {/* ── Row 2: contact · item · date · actions ── */}
-                      <div className="flex items-center gap-2 mt-2.5 flex-wrap pl-[1.75rem]">
-                        {/* Contact + age */}
-                        <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-0">
-                          <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
-                            <i className="fas fa-envelope text-slate-300 text-[10px]"></i>
-                            {request.claimantInfo.email}
-                          </span>
-                          <span className="text-slate-200 text-xs">·</span>
-                          <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
-                            <i className="fas fa-phone text-slate-300 text-[10px]"></i>
-                            {request.claimantInfo.phone}
-                          </span>
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border whitespace-nowrap ${agePillStyle}`}>
-                            <i className={`fas ${isStale ? 'fa-exclamation-triangle' : 'fa-clock'} text-[8px]`}></i>
-                            {ageLabel}
-                          </span>
-
-                          {/* Item badge — only when viewing all items */}
-                          {!selectedFoundItemId && request.itemId?.itemName && (
-                            <>
-                              <span className="text-slate-200 text-xs">·</span>
-                              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                                <i className="fas fa-tag text-slate-300 text-[10px] mr-1"></i>
-                                {request.itemId.itemName}
-                              </span>
-                              {request.itemId?.category && (
-                                <span className="text-xs bg-indigo-50 text-indigo-500 font-semibold px-2 py-0.5 rounded-full border border-indigo-100 whitespace-nowrap">
-                                  {request.itemId.category}
+                        {/* Item + date + status — hidden on small screens */}
+                        <div className="hidden md:flex items-center gap-4 shrink-0">
+                          {/* Item info */}
+                          <div className="flex flex-col items-end gap-0.5">
+                            {!selectedFoundItemId && request.itemId?.itemName && (
+                              <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                                <span className="text-sm font-medium text-slate-700">{request.itemId.itemName}</span>
+                                {request.itemId?.category && (
+                                  <span className="text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                                    {request.itemId.category}
+                                  </span>
+                                )}
+                                {(() => {
+                                  const n = claimCountByItemId[request.itemId?._id || '__unknown__'] || 0;
+                                  if (n < 2) return null;
+                                  return (
+                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-500 border border-rose-100">
+                                      {n} claims
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5">
+                              {isStale && (
+                                <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                  <i className="fas fa-clock text-[9px] mr-0.5"></i>{ageLabel}
                                 </span>
                               )}
-                              {(() => {
-                                const n = claimCountByItemId[request.itemId?._id || '__unknown__'] || 0;
-                                if (n < 2) return null;
-                                const color = n >= 3 ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-amber-50 text-amber-600 border-amber-200';
-                                return (
-                                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border whitespace-nowrap ${color}`}>
-                                    <i className="fas fa-fire text-[8px]"></i>
-                                    {n} claims
-                                  </span>
-                                );
-                              })()}
-                            </>
-                          )}
+                              <span className="text-[11px] text-slate-400">
+                                {new Date(request.submittedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Status badge */}
+                          <div className="flex flex-col items-end gap-0.5 min-w-[110px]">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${statusStyles[request.status] || statusStyles.processed}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
+                              {badge}
+                            </span>
+                            <p className={`text-[11px] font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
+                          </div>
                         </div>
 
-                        {/* Date */}
-                        <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">
-                          <i className="fas fa-calendar-alt text-slate-300 text-[10px] mr-1"></i>
-                          {new Date(request.submittedAt).toLocaleDateString()}
-                        </span>
+                        {/* Divider */}
+                        <div className="hidden md:block w-px h-8 bg-slate-100 shrink-0"></div>
 
-                        {/* Compare toggle */}
-                        {selectedFoundItemId && (() => {
-                          const group = foundItemGroups.find(g => g.itemId === selectedFoundItemId);
-                          if (!group || group.claims.length < 2) return null;
-                          const isSel = compareIds.includes(request._id);
-                          const isDisabled = !isSel && compareIds.length >= 2;
-                          return (
-                            <button
-                              onClick={() => toggleCompare(request._id)}
-                              disabled={isDisabled}
-                              title={isDisabled ? 'Deselect one claim first' : isSel ? 'Remove from comparison' : 'Add to comparison'}
-                              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
-                                isSel
-                                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-200'
-                                  : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50'
-                              }`}
-                            >
-                              <i className={`fas ${isSel ? 'fa-check-square' : 'fa-columns'} text-[10px]`}></i>
-                              {isSel ? 'Selected' : 'Compare'}
-                            </button>
-                          );
-                        })()}
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Compare toggle */}
+                          {selectedFoundItemId && (() => {
+                            const group = foundItemGroups.find(g => g.itemId === selectedFoundItemId);
+                            if (!group || group.claims.length < 2) return null;
+                            const isSel = compareIds.includes(request._id);
+                            const isDisabled = !isSel && compareIds.length >= 2;
+                            return (
+                              <button
+                                onClick={() => toggleCompare(request._id)}
+                                disabled={isDisabled}
+                                title={isDisabled ? 'Deselect one claim first' : isSel ? 'Remove from comparison' : 'Add to comparison'}
+                                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
+                                  isSel
+                                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                                    : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
+                                }`}
+                              >
+                                <i className={`fas ${isSel ? 'fa-check-square' : 'fa-columns'} text-xs`}></i>
+                                {isSel ? 'Selected' : 'Compare'}
+                              </button>
+                            );
+                          })()}
 
-                        {/* Quick-action Approve / Reject — pending only */}
-                        {request.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleQuickAction(request._id, 'approved')}
-                              disabled={quickActionLoading !== null}
-                              title="Quick Approve"
-                              className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                            >
-                              {quickActionLoading === request._id + 'approved'
-                                ? <i className="fas fa-spinner fa-spin text-[10px]"></i>
-                                : <i className="fas fa-check text-[10px]"></i>}
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleQuickAction(request._id, 'rejected')}
-                              disabled={quickActionLoading !== null}
-                              title="Quick Reject"
-                              className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                            >
-                              {quickActionLoading === request._id + 'rejected'
-                                ? <i className="fas fa-spinner fa-spin text-[10px]"></i>
-                                : <i className="fas fa-times text-[10px]"></i>}
-                              Reject
-                            </button>
-                          </>
-                        )}
+                          {/* Quick-action Approve / Reject — pending only */}
+                          {request.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => setQuickConfirm({ id: request._id, status: 'approved', name: request.claimantInfo.name })}
+                                disabled={quickActionLoading !== null}
+                                title="Approve"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shadow-sm"
+                              >
+                                {quickActionLoading === request._id + 'approved'
+                                  ? <i className="fas fa-spinner fa-spin text-xs"></i>
+                                  : <i className="fas fa-check text-xs"></i>}
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => setQuickConfirm({ id: request._id, status: 'rejected', name: request.claimantInfo.name })}
+                                disabled={quickActionLoading !== null}
+                                title="Reject"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-500 border border-rose-200 hover:border-rose-300 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                {quickActionLoading === request._id + 'rejected'
+                                  ? <i className="fas fa-spinner fa-spin text-xs"></i>
+                                  : <i className="fas fa-times text-xs"></i>}
+                                Reject
+                              </button>
+                            </>
+                          )}
 
-                        {/* Review button */}
-                        <button
-                          onClick={() => openModal(request)}
-                          className="shrink-0 flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-semibold rounded-xl transition-all shadow-sm shadow-blue-200 whitespace-nowrap"
-                        >
-                          <i className="fas fa-eye text-[10px]"></i>
-                          Review
-                        </button>
+                          {/* Review button */}
+                          <button
+                            onClick={() => openModal(request)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[#1a3560] hover:bg-[#0f2347] text-white text-xs font-semibold rounded-lg transition-all shadow-sm whitespace-nowrap"
+                          >
+                            <i className="fas fa-eye text-xs"></i>
+                            Review
+                          </button>
+
+                        </div>
+
                       </div>
                     </div>
                   );
@@ -1584,7 +1525,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
 
               {/* Pagination */}
-              <div className="bg-white/70 backdrop-blur-sm px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-2xl border border-white/60 shadow-sm">
+              <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-xl border border-slate-200 shadow-sm">
                 <div className="text-sm text-gray-400 flex items-center gap-1.5">
                   <i className="fas fa-table-list text-gray-300 text-xs"></i>
                   Showing{' '}
@@ -1628,8 +1569,8 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
             </>
           )}
-            </div>{/* end right pane */}
-          </div>{/* end two-pane */}
+            </div>{/* end claims inner */}
+          </div>{/* end claims layout */}
         </div>
 
         {/* ── Floating Compare Bar ── */}
@@ -1677,6 +1618,65 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             />
           );
         })()}
+
+        {/* ── Quick-Action Confirmation Popup ── */}
+        {quickConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setQuickConfirm(null)}>
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Coloured top strip */}
+              <div className={`h-1.5 w-full ${quickConfirm.status === 'approved' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+
+              <div className="px-6 py-5">
+                {/* Icon + heading */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    quickConfirm.status === 'approved' ? 'bg-emerald-50' : 'bg-rose-50'
+                  }`}>
+                    <i className={`fas ${quickConfirm.status === 'approved' ? 'fa-check-circle text-emerald-500' : 'fa-times-circle text-rose-500'} text-lg`}></i>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">
+                      {quickConfirm.status === 'approved' ? 'Approve this claim?' : 'Reject this claim?'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[220px]">{quickConfirm.name}</p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-slate-500 mb-5">
+                  Are you sure you want to <span className={`font-semibold ${quickConfirm.status === 'approved' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {quickConfirm.status === 'approved' ? 'approve' : 'reject'}
+                  </span> this claim? This action will update the claimant's status immediately.
+                </p>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const { id, status } = quickConfirm;
+                      setQuickConfirm(null);
+                      handleQuickAction(id, status);
+                    }}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors ${
+                      quickConfirm.status === 'approved'
+                        ? 'bg-emerald-500 hover:bg-emerald-600'
+                        : 'bg-rose-500 hover:bg-rose-600'
+                    }`}
+                  >
+                    Yes, {quickConfirm.status === 'approved' ? 'Approve' : 'Reject'}
+                  </button>
+                  <button
+                    onClick={() => setQuickConfirm(null)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Review Modal */}
         {showModal && selectedRequest && (
@@ -2171,6 +2171,25 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     : `This request was ${selectedRequest.status} on ${new Date(selectedRequest.processedAt || selectedRequest.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.`}
                 </p>
                 <div className="flex items-center gap-3">
+                  {/* Delete — only for resolved records */}
+                  {['approved', 'rejected', 'processed'].includes(selectedRequest.status) && (
+                    <button
+                      onClick={() => handleDelete(selectedRequest._id)}
+                      disabled={deleteLoading === selectedRequest._id}
+                      className={`px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
+                        deleteConfirm === selectedRequest._id
+                          ? 'bg-red-600 border-red-600 text-white animate-pulse'
+                          : 'bg-white border-red-200 text-red-500 hover:bg-red-50'
+                      }`}
+                    >
+                      {deleteLoading === selectedRequest._id
+                        ? <><i className="fas fa-spinner fa-spin text-xs"></i>Deleting…</>
+                        : deleteConfirm === selectedRequest._id
+                          ? <><i className="fas fa-exclamation-triangle text-xs"></i>Confirm Delete?</>
+                          : <><i className="fas fa-trash text-xs"></i>Delete Record</>
+                      }
+                    </button>
+                  )}
                   <button
                     onClick={closeModal}
                     disabled={actionLoading || saveLoading}

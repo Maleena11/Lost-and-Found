@@ -121,12 +121,12 @@ function ToggleRow({ label, description, name, checked, onChange, disabled }) {
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "general",       label: "General",          icon: <CogIcon />,                      activeBg: "bg-blue-50 dark:bg-blue-900/30",    activeText: "text-blue-700 dark:text-blue-400",    iconActive: "text-blue-600",    iconBg: "bg-blue-100",    topBorder: "border-t-blue-500"    },
-  { id: "notifications", label: "Notifications",    icon: <BellIcon />,                     activeBg: "bg-amber-50 dark:bg-amber-900/30",  activeText: "text-amber-700 dark:text-amber-400",  iconActive: "text-amber-600",   iconBg: "bg-amber-100",   topBorder: "border-t-amber-500"   },
-  { id: "display",       label: "Display",           icon: <DisplayIcon />,                  activeBg: "bg-violet-50 dark:bg-violet-900/30",activeText: "text-violet-700 dark:text-violet-400",iconActive: "text-violet-600",  iconBg: "bg-violet-100",  topBorder: "border-t-violet-500"  },
-  { id: "data",          label: "Data & Retention",  icon: <DatabaseIcon />,                 activeBg: "bg-emerald-50 dark:bg-emerald-900/30",activeText: "text-emerald-700 dark:text-emerald-400",iconActive: "text-emerald-600",iconBg: "bg-emerald-100",topBorder: "border-t-emerald-500" },
-  { id: "security",      label: "Security",          icon: <ShieldIcon />,                   activeBg: "bg-red-50 dark:bg-red-900/30",      activeText: "text-red-700 dark:text-red-400",      iconActive: "text-red-600",     iconBg: "bg-red-100",     topBorder: "border-t-red-500"     },
-  { id: "about",         label: "About",             icon: <InfoIcon className="w-4 h-4" />, activeBg: "bg-sky-50 dark:bg-sky-900/30",      activeText: "text-sky-700 dark:text-sky-400",      iconActive: "text-sky-600",     iconBg: "bg-sky-100",     topBorder: "border-t-sky-500"     },
+  { id: "general",       label: "General",          icon: <CogIcon />,                      activeBg: "bg-blue-50 dark:bg-blue-900/30",    activeText: "text-blue-700 dark:text-blue-400",    iconActive: "text-blue-600",    iconDefault: "text-blue-400 dark:text-blue-500",    defaultBg: "bg-blue-50/50 dark:bg-blue-900/10",    iconBg: "bg-blue-100",    topBorder: "border-t-blue-500"    },
+  { id: "notifications", label: "Notifications",    icon: <BellIcon />,                     activeBg: "bg-amber-50 dark:bg-amber-900/30",  activeText: "text-amber-700 dark:text-amber-400",  iconActive: "text-amber-600",   iconDefault: "text-amber-400 dark:text-amber-500",  defaultBg: "bg-amber-50/50 dark:bg-amber-900/10",  iconBg: "bg-amber-100",   topBorder: "border-t-amber-500"   },
+  { id: "display",       label: "Display",           icon: <DisplayIcon />,                  activeBg: "bg-violet-50 dark:bg-violet-900/30",activeText: "text-violet-700 dark:text-violet-400",iconActive: "text-violet-600",  iconDefault: "text-violet-400 dark:text-violet-500",defaultBg: "bg-violet-50/50 dark:bg-violet-900/10",iconBg: "bg-violet-100",  topBorder: "border-t-violet-500"  },
+  { id: "data",          label: "Data & Retention",  icon: <DatabaseIcon />,                 activeBg: "bg-emerald-50 dark:bg-emerald-900/30",activeText: "text-emerald-700 dark:text-emerald-400",iconActive: "text-emerald-600",iconDefault: "text-emerald-400 dark:text-emerald-500",defaultBg: "bg-emerald-50/50 dark:bg-emerald-900/10",iconBg: "bg-emerald-100",topBorder: "border-t-emerald-500" },
+  { id: "security",      label: "Security",          icon: <ShieldIcon />,                   activeBg: "bg-red-50 dark:bg-red-900/30",      activeText: "text-red-700 dark:text-red-400",      iconActive: "text-red-600",     iconDefault: "text-red-400 dark:text-red-500",      defaultBg: "bg-red-50/50 dark:bg-red-900/10",      iconBg: "bg-red-100",     topBorder: "border-t-red-500"     },
+  { id: "about",         label: "About",             icon: <InfoIcon className="w-4 h-4" />, activeBg: "bg-sky-50 dark:bg-sky-900/30",      activeText: "text-sky-700 dark:text-sky-400",      iconActive: "text-sky-600",     iconDefault: "text-sky-400 dark:text-sky-500",      defaultBg: "bg-sky-50/50 dark:bg-sky-900/10",      iconBg: "bg-sky-100",     topBorder: "border-t-sky-500"     },
 ];
 
 // ─── Default settings ─────────────────────────────────────────────────────────
@@ -341,18 +341,47 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
           )}
 
           {/* Page Header Banner */}
-          <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 mx-4 mt-4 rounded-2xl px-5 py-5 shadow-lg shadow-indigo-200 flex items-center gap-4 flex-shrink-0">
-            <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
-              <i className="fas fa-cog text-white text-lg"></i>
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-extrabold text-white tracking-tight">System Settings</h2>
-              <p className="text-xs text-indigo-200 mt-0.5">Configure and manage system-wide preferences</p>
-            </div>
-            <div className="hidden sm:flex gap-2">
-              {NAV.map(n => (
-                <div key={n.id} className={`w-2 h-2 rounded-full transition-all ${activeNav === n.id ? "bg-white scale-125" : "bg-white/30"}`} />
-              ))}
+          <div className="relative overflow-hidden rounded-2xl text-white shadow-xl shadow-black/20 mx-4 mt-4 flex-shrink-0" style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}>
+            <div className="h-[3px] w-full" style={{ background: "linear-gradient(90deg, #34d399, #60a5fa, #a78bfa, #f472b6, #34d399)", backgroundSize: "200% 100%", animation: "shimmer 4s linear infinite" }} />
+            <style>{`@keyframes shimmer { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }`}</style>
+            <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+            <div className="absolute inset-0 opacity-[0.04]" style={{ background: "linear-gradient(120deg, transparent 30%, white 50%, transparent 70%)" }} />
+
+            <div className="relative px-6 py-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-emerald-200 mb-3 backdrop-blur-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+                    System Configuration
+                  </div>
+                  <h1 className="text-2xl font-extrabold tracking-tight leading-tight">
+                    System{" "}
+                    <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #5eead4, #67e8f9)" }}>
+                      Settings
+                    </span>
+                  </h1>
+                  <p className="text-blue-300 text-sm mt-1.5 flex items-center gap-1.5">
+                    <i className="fas fa-sliders-h text-[11px] text-teal-400"></i>
+                    Configure and manage system-wide preferences
+                  </p>
+                </div>
+
+                <div className="hidden sm:flex gap-2 flex-wrap justify-end">
+                  {NAV.map(n => (
+                    <button
+                      key={n.id}
+                      onClick={() => handleNav(n.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border backdrop-blur-sm
+                        ${activeNav === n.id
+                          ? "bg-white/20 border-white/30 text-white shadow-sm"
+                          : "bg-white/5 border-white/10 text-blue-200 hover:bg-white/10 hover:text-white"
+                        }`}
+                    >
+                      {n.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -368,9 +397,9 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left
                     ${activeNav === n.id
                       ? `${n.activeBg} ${n.activeText}`
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"}`}
+                      : `${n.defaultBg} text-gray-600 dark:text-gray-400 hover:brightness-95 dark:hover:brightness-110`}`}
                 >
-                  <span className={`flex-shrink-0 ${activeNav === n.id ? n.iconActive : "text-gray-400 dark:text-gray-500"}`}>
+                  <span className={`flex-shrink-0 ${activeNav === n.id ? n.iconActive : n.iconDefault}`}>
                     {n.icon}
                   </span>
                   {n.label}

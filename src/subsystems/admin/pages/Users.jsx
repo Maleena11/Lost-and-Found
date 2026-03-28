@@ -519,13 +519,46 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
         <main className="flex-1 p-6 space-y-6">
 
           {/* Page Header Banner */}
-          <div className="bg-gradient-to-r from-slate-700 via-indigo-700 to-blue-600 rounded-2xl px-5 py-5 mb-6 shadow-lg shadow-indigo-200 flex items-center gap-4">
-            <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
-              <i className="fas fa-users text-white text-lg"></i>
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold text-white tracking-tight">User Management</h2>
-              <p className="text-xs text-blue-100 mt-0.5">Manage all university users from one place</p>
+          <div className="relative overflow-hidden rounded-2xl text-white shadow-xl shadow-black/20 mb-6" style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}>
+            <div className="h-[3px] w-full" style={{ background: "linear-gradient(90deg, #34d399, #60a5fa, #a78bfa, #f472b6, #34d399)", backgroundSize: "200% 100%", animation: "shimmer 4s linear infinite" }} />
+            <style>{`@keyframes shimmer { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }`}</style>
+            <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+            <div className="absolute inset-0 opacity-[0.04]" style={{ background: "linear-gradient(120deg, transparent 30%, white 50%, transparent 70%)" }} />
+
+            <div className="relative px-6 py-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-purple-200 mb-3 backdrop-blur-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+                    User Management
+                  </div>
+                  <h1 className="text-2xl font-extrabold tracking-tight leading-tight">
+                    Manage{" "}
+                    <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #5eead4, #67e8f9)" }}>
+                      University Users
+                    </span>
+                  </h1>
+                  <p className="text-blue-300 text-sm mt-1.5 flex items-center gap-1.5">
+                    <i className="fas fa-shield-alt text-[11px] text-teal-400"></i>
+                    Control access, roles, and permissions for all users
+                  </p>
+                </div>
+
+                <div className="flex gap-3 flex-wrap">
+                  {[
+                    { label: 'Total Users', value: totalUsers,    icon: 'fa-users',       accent: 'bg-white/10 border-white/15' },
+                    { label: 'Active',      value: activeUsers,   icon: 'fa-user-check',  accent: 'bg-teal-500/20 border-teal-400/30' },
+                    { label: 'Admins',      value: adminUsers,    icon: 'fa-user-shield', accent: 'bg-sky-500/20 border-sky-400/30' },
+                    { label: 'Inactive',    value: inactiveUsers, icon: 'fa-user-times',  accent: 'bg-amber-500/20 border-amber-400/30' },
+                  ].map(({ label, value, icon, accent }) => (
+                    <div key={label} className={`${accent} border rounded-xl px-4 py-3 text-center min-w-[84px] backdrop-blur-sm`}>
+                      <i className={`fas ${icon} text-blue-300 text-[11px] mb-1 block`}></i>
+                      <p className="text-2xl font-bold leading-tight">{value}</p>
+                      <p className="text-blue-300 text-[11px] mt-0.5 whitespace-nowrap">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -566,11 +599,11 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
           </div>
 
           {/* ── Toolbar ── */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+          <div className="rounded-xl shadow-md p-4 space-y-3" style={{ background: "linear-gradient(to right, #1e3a5f, #2a4d7a)" }}>
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
               {/* Search */}
               <div className="relative flex-1 max-w-sm">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
@@ -578,10 +611,11 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                   placeholder="Search by name or email…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-9 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-blue-200"
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)" }}
                 />
                 {search && (
-                  <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300 hover:text-white">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 )}
@@ -592,29 +626,32 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 <select
                   value={filterRole}
                   onChange={e => setFilterRole(e.target.value)}
-                  className={`text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${filterRole !== "All" ? "border-blue-400 bg-blue-50 text-blue-700 font-medium" : "border-gray-200"}`}
+                  className="text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-white font-medium"
+                  style={{ background: filterRole !== "All" ? "rgba(59,130,246,0.35)" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)" }}
                 >
-                  <option value="All">All Roles</option>
-                  <option value="User">User</option>
-                  <option value="Admin">Admin</option>
+                  <option value="All" style={{ background: "#1e3a5f" }}>All Roles</option>
+                  <option value="User" style={{ background: "#1e3a5f" }}>User</option>
+                  <option value="Admin" style={{ background: "#1e3a5f" }}>Admin</option>
                 </select>
 
                 {/* Status filter */}
                 <select
                   value={filterStatus}
                   onChange={e => setFilterStatus(e.target.value)}
-                  className={`text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${filterStatus !== "All" ? "border-blue-400 bg-blue-50 text-blue-700 font-medium" : "border-gray-200"}`}
+                  className="text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-white font-medium"
+                  style={{ background: filterStatus !== "All" ? "rgba(59,130,246,0.35)" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)" }}
                 >
-                  <option value="All">All Statuses</option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
+                  <option value="All" style={{ background: "#1e3a5f" }}>All Statuses</option>
+                  <option value="Active" style={{ background: "#1e3a5f" }}>Active</option>
+                  <option value="Inactive" style={{ background: "#1e3a5f" }}>Inactive</option>
                 </select>
 
                 {/* Clear filters */}
                 {(search || filterRole !== "All" || filterStatus !== "All") && (
                   <button
                     onClick={() => { setSearch(""); setFilterRole("All"); setFilterStatus("All"); }}
-                    className="text-xs text-gray-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition flex items-center gap-1"
+                    className="text-xs text-blue-200 hover:text-white px-2 py-1 rounded-lg transition flex items-center gap-1"
+                    style={{ background: "rgba(255,255,255,0.08)" }}
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     Clear
@@ -625,23 +662,27 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 <select
                   value={pageSize}
                   onChange={e => setPageSize(Number(e.target.value))}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-white font-medium"
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)" }}
                   title="Rows per page"
                 >
-                  <option value={8}>8 / page</option>
-                  <option value={16}>16 / page</option>
-                  <option value={24}>24 / page</option>
-                  <option value={32}>32 / page</option>
+                  <option value={8} style={{ background: "#1e3a5f" }}>8 / page</option>
+                  <option value={16} style={{ background: "#1e3a5f" }}>16 / page</option>
+                  <option value={24} style={{ background: "#1e3a5f" }}>24 / page</option>
+                  <option value={32} style={{ background: "#1e3a5f" }}>32 / page</option>
                 </select>
 
-                <div className="w-px h-6 bg-gray-200 hidden sm:block" />
+                <div className="w-px h-6 hidden sm:block" style={{ background: "rgba(255,255,255,0.2)" }} />
 
                 {/* Generate Report button */}
                 <button
                   onClick={handleGenerateReport}
                   disabled={isGeneratingReport || loading}
                   title="Download PDF report of current filtered users"
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+                  className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: "#16a34a" }}
+                  onMouseEnter={e => { if (!isGeneratingReport && !loading) e.currentTarget.style.background = "#15803d"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#16a34a"; }}
                 >
                   {isGeneratingReport ? (
                     <>
@@ -664,7 +705,10 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 {/* Add User button */}
                 <button
                   onClick={() => { setShowAddForm(true); setNewUserTouched({}); }}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm"
+                  className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm"
+                  style={{ background: "#3b82f6" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#2563eb"}
+                  onMouseLeave={e => e.currentTarget.style.background = "#3b82f6"}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   Add User

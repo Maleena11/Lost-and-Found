@@ -29,10 +29,7 @@ export default function Notice() {
                 Campus Announcements
               </div>
               <h1 className="text-4xl font-extrabold mb-2 tracking-tight leading-tight">
-                Notice<br />
-                <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #5eead4, #67e8f9)" }}>
-                  Board
-                </span>
+                Notice <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #5eead4, #67e8f9)" }}>Board</span>
               </h1>
               <p className="text-blue-200 text-sm max-w-xl leading-relaxed mt-1">
                 View official campus announcements and notices.

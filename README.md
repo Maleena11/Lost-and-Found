@@ -17,15 +17,19 @@ It also provides administrators with tools to manage users, items, and system ac
 🧩 Subsystems
 
 🔹 Administrative Subsystem
+
 Handles overall system management including user management, system settings, monitoring activities, and maintaining data integrity.
 
 🔹 Item Reporting Subsystem
+
 Allows users to report lost or found items by submitting details such as item description, category, date, and location.
 
 🔹 Notice Management Subsystem
+
 Manages the display of notices related to lost and found items, helping users easily browse and search for relevant information.
 
 🔹 Claim & Verification Subsystem
+
 Enables users to claim items and ensures proper verification of ownership before returning items to the rightful owner.
 
 👥 Team Structure

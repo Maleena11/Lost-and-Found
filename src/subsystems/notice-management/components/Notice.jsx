@@ -33,6 +33,24 @@ export default function Notice() {
               <p className="text-blue-300 text-sm leading-relaxed max-w-xl">
                 View official campus announcements and notices.
               </p>
+              {/* Feature indicators */}
+              <div className="flex flex-wrap gap-3 mt-5">
+                {[
+                  { label: "All Notices", icon: "fa-list" },
+                  { label: "Lost Items", icon: "fa-search-minus" },
+                  { label: "Found Items", icon: "fa-hand-holding" },
+                  { label: "Urgent Alerts", icon: "fa-exclamation-circle" },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
+                      <i className={`fas ${item.icon} text-blue-300`}></i>
+                      <span className="hidden sm:inline">{item.label}</span>
+                      <span className="sm:hidden">{idx + 1}</span>
+                    </div>
+                    {idx < 3 && <i className="fas fa-chevron-right text-blue-600 text-xs flex-shrink-0"></i>}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="flex-shrink-0">
               <Link

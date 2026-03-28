@@ -81,8 +81,8 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-gradient-to-r from-blue-600 to-blue-900 text-white shadow-md w-full">
-        <div className="mx-auto flex justify-between items-center p-4 max-w-6xl w-full">
+      <header className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-md w-full">
+        <div className="mx-auto flex justify-between items-center py-6 px-4 max-w-6xl w-full">
           <div className="flex items-center gap-3">
             <i className="fas fa-graduation-cap text-3xl"></i>
             <h1 className="text-xl font-bold">UniFind - Lost & Found</h1>

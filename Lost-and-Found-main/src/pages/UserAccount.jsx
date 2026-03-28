@@ -418,9 +418,9 @@ export default function UserAccount() {
 
                         {/* Image / thumbnail area */}
                         <div className="relative h-48 bg-slate-200 flex-shrink-0">
-                          {(claim.itemId?.thumbnail || claim.itemId?.images?.[0]) ? (
+                          {claim.itemId?.images?.[0] ? (
                             <img
-                              src={claim.itemId.thumbnail || claim.itemId.images[0]}
+                              src={claim.itemId.images[0]}
                               alt={claim.itemId?.itemName || "Item"}
                               className="w-full h-full object-cover"
                             />

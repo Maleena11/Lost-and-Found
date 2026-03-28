@@ -17,6 +17,8 @@ export default function ConfirmCollection({ activeSection, setActiveSection, sid
   const [pinState, setPinState] = useState({});
   // Per-card regenerate state: { [requestId]: { loading, done, error } }
   const [regenState, setRegenState] = useState({});
+  // Per-card delete state: { [requestId]: { confirming, deleting } }
+  const [deleteState, setDeleteState] = useState({});
   const pinInputRefs = useRef({});
 
   useEffect(() => { fetchApprovedRequests(); }, []);
@@ -69,6 +71,37 @@ export default function ConfirmCollection({ activeSection, setActiveSection, sid
     } catch (err) {
       const msg = err.response?.data?.error ?? "Failed to regenerate PIN.";
       setRegenState((prev) => ({ ...prev, [requestId]: { loading: false, done: false, error: msg } }));
+    }
+  };
+
+  const handleDeleteClick = (requestId) => {
+    setDeleteState((prev) => ({ ...prev, [requestId]: { confirming: true, deleting: false } }));
+  };
+
+  const cancelDelete = (requestId) => {
+    setDeleteState((prev) => {
+      const next = { ...prev };
+      delete next[requestId];
+      return next;
+    });
+  };
+
+  const handleDeleteConfirm = async (requestId) => {
+    setDeleteState((prev) => ({ ...prev, [requestId]: { confirming: false, deleting: true } }));
+    try {
+      await axios.delete(`http://localhost:3001/api/verification/${requestId}`);
+      setRequests((prev) => prev.filter((r) => r._id !== requestId));
+      setDeleteState((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
+    } catch {
+      setDeleteState((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
     }
   };
 
@@ -403,6 +436,7 @@ export default function ConfirmCollection({ activeSection, setActiveSection, sid
                   const ps = pinState[request._id];
                   const showPinForm = !!ps;
                   const rs = regenState[request._id];
+                  const ds = deleteState[request._id];
                   const pinExpired = request.collectionPinExpiry && new Date() > new Date(request.collectionPinExpiry);
 
                   return (
@@ -516,6 +550,40 @@ export default function ConfirmCollection({ activeSection, setActiveSection, sid
                             </button>
                           </div>
                         )}
+
+                        {/* Delete */}
+                        <div>
+                          {ds?.confirming ? (
+                            <div className="flex gap-2 items-center bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                              <p className="text-xs text-red-700 font-medium flex-1">Delete this claim?</p>
+                              <button
+                                onClick={() => handleDeleteConfirm(request._id)}
+                                className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-semibold transition-colors"
+                              >
+                                Delete
+                              </button>
+                              <button
+                                onClick={() => cancelDelete(request._id)}
+                                className="px-2.5 py-1 border border-slate-200 text-slate-600 rounded-md text-xs font-medium hover:bg-slate-50 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : ds?.deleting ? (
+                            <div className="flex items-center justify-center gap-2 text-xs text-red-500 py-1">
+                              <i className="fas fa-spinner fa-spin text-xs"></i>
+                              Deleting…
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteClick(request._id)}
+                              className="w-full inline-flex items-center justify-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              <i className="fas fa-trash text-xs"></i>
+                              Delete Claim
+                            </button>
+                          )}
+                        </div>
 
                         {/* PIN form or Confirm button */}
                         <div className="mt-auto">

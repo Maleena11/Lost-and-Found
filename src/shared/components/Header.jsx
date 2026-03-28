@@ -25,16 +25,21 @@ export default function Header() {
     if (current) setActive(current);
   }, [location]);
 
+  const lastFetchRef = useRef(0);
+
   // Fetch in-app notifications if student email is set
   useEffect(() => {
     if (!notifEmail) return;
-    const fetchNotifications = () => {
+    const fetchNotifications = (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastFetchRef.current < 10000) return;
+      lastFetchRef.current = now;
       axios.get(`http://localhost:3001/api/notifications/in-app/${notifEmail}`)
         .then(res => setNotifications(res.data.data || []))
         .catch(() => {});
     };
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // refresh every minute
+    fetchNotifications(true);
+    const interval = setInterval(() => fetchNotifications(true), 60000); // refresh every minute
     return () => clearInterval(interval);
   }, [notifEmail]);
 

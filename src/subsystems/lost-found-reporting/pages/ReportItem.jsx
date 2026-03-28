@@ -7,6 +7,24 @@ import { getTempUser } from "../../../shared/utils/tempUserAuth"; // Import the 
 
 export default function ReportItem() {
   const navigate = useNavigate();
+  const generateThumbnail = (base64, size = 80) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        const scale = Math.max(size / img.width, size / img.height);
+        const x = (size - img.width * scale) / 2;
+        const y = (size - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        resolve(canvas.toDataURL("image/jpeg", 0.5));
+      };
+      img.src = base64;
+    });
+  };
+
   const [formData, setFormData] = useState({
     itemType: "lost", // Default to lost item
     itemName: "",
@@ -228,10 +246,13 @@ export default function ReportItem() {
         });
       })
     )
-    .then(base64Images => {
+    .then(async base64Images => {
+      const newImages = [...formData.images, ...base64Images];
+      const thumb = formData.thumbnail || await generateThumbnail(newImages[0]);
       setFormData(prev => ({
         ...prev,
-        images: [...prev.images, ...base64Images]
+        images: newImages,
+        thumbnail: thumb
       }));
       clearError("images");
     });
@@ -240,23 +261,21 @@ export default function ReportItem() {
     e.target.value = "";
   };
 
-  const handleRemoveImage = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
+  const handleRemoveImage = async (index) => {
+    const newImages = formData.images.filter((_, i) => i !== index);
+    const thumb = newImages.length > 0 ? await generateThumbnail(newImages[0]) : null;
+    setFormData(prev => ({ ...prev, images: newImages, thumbnail: thumb }));
   };
 
   const handleReplaceImage = (e, index) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setFormData(prev => {
-        const updated = [...prev.images];
-        updated[index] = ev.target.result;
-        return { ...prev, images: updated };
-      });
+    reader.onload = async (ev) => {
+      const updated = [...formData.images];
+      updated[index] = ev.target.result;
+      const thumb = await generateThumbnail(updated[0]);
+      setFormData(prev => ({ ...prev, images: updated, thumbnail: thumb }));
       clearError("images");
     };
     reader.readAsDataURL(file);
@@ -316,6 +335,7 @@ export default function ReportItem() {
         yearGroup: "",
         dateTime: "",
         images: [],
+        thumbnail: null,
         contactInfo: {
           name: (tempUser.name && tempUser.name !== "Temporary User") ? tempUser.name : "",
           phone: formData.contactInfo.phone,

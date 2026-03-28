@@ -40,112 +40,106 @@ function formatDateTime(dateStr) {
 
 // ─── Detail Card View ────────────────────────────────────────────────────────
 function DetailView({ item, onBack, onUse }) {
-  const [activeImage, setActiveImage] = useState(0);
   const typeStyle = TYPE_COLORS[item.itemType] || TYPE_COLORS.lost;
-  const hasImages = item.images?.length > 0;
+  const thumbnail = item.thumbnail;
+  const [fullImage, setFullImage] = useState(null);
+
+  useEffect(() => {
+    if (!item._id) return;
+    axios.get(`http://localhost:3001/api/lost-found/${item._id}`)
+      .then(res => {
+        const full = res.data?.data || res.data;
+        if (full.images?.[0]) setFullImage(full.images[0]);
+      })
+      .catch(() => {});
+  }, [item._id]);
+
+  const displayImage = fullImage || thumbnail;
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Detail Header */}
-      <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between gap-3 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-          >
-            <i className="fas fa-arrow-left text-gray-600 text-sm"></i>
-          </button>
-          <div>
-            <h2 className="text-base font-extrabold text-gray-900">Report Details</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Review all details before using this report</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => {/* close handled by parent */}}
-          className="hidden"
-        />
-      </div>
 
-      {/* Detail Body */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-        {/* Images */}
-        {hasImages && (
-          <div>
-            <div className="w-full h-52 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-              <img
-                src={item.images[activeImage]}
-                alt={`${item.itemName} ${activeImage + 1}`}
-                className="w-full h-full object-contain"
-              />
-            </div>
-            {item.images.length > 1 && (
-              <div className="flex gap-2 mt-2">
-                {item.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveImage(idx)}
-                    className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
-                      activeImage === idx ? "border-blue-500" : "border-gray-200 hover:border-blue-300"
-                    }`}
-                  >
-                    <img src={img} alt={`thumb ${idx + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+      {/* Hero Image */}
+      <div className="relative flex-shrink-0 h-52 bg-gray-900 overflow-hidden rounded-t-2xl">
+        {displayImage ? (
+          <>
+            {/* Blurred background */}
+            <img src={displayImage} alt="" aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-50" />
+            {/* Full-quality image */}
+            <img src={displayImage} alt={item.itemName}
+              className="relative z-10 h-full mx-auto object-contain drop-shadow-2xl" />
+            {/* Subtle shimmer overlay while upgrading from thumbnail to full */}
+            {!fullImage && thumbnail && (
+              <div className="absolute inset-0 z-20 bg-white/10 animate-pulse" />
             )}
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <i className="fas fa-image text-5xl text-gray-600"></i>
           </div>
         )}
 
-        {/* Title row */}
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-xl font-extrabold text-gray-900 leading-tight">{item.itemName}</h3>
-          <span className={`flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full border ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`}>
+        {/* Dark gradient at bottom */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent z-20" />
+
+        {/* Floating back button */}
+        <button type="button" onClick={onBack}
+          className="absolute top-3 left-3 z-30 w-8 h-8 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-colors">
+          <i className="fas fa-arrow-left text-xs"></i>
+        </button>
+
+        {/* Item name + badge overlaid on gradient */}
+        <div className="absolute bottom-0 inset-x-0 z-30 px-4 pb-3 flex items-end justify-between gap-2">
+          <h3 className="text-base font-extrabold text-white leading-snug drop-shadow line-clamp-2">{item.itemName}</h3>
+          <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full border ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`}>
             {typeStyle.label}
           </span>
         </div>
+      </div>
+
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
         {/* Info grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <InfoRow icon="fa-tag"           label="Category"   value={CATEGORY_LABELS[item.category] || item.category} />
-          <InfoRow icon="fa-map-marker-alt" label="Location"  value={item.location} />
-          <InfoRow icon="fa-calendar-alt"  label="Date & Time" value={formatDateTime(item.dateTime)} />
-          {item.faculty    && <InfoRow icon="fa-university"  label="Faculty"     value={item.faculty} />}
-          {item.department && <InfoRow icon="fa-sitemap"     label="Department"  value={item.department} />}
-          {item.building   && <InfoRow icon="fa-building"    label="Building"    value={item.building} />}
-          {item.yearGroup  && <InfoRow icon="fa-users"       label="Year Group"  value={item.yearGroup} />}
+        <div className="grid grid-cols-2 gap-2">
+          <InfoRow icon="fa-tag"            label="Category"   value={CATEGORY_LABELS[item.category] || item.category} />
+          <InfoRow icon="fa-map-marker-alt" label="Location"   value={item.location} />
+          <InfoRow icon="fa-calendar-alt"   label="Date & Time" value={formatDateTime(item.dateTime)} />
+          {item.faculty    && <InfoRow icon="fa-university" label="Faculty"     value={item.faculty} />}
+          {item.department && <InfoRow icon="fa-sitemap"    label="Department"  value={item.department} />}
+          {item.building   && <InfoRow icon="fa-building"   label="Building"    value={item.building} />}
+          {item.yearGroup  && <InfoRow icon="fa-users"      label="Year Group"  value={item.yearGroup} />}
         </div>
 
-        {/* Description — hidden for found items only */}
+        <div className="border-t border-gray-100" />
+
+        {/* Description */}
         {item.itemType === "found" ? (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i className="fas fa-shield-alt text-blue-500 text-sm"></i>
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex items-start gap-3">
+            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i className="fas fa-shield-alt text-blue-500 text-xs"></i>
             </div>
             <div>
               <p className="text-sm font-bold text-blue-800">Description hidden</p>
-              <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                The description for <strong>Found</strong> items is hidden to prevent malicious users from reading
-                exact item details and creating a fake lost notice to fraudulently claim the item.
+              <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+                Hidden to prevent fraudulent claims on found items.
               </p>
             </div>
           </div>
         ) : (
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Description</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Description</p>
             <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
               {item.description || "No description provided."}
             </p>
           </div>
         )}
 
-        {/* Contact Info — always visible */}
+        {/* Contact Info */}
         {(item.contactInfo?.name || item.contactInfo?.phone || item.contactInfo?.email) && (
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Contact Information</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Contact</p>
             <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3 space-y-1.5">
               {item.contactInfo?.name  && <InfoRow icon="fa-user"     label="Name"  value={item.contactInfo.name}  small />}
               {item.contactInfo?.phone && <InfoRow icon="fa-phone"    label="Phone" value={item.contactInfo.phone} small />}
@@ -155,21 +149,15 @@ function DetailView({ item, onBack, onUse }) {
         )}
       </div>
 
-      {/* Detail Footer */}
-      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-between items-center flex-shrink-0">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
-        >
+      {/* Footer */}
+      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-between items-center flex-shrink-0">
+        <button type="button" onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors">
           <i className="fas fa-arrow-left text-xs"></i>
-          Back to List
+          Back
         </button>
-        <button
-          type="button"
-          onClick={() => onUse(item)}
-          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm"
-        >
+        <button type="button" onClick={() => onUse(item)}
+          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm">
           <i className="fas fa-magic text-xs"></i>
           Use this Report
         </button>
@@ -199,7 +187,20 @@ export default function ItemReportPickerModal({ onSelect, onClose, preloadedItem
   const [search, setSearch]           = useState("");
   const [filter, setFilter]           = useState("all");
   const [previewItem, setPreviewItem] = useState(null);
-  const [loadingFull, setLoadingFull] = useState(false);
+  const [lightbox, setLightbox]       = useState(null); // { thumbnail, itemId, itemName }
+  const [lightboxFull, setLightboxFull] = useState(null);
+
+  const openLightbox = (e, item) => {
+    e.stopPropagation();
+    setLightbox({ thumbnail: item.thumbnail, itemId: item._id, itemName: item.itemName });
+    setLightboxFull(null);
+    axios.get(`http://localhost:3001/api/lost-found/${item._id}`)
+      .then(res => {
+        const full = res.data?.data || res.data;
+        if (full.images?.[0]) setLightboxFull(full.images[0]);
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (preloadedItems !== null) return;
@@ -214,18 +215,8 @@ export default function ItemReportPickerModal({ onSelect, onClose, preloadedItem
       .finally(() => setLoading(false));
   }, [preloadedItems]);
 
-  // When a card is clicked, fetch the full report (with images) before showing detail
-  const handleCardClick = async (item) => {
-    setLoadingFull(true);
-    try {
-      const res = await axios.get(`http://localhost:3001/api/lost-found/${item._id}`);
-      const full = res.data?.data || res.data;
-      setPreviewItem(full);
-    } catch {
-      setPreviewItem(item); // fallback to lean data if fetch fails
-    } finally {
-      setLoadingFull(false);
-    }
+  const handleCardClick = (item) => {
+    setPreviewItem(item);
   };
 
   const filtered = items.filter((item) => {
@@ -242,16 +233,36 @@ export default function ItemReportPickerModal({ onSelect, onClose, preloadedItem
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
 
-        {/* ── DETAIL VIEW ── */}
-        {/* Full-report loading overlay */}
-        {loadingFull && (
-          <div className="absolute inset-0 z-20 bg-white/80 rounded-2xl flex flex-col items-center justify-center gap-3">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div>
-            <p className="text-sm text-gray-500 font-medium">Loading report details...</p>
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => { setLightbox(null); setLightboxFull(null); }}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors"
+            onClick={() => { setLightbox(null); setLightboxFull(null); }}
+          >
+            <i className="fas fa-times"></i>
+          </button>
+          <div className="relative max-w-sm w-full mx-6" onClick={e => e.stopPropagation()}>
+            <img
+              src={lightboxFull || lightbox.thumbnail}
+              alt={lightbox.itemName}
+              className="w-full rounded-2xl shadow-2xl object-contain max-h-[70vh]"
+            />
+            {!lightboxFull && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-2xl">
+                <div className="w-8 h-8 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
+            <p className="text-center text-white/80 text-sm mt-3 font-medium">{lightbox.itemName}</p>
           </div>
-        )}
+        </div>
+      )}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
 
         {previewItem ? (
           <>
@@ -352,7 +363,7 @@ export default function ItemReportPickerModal({ onSelect, onClose, preloadedItem
             )}
             {!loading && !error && filtered.map((item) => {
               const typeStyle = TYPE_COLORS[item.itemType] || TYPE_COLORS.lost;
-              const thumbnail = item.images?.[0];
+              const thumbnail = item.thumbnail || item.images?.[0];
               return (
                 <button
                   key={item._id}
@@ -363,9 +374,17 @@ export default function ItemReportPickerModal({ onSelect, onClose, preloadedItem
                   {/* Top row: image + header info */}
                   <div className="flex gap-3 p-3">
                     {/* Thumbnail */}
-                    <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50 flex items-center justify-center">
+                    <div
+                      className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50 flex items-center justify-center group/thumb"
+                      onClick={thumbnail ? (e) => openLightbox(e, item) : undefined}
+                    >
                       {thumbnail ? (
-                        <img src={thumbnail} alt={item.itemName} className="w-full h-full object-cover" />
+                        <>
+                          <img src={thumbnail} alt={item.itemName} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/30 transition-colors flex items-center justify-center">
+                            <i className="fas fa-search-plus text-white text-lg opacity-0 group-hover/thumb:opacity-100 transition-opacity drop-shadow"></i>
+                          </div>
+                        </>
                       ) : (
                         <i className="fas fa-image text-gray-300 text-2xl"></i>
                       )}

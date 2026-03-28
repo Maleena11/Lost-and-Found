@@ -280,12 +280,15 @@ export default function CreateNotice() {
   const [pendingFields, setPendingFields] = useState(new Set());
   const [preloadedReports, setPreloadedReports] = useState(null);
   const [preloadError, setPreloadError] = useState(null);
+  const [attachmentLightbox, setAttachmentLightbox] = useState(null);
 
-  useEffect(() => {
+  const handleOpenReportPicker = () => {
+    setShowReportPicker(true);
+    if (preloadedReports !== null) return;
     axios.get("http://localhost:3001/api/lost-found/?lean=true")
       .then(res => setPreloadedReports(Array.isArray(res.data) ? res.data : res.data.data || []))
       .catch(() => setPreloadError("Failed to load item reports."));
-  }, []);
+  };
 
   const PRIORITY_STYLE = {
     urgent: {
@@ -408,7 +411,7 @@ export default function CreateNotice() {
     setShowImagePicker(false);
   };
 
-  const handleReportSelect = (report) => {
+  const handleReportSelect = async (report) => {
     const noticeCategory = report.itemType === "lost" ? "lost-item" : "found-item";
     const { itemType: noticeItemType, priority } = resolveItemTypeAndPriority(report.category, report.itemName);
 
@@ -438,30 +441,35 @@ export default function CreateNotice() {
     const hasPhone = !!report.contactInfo?.phone;
     const hasEmail = !!report.contactInfo?.email;
 
+    // Fetch full item to get images
+    let images = [];
+    try {
+      const res = await axios.get(`http://localhost:3001/api/lost-found/${report._id}`);
+      const full = res.data?.data || res.data;
+      images = full.images || [];
+    } catch { /* proceed without images */ }
+
     setFormData(prev => ({
       ...prev,
-      // Auto-filled from report
       title:        title.slice(0, 100),
       category:     noticeCategory,
       itemType:     noticeItemType,
       priority:     priority,
       content:      contentLines.join("\n").slice(0, 1000),
-      attachments:  report.images?.length > 0 ? [...report.images] : [],
+      attachments:  images,
       contactPhone: hasPhone ? report.contactInfo.phone : "",
       contactEmail: hasEmail ? report.contactInfo.email : "",
-      // Auto-filled — report date as start, expiry calculated from that date
       startDate:      report.dateTime ? toDateString(new Date(report.dateTime)) : getTodayString(),
       endDate:        getExpiryDateString(priority, report.dateTime || new Date()),
       targetAudience: resolveTargetAudience(report.category, report.yearGroup),
     }));
 
-    // Only contact fields (if missing from report) need manual input
     const pending = new Set();
     if (!hasPhone) pending.add("contactPhone");
     if (!hasEmail) pending.add("contactEmail");
     setPendingFields(pending);
 
-    setSelectedReport(report);
+    setSelectedReport({ ...report, images });
     setShowReportPicker(false);
     setErrors({ contactPhone: '', contactEmail: '' });
     setDateError(null);
@@ -593,7 +601,7 @@ export default function CreateNotice() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setShowReportPicker(true)}
+                      onClick={handleOpenReportPicker}
                       className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                       <i className="fas fa-file-alt text-xs"></i>
@@ -616,7 +624,7 @@ export default function CreateNotice() {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setShowReportPicker(true)}
+                          onClick={handleOpenReportPicker}
                           className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline underline-offset-2"
                         >
                           Change
@@ -635,25 +643,17 @@ export default function CreateNotice() {
                     <div className={`bg-white rounded-lg border ${ps.inner} overflow-hidden`}>
                       {/* Header row: image(s) + name/badges */}
                       <div className="flex gap-3 px-4 pt-4 pb-3">
-                        {/* Images strip */}
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          {selectedReport.images?.length > 0 ? (
-                            selectedReport.images.slice(0, 3).map((img, idx) => (
-                              <img
-                                key={idx}
-                                src={img}
-                                alt={`${selectedReport.itemName} ${idx + 1}`}
-                                className="w-16 h-16 rounded-lg object-cover border border-gray-200"
-                              />
-                            ))
+                        {/* Thumbnail */}
+                        <div className="flex-shrink-0">
+                          {selectedReport.thumbnail ? (
+                            <img
+                              src={selectedReport.thumbnail}
+                              alt={selectedReport.itemName}
+                              className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                            />
                           ) : (
                             <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
                               <i className="fas fa-image text-gray-300 text-xl"></i>
-                            </div>
-                          )}
-                          {selectedReport.images?.length > 3 && (
-                            <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
-                              <span className="text-xs font-bold text-gray-500">+{selectedReport.images.length - 3}</span>
                             </div>
                           )}
                         </div>
@@ -929,17 +929,47 @@ export default function CreateNotice() {
                       <img
                         src={src}
                         alt={`preview ${idx + 1}`}
-                        className="h-16 w-16 object-cover rounded-lg border border-gray-200"
+                        className="h-16 w-16 object-cover rounded-lg border border-gray-200 cursor-pointer"
+                        onClick={() => setAttachmentLightbox(src)}
                       />
+                      {/* Zoom hint */}
+                      <div
+                        className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center cursor-pointer"
+                        onClick={() => setAttachmentLightbox(src)}
+                      >
+                        <i className="fas fa-search-plus text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"></i>
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeAttachment(idx)}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-300 hover:bg-gray-400 text-gray-600 rounded-full flex items-center justify-center shadow transition-colors"
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-300 hover:bg-gray-400 text-gray-600 rounded-full flex items-center justify-center shadow transition-colors z-10"
                       >
                         <i className="fas fa-times text-[9px]"></i>
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Attachment lightbox */}
+              {attachmentLightbox && (
+                <div
+                  className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+                  onClick={() => setAttachmentLightbox(null)}
+                >
+                  <button
+                    type="button"
+                    className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors"
+                    onClick={() => setAttachmentLightbox(null)}
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                  <img
+                    src={attachmentLightbox}
+                    alt="Full view"
+                    className="max-w-lg w-full mx-6 rounded-2xl shadow-2xl object-contain max-h-[80vh]"
+                    onClick={e => e.stopPropagation()}
+                  />
                 </div>
               )}
             </div>

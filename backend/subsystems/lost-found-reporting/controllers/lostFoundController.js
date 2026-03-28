@@ -4,7 +4,7 @@ const LostFoundItem = require('../models/LostFoundItem');
 // Supports ?lean=true to exclude base64 images for fast list views
 exports.getAllItems = async (req, res) => {
   try {
-    const projection = req.query.lean === 'true' ? { 'images': { $slice: 1 } } : {};
+    const projection = req.query.lean === 'true' ? { images: 0 } : {};
     const items = await LostFoundItem.find({}, projection).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,

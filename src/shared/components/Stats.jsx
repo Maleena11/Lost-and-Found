@@ -14,7 +14,7 @@ export default function Stats() {
             key={i}
             className="p-6 shadow-lg rounded-lg hover:-translate-y-1 transition"
           >
-            <i className={`fas ${s.icon} text-4xl text-blue-600 mb-4`}></i>
+            <i className={`fas ${s.icon} text-4xl text-blue-900 mb-4`}></i>
             <h3 className="text-3xl font-bold text-blue-900">{s.number}</h3>
             <p className="text-gray-600">{s.text}</p>
           </div>

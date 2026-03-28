@@ -179,7 +179,7 @@ export default function Register() {
     ) : null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-4 py-10 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 p-4 py-10 relative overflow-hidden">
       {/* Decorative circles */}
       <div className="absolute top-[-80px] left-[-80px] w-72 h-72 bg-white opacity-5 rounded-full pointer-events-none" />
       <div className="absolute bottom-[-100px] right-[-60px] w-96 h-96 bg-white opacity-5 rounded-full pointer-events-none" />
@@ -199,29 +199,29 @@ export default function Register() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Card header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-5 text-center">
+          <div className="bg-gradient-to-r from-blue-800 to-indigo-800 px-8 py-5 text-center">
             <h2 className="text-lg font-semibold text-white">Create Your Account</h2>
             <p className="text-blue-100 text-xs mt-1">Join UniFind to report and recover lost items</p>
           </div>
 
           {/* Progress steps indicator */}
           <div className="flex justify-center gap-2 py-4 border-b border-gray-100 bg-gray-50">
-            <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
-              <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+            <div className="flex items-center gap-1.5 text-xs text-blue-800 font-medium">
+              <span className="w-5 h-5 rounded-full bg-blue-800 text-white flex items-center justify-center text-xs font-bold">1</span>
               Personal Info
             </div>
             <div className="flex items-center gap-1 text-gray-400">
               <div className="w-6 h-px bg-gray-300" />
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
-              <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+            <div className="flex items-center gap-1.5 text-xs text-blue-800 font-medium">
+              <span className="w-5 h-5 rounded-full bg-blue-800 text-white flex items-center justify-center text-xs font-bold">2</span>
               Contact
             </div>
             <div className="flex items-center gap-1 text-gray-400">
               <div className="w-6 h-px bg-gray-300" />
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
-              <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">3</span>
+            <div className="flex items-center gap-1.5 text-xs text-blue-800 font-medium">
+              <span className="w-5 h-5 rounded-full bg-blue-800 text-white flex items-center justify-center text-xs font-bold">3</span>
               Security
             </div>
           </div>
@@ -497,15 +497,15 @@ export default function Register() {
                     checked={form.agreeTerms}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className="w-4 h-4 mt-0.5 accent-blue-600 flex-shrink-0"
+                    className="w-4 h-4 mt-0.5 accent-blue-900 flex-shrink-0"
                   />
                   <span>
                     I agree to the{" "}
-                    <a href="#" className="text-blue-600 font-medium hover:underline">
+                    <a href="#" className="text-blue-800 font-medium hover:underline">
                       Terms &amp; Conditions
                     </a>{" "}
                     and{" "}
-                    <a href="#" className="text-blue-600 font-medium hover:underline">
+                    <a href="#" className="text-blue-800 font-medium hover:underline">
                       Privacy Policy
                     </a>
                   </span>
@@ -517,7 +517,7 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
+                className="w-full bg-gradient-to-r from-blue-800 to-indigo-800 text-white py-3 rounded-xl font-semibold text-sm hover:from-blue-900 hover:to-indigo-900 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
               >
                 {loading ? (
                   <>
@@ -545,7 +545,7 @@ export default function Register() {
 
             <Link
               to="/login"
-              className="w-full flex items-center justify-center gap-2 border-2 border-blue-600 text-blue-600 py-3 rounded-xl font-semibold text-sm hover:bg-blue-50 transition-all"
+              className="w-full flex items-center justify-center gap-2 border-2 border-blue-800 text-blue-800 py-3 rounded-xl font-semibold text-sm hover:bg-blue-100 transition-all"
             >
               <i className="fas fa-sign-in-alt" />
               Sign In Instead

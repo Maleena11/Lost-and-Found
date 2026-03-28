@@ -7,9 +7,12 @@ The project is developed as a group system with four main subsystems, each handl
 🚀 System Overview
 This system allows students to:
 
-Report lost or found items بسهولة
+Report lost or found items
+ة
 View available notices about items
+
 Claim items securely
+
 Verify ownership through an organized process
 
 It also provides administrators with tools to manage users, items, and system activities effectively.
@@ -47,7 +50,9 @@ Enhance user convenience within the university environment
 🛠️ Technologies Used
 
 Frontend: HTML, CSS, JavaScript
+
 Backend: Node.js / Java 
+
 Database: MongoDB
 
 📌 Conclusion

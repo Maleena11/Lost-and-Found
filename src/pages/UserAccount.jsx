@@ -71,6 +71,36 @@ function SidebarLink({ icon, label, active, onClick, badge }) {
   );
 }
 
+/* ── Toast ───────────────────────────────────────────────────── */
+function Toast({ toasts }) {
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+      {toasts.map(t => (
+        <div
+          key={t.id}
+          className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-xl border pointer-events-auto
+            animate-[slideIn_0.3s_ease-out]
+            ${t.type === "success"
+              ? "bg-white border-green-200"
+              : "bg-white border-red-200"}`}
+          style={{ minWidth: 320, maxWidth: 400 }}
+        >
+          <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
+            ${t.type === "success" ? "bg-green-100" : "bg-red-100"}`}>
+            <i className={`text-sm ${t.type === "success" ? "fas fa-check text-green-600" : "fas fa-exclamation-triangle text-red-600"}`} />
+          </div>
+          <div>
+            <p className={`text-sm font-semibold ${t.type === "success" ? "text-green-700" : "text-red-700"}`}>
+              {t.type === "success" ? "Success" : "Error"}
+            </p>
+            <p className="text-sm text-gray-600 mt-0.5 leading-snug">{t.message}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ── main page ───────────────────────────────────────────────── */
 export default function UserAccount() {
   const { user, logout } = useAuth();
@@ -85,6 +115,13 @@ export default function UserAccount() {
   const [confirmDelete, setConfirmDelete] = useState(null); // claimId awaiting confirmation
   const [claimSort, setClaimSort] = useState("newest");
   const [claimFilter, setClaimFilter] = useState("all");
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = (message, type = "success") => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  };
 
   const email = user?.email || "";
   const initials = (user?.name || email || "U").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
@@ -121,9 +158,9 @@ export default function UserAccount() {
     setResendingPin(prev => ({ ...prev, [claimId]: true }));
     try {
       await axios.patch(`${API}/verification/${claimId}/regenerate-pin`);
-      alert("A new collection PIN has been sent to your registered email address.");
+      showToast("A new collection PIN has been sent to your registered email address.");
     } catch {
-      alert("Failed to resend PIN. Please try again or contact the Lost & Found Office.");
+      showToast("Failed to resend PIN. Please try again or contact the Lost & Found Office.", "error");
     } finally {
       setResendingPin(prev => ({ ...prev, [claimId]: false }));
     }
@@ -136,7 +173,7 @@ export default function UserAccount() {
       await axios.delete(`${API}/verification/${claimId}`);
       setClaims(prev => prev.filter(c => c._id !== claimId));
     } catch {
-      alert("Failed to delete claim. Please try again.");
+      showToast("Failed to delete claim. Please try again.", "error");
       setDeletingClaim(prev => ({ ...prev, [claimId]: false }));
     }
   };
@@ -148,6 +185,7 @@ export default function UserAccount() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
+      <Toast toasts={toasts} />
       <Header />
 
       {/* ── Hero banner ───────────────────────────────────────── */}
@@ -433,35 +471,56 @@ export default function UserAccount() {
                           </div>
 
                           {/* Verification stages */}
-                          <div className="mt-auto bg-slate-50 border border-slate-200 rounded-xl p-3">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Verification Progress</p>
-                            <div className="flex items-center">
-                              {["stage1", "stage2", "stage3"].map((stageKey, i) => {
-                                const stage = claim.approvalStages?.[stageKey] || {};
-                                const st = STAGE_STATE[stage.status] || STAGE_STATE.pending;
-                                return (
-                                  <div key={stageKey} className="flex items-center flex-1">
-                                    <div className="flex flex-col items-center gap-1">
-                                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${st.bg} ${st.ring} ${st.text} flex-shrink-0 shadow-sm`}>
-                                        <i className={`${st.icon} text-xs`} />
+                          {(() => {
+                            const stageKeys = ["stage1", "stage2", "stage3"];
+                            const stageStatuses = stageKeys.map(k => claim.approvalStages?.[k]?.status || "pending");
+                            const passedCount = stageStatuses.filter(s => s === "passed").length;
+                            const hasFailed = stageStatuses.some(s => s === "failed");
+                            const stageMsg = hasFailed
+                              ? { text: "One or more verification stages need attention.", color: "text-red-600", icon: "fas fa-exclamation-circle text-red-400" }
+                              : passedCount === 0
+                              ? { text: "Your claim is submitted and awaiting review.", color: "text-amber-600", icon: "fas fa-hourglass-start text-amber-400" }
+                              : passedCount === 1
+                              ? { text: "Stage 1 complete — checking item details next.", color: "text-blue-600", icon: "fas fa-spinner text-blue-400" }
+                              : passedCount === 2
+                              ? { text: "Almost there — final review in progress.", color: "text-blue-600", icon: "fas fa-spinner text-blue-400" }
+                              : { text: "All stages complete — awaiting final approval.", color: "text-green-600", icon: "fas fa-check-circle text-green-500" };
+                            return (
+                              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Verification Progress</p>
+                                <div className="flex items-center">
+                                  {stageKeys.map((stageKey, i) => {
+                                    const stage = claim.approvalStages?.[stageKey] || {};
+                                    const st = STAGE_STATE[stage.status] || STAGE_STATE.pending;
+                                    return (
+                                      <div key={stageKey} className="flex items-center flex-1">
+                                        <div className="flex flex-col items-center gap-1">
+                                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${st.bg} ${st.ring} ${st.text} flex-shrink-0 shadow-sm`}>
+                                            <i className={`${st.icon} text-xs`} />
+                                          </div>
+                                          <div className="text-center">
+                                            <p className="text-[10px] font-semibold text-slate-700">Stage {i + 1}</p>
+                                            <p className={`text-[9px] font-medium capitalize ${stage.status === "passed" ? "text-green-600" : stage.status === "failed" ? "text-red-500" : "text-slate-400"}`}>
+                                              {stage.status || "Pending"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        {i < 2 && (
+                                          <div className={`flex-1 h-0.5 mx-1.5 mb-4 rounded-full ${
+                                            stage.status === "passed" ? "bg-green-400" : "bg-gray-200"
+                                          }`} />
+                                        )}
                                       </div>
-                                      <div className="text-center">
-                                        <p className="text-[10px] font-semibold text-slate-700">Stage {i + 1}</p>
-                                        <p className={`text-[9px] font-medium capitalize ${stage.status === "passed" ? "text-green-600" : stage.status === "failed" ? "text-red-500" : "text-slate-400"}`}>
-                                          {stage.status || "Pending"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {i < 2 && (
-                                      <div className={`flex-1 h-0.5 mx-1.5 mb-4 rounded-full ${
-                                        stage.status === "passed" ? "bg-green-400" : "bg-gray-200"
-                                      }`} />
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className="mt-2.5 flex items-center gap-1.5">
+                                  <i className={`${stageMsg.icon} text-[10px] flex-shrink-0`} />
+                                  <p className={`text-[10px] font-medium leading-snug ${stageMsg.color}`}>{stageMsg.text}</p>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Collection notice for approved claims */}
                           {claim.status === "approved" && (

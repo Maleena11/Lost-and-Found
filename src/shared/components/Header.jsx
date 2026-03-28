@@ -86,7 +86,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-md w-full">
+      <header className="bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-md w-full">
         <div className="mx-auto flex justify-between items-center py-6 px-4 max-w-6xl w-full">
           <div className="flex items-center gap-3">
             <i className="fas fa-graduation-cap text-3xl"></i>
@@ -184,7 +184,7 @@ export default function Header() {
             </Link>
 
             {/* Auth buttons */}
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-blue-500">
+            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-blue-700">
               {user ? (
                 <>
                   <Link

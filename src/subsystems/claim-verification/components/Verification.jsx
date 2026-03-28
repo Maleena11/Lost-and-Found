@@ -150,6 +150,8 @@ export default function Verification() {
   const [foundItems, setFoundItems]     = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [search, setSearch]             = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sortOrder, setSortOrder]           = useState("newest");
   const [loading, setLoading]           = useState(false);
   const [submitting, setSubmitting]     = useState(false);
   const [error, setError]               = useState("");
@@ -249,14 +251,22 @@ export default function Verification() {
     setClaimRef("");
   };
 
-  const filteredFoundItems = foundItems.filter(item => {
-    const q = search.toLowerCase();
-    return (
-      item.itemName?.toLowerCase().includes(q) ||
-      item.category?.toLowerCase().includes(q) ||
-      item.location?.toLowerCase().includes(q)
-    );
-  });
+  const categories = ["all", ...new Set(foundItems.map(i => i.category).filter(Boolean))];
+
+  const filteredFoundItems = foundItems
+    .filter(item => {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        item.itemName?.toLowerCase().includes(q) ||
+        item.category?.toLowerCase().includes(q) ||
+        item.location?.toLowerCase().includes(q);
+      const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      const diff = new Date(a.dateTime) - new Date(b.dateTime);
+      return sortOrder === "oldest" ? diff : -diff;
+    });
 
   // ── Form handlers ─────────────────────────────────────────────────────────
 
@@ -389,6 +399,8 @@ export default function Verification() {
       setSelectedItem(null);
       setTouched({});
       setErrors({});
+      setCategoryFilter("all");
+      setSortOrder("newest");
       fetchFoundItems();
 
     } catch (err) {
@@ -535,57 +547,79 @@ export default function Verification() {
       <Header />
 
       {/* Banner */}
-      <div className="bg-gradient-to-r from-blue-800 via-blue-900 to-indigo-950 text-white py-12 px-6 relative overflow-hidden">
-        {/* Dot grid background */}
-        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-        {/* Right fade overlay */}
-        <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-indigo-900/60 to-transparent hidden lg:block" />
+      <div className="relative overflow-hidden text-white" style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}>
+        {/* Animated accent line */}
+        <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #34d399, #60a5fa, #a78bfa, #f472b6, #34d399)", backgroundSize: "200% 100%", animation: "shimmer 4s linear infinite" }} />
+        <style>{`@keyframes shimmer { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }`}</style>
 
-        <div className="max-w-7xl mx-auto relative">
+        {/* Dot grid background */}
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        {/* Diagonal light sweep */}
+        <div className="absolute inset-0 opacity-[0.04]" style={{ background: "linear-gradient(120deg, transparent 30%, white 50%, transparent 70%)" }} />
+
+        <div className="max-w-7xl mx-auto px-6 py-10 relative">
           <div className="flex items-center justify-between gap-8">
 
             {/* Left: text content */}
             <div className="flex-1">
-              <div className="flex items-center gap-2 text-blue-300 text-xs mb-3">
-                <i className="fas fa-home text-xs" />
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-1.5 text-blue-300 text-xs mb-4">
+                <i className="fas fa-home text-[10px]" />
                 <span>Home</span>
-                <i className="fas fa-chevron-right text-xs" />
-                <span className="text-white font-medium">Claim Verification</span>
+                <i className="fas fa-chevron-right text-[10px]" />
+                <span className="text-white font-semibold">Claim Verification</span>
               </div>
-              <h1 className="text-3xl font-extrabold mb-2 tracking-tight">Item Ownership Verification</h1>
-              <p className="text-blue-300 text-sm max-w-xl leading-relaxed">
+
+              {/* Eyebrow label */}
+              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-blue-200 mb-3 backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Official Student Services Portal
+              </div>
+
+              <h1 className="text-4xl font-extrabold mb-2 tracking-tight leading-tight">
+                Item Ownership<br />
+                <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #93c5fd, #c4b5fd)" }}>
+                  Verification
+                </span>
+              </h1>
+              <p className="text-blue-200 text-sm max-w-xl leading-relaxed mt-1">
                 Submit a formal claim for a found item. All claims are reviewed by the Student Services team
                 and require valid student identification for collection.
               </p>
-              <div className="flex flex-wrap gap-3 mt-5">
+
+              {/* Trust badges */}
+              <div className="flex flex-wrap gap-2.5 mt-5">
                 {[
-                  { icon: "fa-clock",        text: "1–2 business days processing" },
-                  { icon: "fa-id-card",      text: "Student ID required at collection" },
-                  { icon: "fa-lock",         text: "Secure & Confidential" },
-                  { icon: "fa-shield-check", text: "Admin-reviewed claims" },
-                ].map(({ icon, text }) => (
-                  <div key={text} className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
-                    <i className={`fas ${icon} text-blue-300`} />
-                    <span>{text}</span>
+                  { icon: "fa-clock",        text: "1–2 business days processing", color: "text-amber-300" },
+                  { icon: "fa-id-card",      text: "Student ID required",          color: "text-blue-300"  },
+                  { icon: "fa-lock",         text: "Secure & Confidential",        color: "text-emerald-300" },
+                  { icon: "fa-shield-check", text: "Admin-reviewed claims",         color: "text-violet-300" },
+                ].map(({ icon, text, color }) => (
+                  <div key={text} className="flex items-center gap-2 bg-white/10 hover:bg-white/[0.15] transition-colors border border-white/10 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
+                    <i className={`fas ${icon} ${color} text-[11px]`} />
+                    <span className="text-white/90">{text}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Right: decorative icon panel */}
-            <div className="hidden lg:flex flex-col items-center justify-center flex-shrink-0">
+            {/* Right: stats panel */}
+            <div className="hidden lg:flex flex-col items-center gap-4 flex-shrink-0">
               <div className="relative">
-                <div className="w-32 h-32 bg-white/10 rounded-3xl flex items-center justify-center border border-white/20 shadow-2xl shadow-black/30 backdrop-blur-sm">
+                <div className="w-36 h-36 rounded-3xl flex items-center justify-center border border-white/20 shadow-2xl shadow-black/40 backdrop-blur-sm" style={{ background: "rgba(255,255,255,0.08)" }}>
                   <i className="fas fa-shield-alt text-white/80 text-5xl" />
                 </div>
-                <div className="absolute -top-2 -right-2 w-9 h-9 bg-emerald-400 rounded-full flex items-center justify-center shadow-lg shadow-emerald-900/40 border-2 border-emerald-300">
+                <div className="absolute -top-2 -right-2 w-9 h-9 bg-emerald-400 rounded-full flex items-center justify-center shadow-lg border-2 border-emerald-300">
                   <i className="fas fa-check text-white text-sm" />
                 </div>
                 <div className="absolute -bottom-2 -left-2 w-7 h-7 bg-amber-400 rounded-full flex items-center justify-center shadow-md border-2 border-amber-300">
                   <i className="fas fa-star text-white text-[10px]" />
                 </div>
               </div>
-              <p className="text-blue-300 text-xs mt-4 font-semibold tracking-wide uppercase">Verified Claims Portal</p>
+              <div className="text-center">
+                <p className="text-blue-300 text-[11px] font-bold tracking-widest uppercase">Verified Claims Portal</p>
+                <p className="text-white/50 text-[10px] mt-0.5">Powered by Student Services</p>
+              </div>
             </div>
 
           </div>
@@ -660,39 +694,73 @@ export default function Verification() {
               </div>
             ) : (
               <>
-                {/* Search + count row */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-                  <div className="relative flex-1">
-                    <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                      placeholder="Search by name, category or location..."
-                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    {search && (
-                      <button
-                        onClick={() => setSearch("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <i className="fas fa-times-circle text-xs" />
-                      </button>
-                    )}
+                {/* Search + filters row */}
+                <div className="flex flex-col gap-3 mb-4">
+                  {/* Top row: search + sort */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="relative flex-1">
+                      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search by name, category or location..."
+                        className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+                      />
+                      {search && (
+                        <button
+                          onClick={() => setSearch("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <i className="fas fa-times-circle text-xs" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="relative">
+                        <i className="fas fa-sort-amount-down absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+                        <select
+                          value={sortOrder}
+                          onChange={e => setSortOrder(e.target.value)}
+                          className="pl-8 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none cursor-pointer font-medium text-gray-700"
+                        >
+                          <option value="newest">Newest First</option>
+                          <option value="oldest">Oldest First</option>
+                        </select>
+                        <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+                      </div>
+                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                        {filteredFoundItems.length} of {foundItems.length} item{foundItems.length !== 1 ? "s" : ""}
+                      </span>
+                      {selectedItem && (
+                        <button
+                          onClick={() => setSelectedItem(null)}
+                          className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1 whitespace-nowrap"
+                        >
+                          <i className="fas fa-times text-xs" /> Clear
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-xs text-gray-400">
-                      {filteredFoundItems.length} of {foundItems.length} item{foundItems.length !== 1 ? "s" : ""}
-                    </span>
-                    {selectedItem && (
-                      <button
-                        onClick={() => setSelectedItem(null)}
-                        className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1"
+
+                  {/* Category filter dropdown */}
+                  {categories.length > 1 && (
+                    <div className="relative w-full sm:w-56">
+                      <i className="fas fa-folder absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+                      <select
+                        value={categoryFilter}
+                        onChange={e => setCategoryFilter(e.target.value)}
+                        className="w-full pl-8 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors appearance-none cursor-pointer font-medium text-gray-700 capitalize"
                       >
-                        <i className="fas fa-times text-xs" /> Clear
-                      </button>
-                    )}
-                  </div>
+                        {categories.map(cat => (
+                          <option key={cat} value={cat} className="capitalize">
+                            {cat === "all" ? "All Categories" : cat.replace(/-/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                      <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Catalogue grid */}
@@ -1417,7 +1485,7 @@ export default function Verification() {
           </div>
 
           {/* Need Help */}
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-br from-blue-900 to-indigo-950 rounded-2xl p-5 text-white relative overflow-hidden">
             <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
             <div className="relative">
               <h3 className="text-sm font-bold flex items-center gap-2 mb-2">

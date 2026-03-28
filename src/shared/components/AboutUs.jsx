@@ -106,7 +106,7 @@ const AboutUs = () => {
         </div>
 
         {/* Team/Contact Section */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-900 rounded-2xl p-12 text-center text-white">
+        <div className="bg-gradient-to-r from-blue-900 to-blue-950 rounded-2xl p-12 text-center text-white">
           <h3 className="text-3xl font-bold mb-4">Join Our Community</h3>
           <p className="text-blue-100 mb-8 max-w-3xl mx-auto text-lg">
             Become part of a growing community of students, university staff, and volunteers working together

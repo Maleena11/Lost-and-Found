@@ -96,7 +96,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 p-4 relative overflow-hidden">
       {/* Decorative circles */}
       <div className="absolute top-[-80px] left-[-80px] w-72 h-72 bg-white opacity-5 rounded-full pointer-events-none" />
       <div className="absolute bottom-[-100px] right-[-60px] w-96 h-96 bg-white opacity-5 rounded-full pointer-events-none" />
@@ -116,7 +116,7 @@ export default function Login() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Card header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-5 text-center">
+          <div className="bg-gradient-to-r from-blue-800 to-indigo-800 px-8 py-5 text-center">
             <h2 className="text-lg font-semibold text-white">Welcome Back</h2>
             <p className="text-blue-100 text-xs mt-1">Sign in to your account to continue</p>
           </div>
@@ -214,13 +214,13 @@ export default function Login() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 accent-blue-600 rounded"
+                    className="w-4 h-4 accent-blue-900 rounded"
                   />
                   Remember me
                 </label>
                 <a
                   href="#"
-                  className="text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
+                  className="text-blue-800 font-medium hover:text-blue-950 hover:underline transition-colors"
                 >
                   Forgot Password?
                 </a>
@@ -230,7 +230,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
+                className="w-full bg-gradient-to-r from-blue-800 to-indigo-800 text-white py-3 rounded-xl font-semibold text-sm hover:from-blue-900 hover:to-indigo-900 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
               >
                 {loading ? (
                   <>
@@ -259,7 +259,7 @@ export default function Login() {
             {/* Register link */}
             <Link
               to="/register"
-              className="w-full flex items-center justify-center gap-2 border-2 border-blue-600 text-blue-600 py-3 rounded-xl font-semibold text-sm hover:bg-blue-50 transition-all"
+              className="w-full flex items-center justify-center gap-2 border-2 border-blue-800 text-blue-800 py-3 rounded-xl font-semibold text-sm hover:bg-blue-100 transition-all"
             >
               <i className="fas fa-user-plus" />
               Create Account

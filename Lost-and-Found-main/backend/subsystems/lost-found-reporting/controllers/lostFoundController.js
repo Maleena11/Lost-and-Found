@@ -1,11 +1,9 @@
 const LostFoundItem = require('../models/LostFoundItem');
 
 // Get all lost and found items
-// Supports ?lean=true to exclude base64 images for fast list views
 exports.getAllItems = async (req, res) => {
   try {
-    const projection = req.query.lean === 'true' ? { images: 0 } : {};
-    const items = await LostFoundItem.find({}, projection).sort({ createdAt: -1 });
+    const items = await LostFoundItem.find({}).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       count: items.length,
@@ -205,21 +203,21 @@ exports.deleteItem = async (req, res) => {
 exports.searchItems = async (req, res) => {
   try {
     const { itemType, category, location, dateFrom, dateTo, query } = req.query;
-    
+
     // Build search criteria
     let searchCriteria = {};
-    
+
     if (itemType) searchCriteria.itemType = itemType;
     if (category) searchCriteria.category = category;
     if (location) searchCriteria.location = { $regex: location, $options: 'i' };
-    
+
     // Date range
     if (dateFrom || dateTo) {
       searchCriteria.dateTime = {};
       if (dateFrom) searchCriteria.dateTime.$gte = new Date(dateFrom);
       if (dateTo) searchCriteria.dateTime.$lte = new Date(dateTo);
     }
-    
+
     // Text search
     if (query) {
       searchCriteria.$or = [
@@ -227,9 +225,9 @@ exports.searchItems = async (req, res) => {
         { description: { $regex: query, $options: 'i' } }
       ];
     }
-    
+
     const items = await LostFoundItem.find(searchCriteria);
-    
+
     res.status(200).json({
       success: true,
       count: items.length,

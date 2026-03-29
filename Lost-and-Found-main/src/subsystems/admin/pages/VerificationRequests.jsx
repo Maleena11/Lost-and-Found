@@ -1456,17 +1456,26 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
                         {/* Action buttons */}
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Compare toggle */}
-                          {selectedFoundItemId && (() => {
-                            const group = foundItemGroups.find(g => g.itemId === selectedFoundItemId);
-                            if (!group || group.claims.length < 2) return null;
+                          {/* Compare toggle — visible whenever this item has 2+ claims */}
+                          {(() => {
+                            const thisItemId = request.itemId?._id || '__unknown__';
+                            if ((claimCountByItemId[thisItemId] || 0) < 2) return null;
                             const isSel = compareIds.includes(request._id);
-                            const isDisabled = !isSel && compareIds.length >= 2;
+                            // Only allow selecting a second claim for the same item
+                            const firstSelectedItemId = compareIds.length > 0
+                              ? (verificationRequests.find(r => r._id === compareIds[0])?.itemId?._id || '__unknown__')
+                              : null;
+                            const isDisabled = !isSel && (compareIds.length >= 2 || (firstSelectedItemId && firstSelectedItemId !== thisItemId));
+                            const disabledTitle = compareIds.length >= 2
+                              ? 'Deselect one claim first'
+                              : firstSelectedItemId && firstSelectedItemId !== thisItemId
+                                ? 'Can only compare claims for the same item'
+                                : '';
                             return (
                               <button
                                 onClick={() => toggleCompare(request._id)}
                                 disabled={isDisabled}
-                                title={isDisabled ? 'Deselect one claim first' : isSel ? 'Remove from comparison' : 'Add to comparison'}
+                                title={isDisabled ? disabledTitle : isSel ? 'Remove from comparison' : 'Add to comparison'}
                                 className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
                                   isSel
                                     ? 'bg-indigo-600 border-indigo-600 text-white'

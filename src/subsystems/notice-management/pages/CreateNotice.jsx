@@ -282,12 +282,15 @@ export default function CreateNotice() {
   const [preloadError, setPreloadError] = useState(null);
   const [attachmentLightbox, setAttachmentLightbox] = useState(null);
 
-  const handleOpenReportPicker = () => {
-    setShowReportPicker(true);
-    if (preloadedReports !== null) return;
+  // Preload reports in the background as soon as the page mounts
+  useEffect(() => {
     axios.get("http://localhost:3001/api/lost-found/?lean=true")
       .then(res => setPreloadedReports(Array.isArray(res.data) ? res.data : res.data.data || []))
       .catch(() => setPreloadError("Failed to load item reports."));
+  }, []);
+
+  const handleOpenReportPicker = () => {
+    setShowReportPicker(true);
   };
 
   const PRIORITY_STYLE = {
@@ -645,9 +648,9 @@ export default function CreateNotice() {
                       <div className="flex gap-3 px-4 pt-4 pb-3">
                         {/* Thumbnail */}
                         <div className="flex-shrink-0">
-                          {selectedReport.thumbnail ? (
+                          {(selectedReport.thumbnail || selectedReport.images?.[0]) ? (
                             <img
-                              src={selectedReport.thumbnail}
+                              src={selectedReport.thumbnail || selectedReport.images?.[0]}
                               alt={selectedReport.itemName}
                               className="w-16 h-16 rounded-lg object-cover border border-gray-200"
                             />

@@ -768,9 +768,7 @@ export default function NoticeSection() {
 
               {/* Content body */}
               <div className="px-4 pt-3 pb-2 flex-1 flex flex-col">
-                <h3 className={`font-extrabold text-sm leading-snug mb-2 ${
-                  isUrgent ? 'text-red-900' : isMedium ? 'text-green-900' : isLow ? 'text-amber-900' : 'text-gray-900'
-                }`}>
+                <h3 className="font-extrabold text-base leading-tight tracking-wide mb-2 text-black">
                   {notice.title}
                 </h3>
                 {notice.category !== 'found-item' && (

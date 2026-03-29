@@ -261,7 +261,8 @@ exports.getVerificationRequestsByEmail = async (req, res) => {
     const requests = await VerificationRequest.find({
       'claimantInfo.email': req.params.email.toLowerCase()
     })
-      .populate('itemId')
+      .select('-claimantImages')
+      .populate('itemId', 'itemName category location thumbnail images')
       .sort({ submittedAt: -1 });
 
     res.status(200).json({

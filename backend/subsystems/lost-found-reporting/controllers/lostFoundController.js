@@ -1,10 +1,32 @@
 const LostFoundItem = require('../models/LostFoundItem');
+const { Jimp, JimpMime } = require('jimp');
+
+const THUMB_SIZE = 80;
+
+async function generateThumbnail(base64DataUrl) {
+  const base64 = base64DataUrl.replace(/^data:image\/\w+;base64,/, '');
+  const buffer = Buffer.from(base64, 'base64');
+  const image = await Jimp.read(buffer);
+  const size = Math.min(image.width, image.height);
+  image
+    .crop({
+      x: Math.floor((image.width - size) / 2),
+      y: Math.floor((image.height - size) / 2),
+      w: size,
+      h: size,
+    })
+    .resize({ w: THUMB_SIZE, h: THUMB_SIZE });
+  const thumbBuffer = await image.getBuffer(JimpMime.jpeg);
+  return 'data:image/jpeg;base64,' + thumbBuffer.toString('base64');
+}
 
 // Get all lost and found items
-// Supports ?lean=true to exclude base64 images for fast list views
+// Supports ?lean=true to return only thumbnail + first image (for list views).
+// Items that have a thumbnail skip the image entirely on the frontend;
+// the first image acts as a fallback for legacy items that have no thumbnail yet.
 exports.getAllItems = async (req, res) => {
   try {
-    const projection = req.query.lean === 'true' ? { images: 0 } : {};
+    const projection = req.query.lean === 'true' ? { images: { $slice: 1 } } : {};
     const items = await LostFoundItem.find({}, projection).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
@@ -57,6 +79,14 @@ exports.createItem = async (req, res) => {
       contactInfo
     } = req.body;
 
+    // Auto-generate thumbnail from first image
+    let thumbnail;
+    if (Array.isArray(images) && images.length > 0) {
+      try {
+        thumbnail = await generateThumbnail(images[0]);
+      } catch { /* proceed without thumbnail */ }
+    }
+
     // Create new item
     const newItem = await LostFoundItem.create({
       userId,
@@ -65,6 +95,7 @@ exports.createItem = async (req, res) => {
       category,
       description,
       images,
+      thumbnail,
       location,
       dateTime: new Date(dateTime),
       contactInfo

@@ -4,10 +4,12 @@ import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import axios from "axios";
 import { getTempUser } from "../../../shared/utils/tempUserAuth";
+import { useAuth } from "../../../shared/utils/AuthContext";
 
 export default function EditItem() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [tempUser, setTempUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -55,7 +57,12 @@ export default function EditItem() {
 
       setFormData({
         ...item,
-        dateTime: formattedDate
+        dateTime: formattedDate,
+        contactInfo: {
+          ...item.contactInfo,
+          name: authUser?.name || item.contactInfo?.name || "",
+          email: authUser?.email || item.contactInfo?.email || "",
+        }
       });
 
     } catch (err) {
@@ -454,11 +461,13 @@ export default function EditItem() {
                       name="contactInfo.name"
                       value={formData.contactInfo.name || ""}
                       onChange={(e) => {
+                        if (authUser?.name) return;
                         const regex = /^[a-zA-Z0-9!@#$%^&*()_+={}\[\]:;"'<>.,?/ -]*$/;
                         if (regex.test(e.target.value)) handleChange(e);
                       }}
+                      readOnly={!!authUser?.name}
                       placeholder="Your full name"
-                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.contactName ? 'border-red-400' : 'border-gray-200'}`}
+                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${authUser?.name ? "bg-gray-50 text-gray-500 cursor-default" : ""} ${errors.contactName ? 'border-red-400' : 'border-gray-200'}`}
                     />
                   </div>
                   {errors.contactName && <p className="mt-1 text-xs text-red-500">{errors.contactName}</p>}
@@ -499,11 +508,13 @@ export default function EditItem() {
                     name="contactInfo.email"
                     value={formData.contactInfo.email || ""}
                     onChange={(e) => {
+                      if (authUser?.email) return;
                       const regex = /^[a-zA-Z0-9@.]*$/;
                       if (regex.test(e.target.value)) handleChange(e);
                     }}
+                    readOnly={!!authUser?.email}
                     placeholder="it12345678@my.sliit.lk"
-                    className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.contactEmail ? 'border-red-400' : 'border-gray-200'}`}
+                    className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${authUser?.email ? "bg-gray-50 text-gray-500 cursor-default" : ""} ${errors.contactEmail ? 'border-red-400' : 'border-gray-200'}`}
                   />
                 </div>
                 {errors.contactEmail && <p className="mt-1 text-xs text-red-500">{errors.contactEmail}</p>}

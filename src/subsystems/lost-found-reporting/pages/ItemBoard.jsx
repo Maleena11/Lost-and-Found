@@ -51,7 +51,7 @@ export default function ItemBoard() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:3001/api/lost-found');
+      const response = await axios.get('http://localhost:3001/api/lost-found?lean=true');
       setItems(response.data.data);
       setError(null);
     } catch (err) {
@@ -62,10 +62,16 @@ export default function ItemBoard() {
     }
   };
 
-  const openItemDetails = (item) => {
+  const openItemDetails = async (item) => {
     setSelectedItem(item);
     setActiveImageIndex(0);
     setShowModal(true);
+    try {
+      const response = await axios.get(`http://localhost:3001/api/lost-found/${item._id}`);
+      setSelectedItem(response.data.data);
+    } catch (err) {
+      console.error("Error fetching item details:", err);
+    }
   };
 
   const closeModal = () => {
@@ -154,6 +160,7 @@ export default function ItemBoard() {
 
   const getItemImage = (item) => {
     if (item.images && item.images.length > 0) return item.images[0];
+    if (item.thumbnail) return item.thumbnail;
     return null;
   };
 
@@ -361,15 +368,15 @@ export default function ItemBoard() {
                 </div>
 
                 {/* Image */}
-                <div className="h-44 overflow-hidden bg-gray-50 flex items-center justify-center">
+                <div className="relative w-full overflow-hidden bg-gray-50" style={{ paddingBottom: '65%' }}>
                   {getItemImage(item) ? (
                     <img
                       src={getItemImage(item)}
                       alt={item.itemName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-gray-300">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-300">
                       <i className="fas fa-image text-4xl"></i>
                       <span className="text-xs text-gray-400">No image</span>
                     </div>

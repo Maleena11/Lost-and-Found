@@ -4,10 +4,26 @@ import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import axios from "axios";
 import { getTempUser } from "../../../shared/utils/tempUserAuth"; // Import the temp user utility
+import { useAuth } from "../../../shared/utils/AuthContext";
 
 export default function ReportItem() {
   const navigate = useNavigate();
-  const generateThumbnail = (base64, size = 80) => {
+  const compressImage = (base64, maxWidth = 1200, quality = 0.8) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = base64;
+    });
+  };
+
+  const generateThumbnail = (base64, size = 400) => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -19,7 +35,7 @@ export default function ReportItem() {
         const x = (size - img.width * scale) / 2;
         const y = (size - img.height * scale) / 2;
         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-        resolve(canvas.toDataURL("image/jpeg", 0.5));
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.src = base64;
     });
@@ -106,6 +122,8 @@ export default function ReportItem() {
     "Law": ["Law"],
   };
 
+  const { user: authUser } = useAuth();
+
   // Get the temporary user when component mounts
   const [tempUser, setTempUser] = useState(null);
 
@@ -114,12 +132,15 @@ export default function ReportItem() {
     const user = getTempUser();
     setTempUser(user);
 
-    // Pre-fill contact info with temp user data...
+    // Pre-fill contact info: prefer logged-in account data over temp user
+    const prefillName = authUser?.name || ((user.name && user.name !== "Temporary User") ? user.name : "");
+    const prefillEmail = authUser?.email || ((user.email && user.email !== "temp@example.com") ? user.email : "");
+
     setFormData(prev => ({
       ...prev,
       contactInfo: {
-        name: (user.name && user.name !== "Temporary User") ? user.name : "",
-        email: (user.email && user.email !== "temp@example.com") ? user.email : "",
+        name: prefillName,
+        email: prefillEmail,
         phone: prev.contactInfo.phone
       }
     }));
@@ -247,7 +268,8 @@ export default function ReportItem() {
       })
     )
     .then(async base64Images => {
-      const newImages = [...formData.images, ...base64Images];
+      const compressed = await Promise.all(base64Images.map(b64 => compressImage(b64)));
+      const newImages = [...formData.images, ...compressed];
       const thumb = formData.thumbnail || await generateThumbnail(newImages[0]);
       setFormData(prev => ({
         ...prev,
@@ -273,7 +295,7 @@ export default function ReportItem() {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const updated = [...formData.images];
-      updated[index] = ev.target.result;
+      updated[index] = await compressImage(ev.target.result);
       const thumb = await generateThumbnail(updated[0]);
       setFormData(prev => ({ ...prev, images: updated, thumbnail: thumb }));
       clearError("images");
@@ -337,9 +359,9 @@ export default function ReportItem() {
         images: [],
         thumbnail: null,
         contactInfo: {
-          name: (tempUser.name && tempUser.name !== "Temporary User") ? tempUser.name : "",
+          name: authUser?.name || ((tempUser.name && tempUser.name !== "Temporary User") ? tempUser.name : ""),
           phone: formData.contactInfo.phone,
-          email: (tempUser.email && tempUser.email !== "temp@example.com") ? tempUser.email : "",
+          email: authUser?.email || ((tempUser.email && tempUser.email !== "temp@example.com") ? tempUser.email : ""),
         }
       });
     } catch (error) {
@@ -763,12 +785,14 @@ export default function ReportItem() {
                       name="contactInfo.name"
                       value={formData.contactInfo.name}
                       onChange={(e) => {
+                        if (authUser?.name) return;
                         const titled = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
                         const regex = /^[a-zA-Z0-9 !@#$%^&*()_+={}\[\]:;"'<>.,?/-]*$/;
                         if (regex.test(titled)) handleChange({ target: { name: e.target.name, value: titled } });
                       }}
+                      readOnly={!!authUser?.name}
                       placeholder="Your full name"
-                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactName ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
+                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${authUser?.name ? "bg-gray-50 text-gray-500 cursor-default" : ""} ${errors.contactName ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                     />
                   </div>
                   {errors.contactName && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactName}</p>}
@@ -805,11 +829,13 @@ export default function ReportItem() {
                     name="contactInfo.email"
                     value={formData.contactInfo.email}
                     onChange={(e) => {
+                      if (authUser?.email) return;
                       const regex = /^[a-zA-Z0-9@.]*$/;
                       if (regex.test(e.target.value)) handleChange(e);
                     }}
+                    readOnly={!!authUser?.email}
                     placeholder="it12345678@my.sliit.lk"
-                    className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactEmail ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
+                    className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${authUser?.email ? "bg-gray-50 text-gray-500 cursor-default" : ""} ${errors.contactEmail ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                   />
                 </div>
                 {errors.contactEmail && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactEmail}</p>}

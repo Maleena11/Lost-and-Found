@@ -2,13 +2,26 @@ const LostFoundItem = require('../models/LostFoundItem');
 
 // Get all lost and found items
 // Supports ?lean=true to exclude base64 images for fast list views
+// Supports ?page=1&limit=50 for pagination
 exports.getAllItems = async (req, res) => {
   try {
-    const projection = req.query.lean === 'true' ? { images: 0 } : {};
-    const items = await LostFoundItem.find({}, projection).sort({ createdAt: -1 });
+    // lean=true: return only first image (for card quality) and exclude the rest
+    const projection = req.query.lean === 'true' ? { images: { $slice: 1 }, thumbnail: 0 } : {};
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      LostFoundItem.find({}, projection).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      LostFoundItem.countDocuments()
+    ]);
+
     res.status(200).json({
       success: true,
       count: items.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
       data: items
     });
   } catch (error) {

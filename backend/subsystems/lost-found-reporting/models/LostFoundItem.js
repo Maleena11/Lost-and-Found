@@ -95,7 +95,12 @@ const lostFoundItemSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field on save
+lostFoundItemSchema.index({ createdAt: -1 });
+lostFoundItemSchema.index({ itemType: 1, status: 1 });
+lostFoundItemSchema.index({ category: 1 });
+lostFoundItemSchema.index({ userId: 1 });
+
+// Update the updatedAt field on save0
 lostFoundItemSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();

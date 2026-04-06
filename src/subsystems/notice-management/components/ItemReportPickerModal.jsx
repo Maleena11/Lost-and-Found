@@ -41,7 +41,7 @@ function formatDateTime(dateStr) {
 // ─── Detail Card View ────────────────────────────────────────────────────────
 function DetailView({ item, onBack, onUse }) {
   const typeStyle = TYPE_COLORS[item.itemType] || TYPE_COLORS.lost;
-  const thumbnail = item.thumbnail;
+  const thumbnail = item.thumbnail || item.images?.[0];
   const [fullImage, setFullImage] = useState(null);
 
   useEffect(() => {

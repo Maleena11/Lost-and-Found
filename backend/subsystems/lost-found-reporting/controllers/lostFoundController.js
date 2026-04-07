@@ -21,6 +21,23 @@ async function generateThumbnail(base64DataUrl) {
 }
 
 // Get all lost and found items
+
+// Supports ?lean=true to exclude base64 images for fast list views
+// Supports ?page=1&limit=50 for pagination
+exports.getAllItems = async (req, res) => {
+  try {
+    // lean=true: return only first image (for card quality) and exclude the rest
+    const projection = req.query.lean === 'true' ? { images: { $slice: 1 }, thumbnail: 0 } : {};
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      LostFoundItem.find({}, projection).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      LostFoundItem.countDocuments()
+    ]);
+
+
 // Supports ?lean=true to return only thumbnail + first image (for list views).
 // Items that have a thumbnail skip the image entirely on the frontend;
 // the first image acts as a fallback for legacy items that have no thumbnail yet.
@@ -28,9 +45,13 @@ exports.getAllItems = async (req, res) => {
   try {
     const projection = req.query.lean === 'true' ? { images: { $slice: 1 } } : {};
     const items = await LostFoundItem.find({}, projection).sort({ createdAt: -1 });
+
     res.status(200).json({
       success: true,
       count: items.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
       data: items
     });
   } catch (error) {

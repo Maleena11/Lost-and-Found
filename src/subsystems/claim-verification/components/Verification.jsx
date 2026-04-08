@@ -108,7 +108,7 @@ function ErrorMsg({ error }) {
 
 function Field({ label, required, hint, error, touched, children }) {
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col gap-0" {...(touched && error ? { "data-field-error": "true" } : {})}>
       <label className="block mb-2 text-sm font-semibold text-gray-800 flex items-center gap-1.5">
         {label}
         {required && (
@@ -354,15 +354,17 @@ export default function Verification() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Touch all fields to show all errors at once
-    const allTouched = Object.fromEntries(REQUIRED_FIELDS.map(f => [f, true]));
+    // Touch all fields (including declaration) to show all errors at once
+    const allTouched = Object.fromEntries([...REQUIRED_FIELDS, "declaration"].map(f => [f, true]));
     setTouched(allTouched);
     const errs = runValidate(formData);
     setErrors(errs);
 
     if (!isFormValid) {
-      setError("Please complete all required fields correctly and accept the declaration before submitting.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => {
+        const firstError = document.querySelector("[data-field-error='true']");
+        if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
 
@@ -1205,12 +1207,8 @@ export default function Verification() {
                         </span>
                       )}
                     </div>
-                    <div className="flex justify-between items-center mt-1">
-                      {touched.description && errors.description
-                        ? <ErrorMsg error={errors.description} />
-                        : <span />
-                      }
-                      <span className={`text-xs ml-auto ${formData.description.length < 20 ? "text-gray-400" : "text-green-500"}`}>
+                    <div className="flex justify-end mt-1">
+                      <span className={`text-xs ${formData.description.length < 20 ? "text-gray-400" : "text-green-500"}`}>
                         {formData.description.length} chars {formData.description.length < 20 ? `(${20 - formData.description.length} more needed)` : "✓"}
                       </span>
                     </div>
@@ -1333,9 +1331,11 @@ export default function Verification() {
 
                   {/* Declaration */}
                   <div className={`border rounded-xl p-4 transition-colors ${
-                    !formData.declaration
-                      ? "bg-gray-50 border-gray-200"
-                      : "bg-green-50 border-green-200"
+                    formData.declaration
+                      ? "bg-green-50 border-green-200"
+                      : touched.declaration
+                        ? "bg-red-50 border-red-300"
+                        : "bg-gray-50 border-gray-200"
                   }`}>
                     <label className="flex items-start gap-3 cursor-pointer select-none">
                       <input
@@ -1352,11 +1352,16 @@ export default function Verification() {
                         <span className="font-medium">disciplinary action</span> in accordance with university regulations.
                       </span>
                     </label>
-                    {!formData.declaration && touched.declaration === undefined && (
-                      <p className="mt-2 text-xs text-gray-400 ml-7">
-                        <i className="fas fa-exclamation-circle mr-1" />
-                        You must accept the declaration to submit your claim.
-                      </p>
+                    {!formData.declaration && (
+                      touched.declaration
+                        ? <p className="mt-2 text-xs text-red-600 flex items-center gap-1 ml-7 font-medium">
+                            <i className="fas fa-exclamation-circle flex-shrink-0" />
+                            You must accept the declaration to submit your claim.
+                          </p>
+                        : <p className="mt-2 text-xs text-gray-400 ml-7">
+                            <i className="fas fa-exclamation-circle mr-1" />
+                            You must accept the declaration to submit your claim.
+                          </p>
                     )}
                   </div>
 
@@ -1380,13 +1385,6 @@ export default function Verification() {
                   <><i className="fas fa-paper-plane" /> Submit Ownership Claim</>
                 )}
               </button>
-
-              {!isFormValid && !submitting && (
-                <p className="text-center text-xs text-gray-400">
-                  <i className="fas fa-lock mr-1" />
-                  Complete all required fields, correct any errors, and accept the declaration to enable submission.
-                </p>
-              )}
 
             </form>
           )}

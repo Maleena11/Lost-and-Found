@@ -30,7 +30,7 @@ function PhotoGalleryPanel({ images, activeIdx, setActiveIdx, accentColor, label
     <div>
       {/* Main photo */}
       <div
-        className="relative rounded-xl overflow-hidden cursor-zoom-in bg-slate-900 border border-slate-200 mb-2.5 group"
+        className="relative rounded-xl overflow-hidden cursor-zoom-in bg-slate-900 border border-slate-400 mb-2.5 group"
         style={{ aspectRatio: '4/3' }}
         onClick={() => onLightboxOpen(images, activeIdx, label)}
       >
@@ -145,27 +145,27 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
         </div>
 
         {/* Description */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Item Description</p>
           <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.description || <span className="text-slate-300 italic">None provided</span>}</p>
         </div>
 
         {/* Ownership Proof */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Ownership Proof</p>
           <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.ownershipProof || <span className="text-slate-300 italic">None provided</span>}</p>
         </div>
 
         {/* Additional Info */}
         {claim.verificationDetails.additionalInfo && (
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Additional Info</p>
             <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.additionalInfo}</p>
           </div>
         )}
 
         {/* Photos */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
             Photos
             <span className="ml-2 text-slate-300 normal-case font-normal">{photos.length} submitted</span>
@@ -243,7 +243,7 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
         <div className="bg-white border-t border-slate-100 px-6 py-4 flex items-center justify-end shrink-0 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+            className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-400 rounded-xl hover:bg-slate-50 transition-colors"
           >
             Close Comparison
           </button>
@@ -477,8 +477,8 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
     setApprovalStages(updated);
 
-    // Stage 3 decision finalizes the request
-    if (stageKey === 'stage3') {
+    // Any failed stage immediately rejects the request; Stage 3 passed finalizes as approved
+    if (decision === 'failed' || stageKey === 'stage3') {
       setSaveLoading(true);
       try {
         await axios.patch(`http://localhost:3001/api/verification/${selectedRequest._id}/stages`, {
@@ -1175,7 +1175,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             <div className="w-full">
 
               {/* Claims sub-header */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-4 px-5 py-3.5 flex items-center justify-between">
+              <div className="bg-white rounded-xl border border-slate-400 shadow-sm mb-4 px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">
@@ -1193,7 +1193,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   {/* Sort toggle */}
                   <button
                     onClick={() => setSortOrder(o => o === 'oldest' ? 'newest' : 'oldest')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-400 rounded-lg hover:bg-slate-50 transition-colors"
                     title={sortOrder === 'oldest' ? 'Showing oldest first — click for newest first' : 'Showing newest first — click for oldest first'}
                   >
                     <i className={`fas fa-sort-amount-${sortOrder === 'oldest' ? 'up' : 'down'} text-xs text-slate-400`}></i>
@@ -1202,7 +1202,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   {selectedFoundItemId && (
                     <button
                       onClick={() => setSelectedFoundItemId(null)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 border border-slate-400 rounded-lg hover:bg-slate-50 transition-colors"
                     >
                       <i className="fas fa-times text-xs"></i>
                       Show All
@@ -1212,7 +1212,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
 
           {loading ? (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+            <div className="bg-white rounded-xl border border-slate-400 shadow-sm p-12 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                   <i className="fas fa-spinner fa-spin text-xl text-blue-500"></i>
@@ -1224,7 +1224,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
             </div>
           ) : filteredRequests.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+            <div className="bg-white rounded-xl border border-slate-400 shadow-sm p-12 text-center">
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-100 to-slate-100 flex items-center justify-center shadow-inner">
                   <i className="fas fa-inbox text-2xl text-gray-300"></i>
@@ -1305,236 +1305,221 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 );
               })()}
 
-              <div className="space-y-2">
-                {currentRequests.map((request) => {
-                  const initials = request.claimantInfo.name
-                    ? request.claimantInfo.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-                    : '?';
-                  const avatarColors = [
-                    'from-blue-400 to-indigo-500', 'from-violet-400 to-purple-500',
-                    'from-rose-400 to-pink-500',   'from-amber-400 to-orange-500',
-                    'from-teal-400 to-cyan-500',   'from-emerald-400 to-green-500',
-                  ];
-                  const idHash = request._id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-                  const avatarGrad = avatarColors[idHash % avatarColors.length];
-                  const statusStyles = {
-                    pending:   'bg-amber-50 text-amber-600 border border-amber-200',
-                    approved:  'bg-emerald-50 text-emerald-600 border border-emerald-200',
-                    rejected:  'bg-rose-50 text-rose-600 border border-rose-200',
-                    processed: 'bg-sky-50 text-sky-600 border border-sky-200',
-                  };
-                  const dotStyles = {
-                    pending: 'bg-amber-400', approved: 'bg-emerald-400',
-                    rejected: 'bg-rose-400', processed: 'bg-sky-400',
-                  };
-                  const { badge, subtitle, subtitleColor } = getStatusDisplay(request);
-                  const ageMs = Date.now() - new Date(request.submittedAt).getTime();
-                  const ageDays = Math.floor(ageMs / 86400000);
-                  const isStale = request.status === 'pending' && ageDays > 3;
-                  const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays} days ago`;
-                  const agePillStyle = request.status !== 'pending'
-                    ? 'bg-slate-50 text-slate-400 border-slate-200'
-                    : ageDays > 3
-                      ? 'bg-red-50 text-red-600 border-red-200'
-                      : ageDays >= 2
-                        ? 'bg-amber-50 text-amber-600 border-amber-200'
-                        : 'bg-emerald-50 text-emerald-600 border-emerald-200';
+              {/* ── Claims Table ── */}
+              <div className="bg-white rounded-xl border border-slate-400 shadow-sm overflow-hidden">
+                <table className="w-full text-sm border-collapse border border-slate-400">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="w-8 px-4 py-3 text-left border border-slate-400"></th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Claimant</th>
+                      {!selectedFoundItemId && (
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Item</th>
+                      )}
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Submitted</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Status</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRequests.map((request) => {
+                      const initials = request.claimantInfo.name
+                        ? request.claimantInfo.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                        : '?';
+                      const avatarColors = [
+                        'from-blue-400 to-indigo-500', 'from-violet-400 to-purple-500',
+                        'from-rose-400 to-pink-500',   'from-amber-400 to-orange-500',
+                        'from-teal-400 to-cyan-500',   'from-emerald-400 to-green-500',
+                      ];
+                      const idHash = request._id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+                      const avatarGrad = avatarColors[idHash % avatarColors.length];
+                      const statusStyles = {
+                        pending:   'bg-amber-50 text-amber-600 border border-amber-200',
+                        approved:  'bg-emerald-50 text-emerald-600 border border-emerald-200',
+                        rejected:  'bg-rose-50 text-rose-600 border border-rose-200',
+                        processed: 'bg-sky-50 text-sky-600 border border-sky-200',
+                      };
+                      const dotStyles = {
+                        pending: 'bg-amber-400', approved: 'bg-emerald-400',
+                        rejected: 'bg-rose-400', processed: 'bg-sky-400',
+                      };
+                      const { badge, subtitle, subtitleColor } = getStatusDisplay(request);
+                      const ageMs = Date.now() - new Date(request.submittedAt).getTime();
+                      const ageDays = Math.floor(ageMs / 86400000);
+                      const isStale = request.status === 'pending' && ageDays > 3;
+                      const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays} days ago`;
 
-                  const accentBorder = {
-                    pending:   'border-l-blue-400',
-                    approved:  'border-l-emerald-400',
-                    rejected:  'border-l-rose-400',
-                    processed: 'border-l-sky-400',
-                  }[request.status] || 'border-l-slate-300';
+                      const rowBg = bulkSelected.has(request._id) ? 'bg-rose-50/60' : 'bg-white hover:bg-slate-50/60';
+                      const leftAccent = {
+                        pending:   'border-l-4 border-l-blue-400',
+                        approved:  'border-l-4 border-l-emerald-400',
+                        rejected:  'border-l-4 border-l-rose-400',
+                        processed: 'border-l-4 border-l-sky-400',
+                      }[request.status] || 'border-l-4 border-l-slate-300';
 
-                  const accentRing = {
-                    pending:   'border-blue-300 shadow-blue-100',
-                    approved:  'border-emerald-300 shadow-emerald-100',
-                    rejected:  'border-rose-300 shadow-rose-100',
-                    processed: 'border-sky-300 shadow-sky-100',
-                  }[request.status] || 'border-slate-200 shadow-slate-100';
+                      return (
+                        <tr key={request._id} className={`transition-colors ${rowBg} ${leftAccent}`}>
 
-                  return (
-                    <div
-                      key={request._id}
-                      className={`rounded-xl border-l-4 border-2 transition-all shadow-sm hover:shadow-md ${accentBorder} ${
-                        bulkSelected.has(request._id)
-                          ? 'bg-rose-50/60 border-rose-300 ring-1 ring-rose-300'
-                          : `bg-white ${accentRing} hover:shadow-md`
-                      }`}
-                    >
-                      {/* ── Single compact row ── */}
-                      <div className="flex items-center gap-3 px-4 py-3">
-
-                        {/* Checkbox */}
-                        <div className="shrink-0">
-                          {request.status === 'pending' ? (
-                            <input
-                              type="checkbox"
-                              checked={bulkSelected.has(request._id)}
-                              onChange={() => toggleBulkSelect(request._id)}
-                              onClick={e => e.stopPropagation()}
-                              className="w-4 h-4 accent-rose-500 cursor-pointer"
-                            />
-                          ) : (
-                            <div className="w-4" />
-                          )}
-                        </div>
-
-                        {/* Avatar */}
-                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm`}>
-                          {initials}
-                        </div>
-
-                        {/* Claimant info */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-slate-800 leading-tight truncate">{request.claimantInfo.name}</p>
-                            {request.claimantInfo.address && (
-                              <span className="text-xs text-slate-400 truncate hidden lg:block">{request.claimantInfo.address}</span>
+                          {/* Checkbox */}
+                          <td className="px-4 py-3 border border-slate-400">
+                            {request.status === 'pending' ? (
+                              <input
+                                type="checkbox"
+                                checked={bulkSelected.has(request._id)}
+                                onChange={() => toggleBulkSelect(request._id)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-4 h-4 accent-rose-500 cursor-pointer"
+                              />
+                            ) : (
+                              <div className="w-4" />
                             )}
-                          </div>
-                          <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-xs text-slate-400 flex items-center gap-1">
-                              <i className="fas fa-envelope text-slate-300 text-[10px]"></i>
-                              {request.claimantInfo.email}
-                            </span>
-                            <span className="text-xs text-slate-400 flex items-center gap-1">
-                              <i className="fas fa-phone text-slate-300 text-[10px]"></i>
-                              {request.claimantInfo.phone}
-                            </span>
-                          </div>
-                        </div>
+                          </td>
 
-                        {/* Item + date + status — hidden on small screens */}
-                        <div className="hidden md:flex items-center gap-4 shrink-0">
-                          {/* Item info */}
-                          <div className="flex flex-col items-end gap-0.5">
-                            {!selectedFoundItemId && request.itemId?.itemName && (
-                              <div className="flex items-center gap-1.5 justify-end flex-wrap">
-                                <span className="text-sm font-medium text-slate-700">{request.itemId.itemName}</span>
-                                {request.itemId?.category && (
-                                  <span className="text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
-                                    {request.itemId.category}
-                                  </span>
-                                )}
-                                {(() => {
-                                  const n = claimCountByItemId[request.itemId?._id || '__unknown__'] || 0;
-                                  if (n < 2) return null;
-                                  return (
-                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-500 border border-rose-100">
-                                      {n} claims
-                                    </span>
-                                  );
-                                })()}
+                          {/* Claimant */}
+                          <td className="px-4 py-3 border border-slate-400">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm`}>
+                                {initials}
                               </div>
-                            )}
-                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-slate-800 leading-tight">{request.claimantInfo.name}</p>
+                            </div>
+                          </td>
+
+                          {/* Item */}
+                          {!selectedFoundItemId && (
+                            <td className="px-4 py-3 border border-slate-400">
+                              {request.itemId?.itemName ? (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-sm font-medium text-slate-700">{request.itemId.itemName}</span>
+                                  {request.itemId?.category && (
+                                    <span className="text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                                      {request.itemId.category}
+                                    </span>
+                                  )}
+                                  {(() => {
+                                    const n = claimCountByItemId[request.itemId?._id || '__unknown__'] || 0;
+                                    if (n < 2) return null;
+                                    return (
+                                      <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-500 border border-rose-100">
+                                        {n} claims
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">—</span>
+                              )}
+                            </td>
+                          )}
+
+                          {/* Submitted date */}
+                          <td className="px-4 py-3 whitespace-nowrap border border-slate-400">
+                            <div className="flex flex-col gap-0.5">
                               {isStale && (
-                                <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded w-fit">
                                   <i className="fas fa-clock text-[9px] mr-0.5"></i>{ageLabel}
                                 </span>
                               )}
-                              <span className="text-[11px] text-slate-400">
+                              <span className="text-xs text-slate-500">
                                 {new Date(request.submittedAt).toLocaleDateString()}
                               </span>
                             </div>
-                          </div>
+                          </td>
 
-                          {/* Status badge */}
-                          <div className="flex flex-col items-end gap-0.5 min-w-[110px]">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${statusStyles[request.status] || statusStyles.processed}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
-                              {badge}
-                            </span>
-                            <p className={`text-[11px] font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
-                          </div>
-                        </div>
+                          {/* Status */}
+                          <td className="px-4 py-3 border border-slate-400">
+                            <div className="flex flex-col gap-0.5">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap w-fit ${statusStyles[request.status] || statusStyles.processed}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
+                                {badge}
+                              </span>
+                              {subtitle && (
+                                <p className={`text-[11px] font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
+                              )}
+                            </div>
+                          </td>
 
-                        {/* Divider */}
-                        <div className="hidden md:block w-px h-8 bg-slate-100 shrink-0"></div>
+                          {/* Actions */}
+                          <td className="px-4 py-3 border border-slate-400">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              {/* Compare toggle */}
+                              {(() => {
+                                const thisItemId = request.itemId?._id || '__unknown__';
+                                if ((claimCountByItemId[thisItemId] || 0) < 2) return null;
+                                const isSel = compareIds.includes(request._id);
+                                const firstSelectedItemId = compareIds.length > 0
+                                  ? (verificationRequests.find(r => r._id === compareIds[0])?.itemId?._id || '__unknown__')
+                                  : null;
+                                const isDisabled = !isSel && (compareIds.length >= 2 || (firstSelectedItemId && firstSelectedItemId !== thisItemId));
+                                const disabledTitle = compareIds.length >= 2
+                                  ? 'Deselect one claim first'
+                                  : firstSelectedItemId && firstSelectedItemId !== thisItemId
+                                    ? 'Can only compare claims for the same item'
+                                    : '';
+                                return (
+                                  <button
+                                    onClick={() => toggleCompare(request._id)}
+                                    disabled={isDisabled}
+                                    title={isDisabled ? disabledTitle : isSel ? 'Remove from comparison' : 'Add to comparison'}
+                                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
+                                      isSel
+                                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                                        : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
+                                    }`}
+                                  >
+                                    <i className={`fas ${isSel ? 'fa-check-square' : 'fa-columns'} text-xs`}></i>
+                                    {isSel ? 'Selected' : 'Compare'}
+                                  </button>
+                                );
+                              })()}
 
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Compare toggle — visible whenever this item has 2+ claims */}
-                          {(() => {
-                            const thisItemId = request.itemId?._id || '__unknown__';
-                            if ((claimCountByItemId[thisItemId] || 0) < 2) return null;
-                            const isSel = compareIds.includes(request._id);
-                            // Only allow selecting a second claim for the same item
-                            const firstSelectedItemId = compareIds.length > 0
-                              ? (verificationRequests.find(r => r._id === compareIds[0])?.itemId?._id || '__unknown__')
-                              : null;
-                            const isDisabled = !isSel && (compareIds.length >= 2 || (firstSelectedItemId && firstSelectedItemId !== thisItemId));
-                            const disabledTitle = compareIds.length >= 2
-                              ? 'Deselect one claim first'
-                              : firstSelectedItemId && firstSelectedItemId !== thisItemId
-                                ? 'Can only compare claims for the same item'
-                                : '';
-                            return (
+                              {/* Quick-action Approve / Reject — pending only */}
+                              {request.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => setQuickConfirm({ id: request._id, status: 'approved', name: request.claimantInfo.name })}
+                                    disabled={quickActionLoading !== null}
+                                    title="Approve"
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shadow-sm"
+                                  >
+                                    {quickActionLoading === request._id + 'approved'
+                                      ? <i className="fas fa-spinner fa-spin text-xs"></i>
+                                      : <i className="fas fa-check text-xs"></i>}
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => setQuickConfirm({ id: request._id, status: 'rejected', name: request.claimantInfo.name })}
+                                    disabled={quickActionLoading !== null}
+                                    title="Reject"
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-500 border border-rose-200 hover:border-rose-300 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                                  >
+                                    {quickActionLoading === request._id + 'rejected'
+                                      ? <i className="fas fa-spinner fa-spin text-xs"></i>
+                                      : <i className="fas fa-times text-xs"></i>}
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Review button */}
                               <button
-                                onClick={() => toggleCompare(request._id)}
-                                disabled={isDisabled}
-                                title={isDisabled ? disabledTitle : isSel ? 'Remove from comparison' : 'Add to comparison'}
-                                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
-                                  isSel
-                                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                                    : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
-                                }`}
+                                onClick={() => openModal(request)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-[#1a3560] hover:bg-[#0f2347] text-white text-xs font-semibold rounded-lg transition-all shadow-sm whitespace-nowrap"
                               >
-                                <i className={`fas ${isSel ? 'fa-check-square' : 'fa-columns'} text-xs`}></i>
-                                {isSel ? 'Selected' : 'Compare'}
+                                <i className="fas fa-eye text-xs"></i>
+                                Review
                               </button>
-                            );
-                          })()}
+                            </div>
+                          </td>
 
-                          {/* Quick-action Approve / Reject — pending only */}
-                          {request.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => setQuickConfirm({ id: request._id, status: 'approved', name: request.claimantInfo.name })}
-                                disabled={quickActionLoading !== null}
-                                title="Approve"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shadow-sm"
-                              >
-                                {quickActionLoading === request._id + 'approved'
-                                  ? <i className="fas fa-spinner fa-spin text-xs"></i>
-                                  : <i className="fas fa-check text-xs"></i>}
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => setQuickConfirm({ id: request._id, status: 'rejected', name: request.claimantInfo.name })}
-                                disabled={quickActionLoading !== null}
-                                title="Reject"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-500 border border-rose-200 hover:border-rose-300 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                              >
-                                {quickActionLoading === request._id + 'rejected'
-                                  ? <i className="fas fa-spinner fa-spin text-xs"></i>
-                                  : <i className="fas fa-times text-xs"></i>}
-                                Reject
-                              </button>
-                            </>
-                          )}
-
-                          {/* Review button */}
-                          <button
-                            onClick={() => openModal(request)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-[#1a3560] hover:bg-[#0f2347] text-white text-xs font-semibold rounded-lg transition-all shadow-sm whitespace-nowrap"
-                          >
-                            <i className="fas fa-eye text-xs"></i>
-                            Review
-                          </button>
-
-                        </div>
-
-                      </div>
-                    </div>
-                  );
-                })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               {/* Pagination */}
-              <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-xl border border-slate-200 shadow-sm">
+              <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-xl border border-slate-400 shadow-sm">
                 <div className="text-sm text-gray-400 flex items-center gap-1.5">
                   <i className="fas fa-table-list text-gray-300 text-xs"></i>
                   Showing{' '}
@@ -1677,7 +1662,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   </button>
                   <button
                     onClick={() => setQuickConfirm(null)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 border border-slate-400 hover:bg-slate-50 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1835,7 +1820,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     if (foundPhotos.length === 0 && claimantPhotos.length === 0) return null;
                     const openLb = (imgs, idx, lbl) => setLightbox({ open: true, images: imgs, index: idx, label: lbl });
                     return (
-                      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                      <div className="bg-white border border-slate-400 rounded-xl overflow-hidden shadow-sm">
                         {/* Header */}
                         <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-slate-50/70">
                           <div className="w-[3px] h-4 bg-violet-500 rounded-full shrink-0"></div>
@@ -1843,7 +1828,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Photo Comparison</p>
                             <p className="text-[11px] text-slate-400 mt-0.5">Compare photos side-by-side to verify ownership</p>
                           </div>
-                          <span className="text-[11px] text-slate-400 bg-white border border-slate-200 px-2.5 py-0.5 rounded-full shrink-0">
+                          <span className="text-[11px] text-slate-400 bg-white border border-slate-400 px-2.5 py-0.5 rounded-full shrink-0">
                             {foundPhotos.length + claimantPhotos.length} photo{(foundPhotos.length + claimantPhotos.length) !== 1 ? 's' : ''} total
                           </span>
                         </div>
@@ -1899,7 +1884,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/50 flex items-center gap-2">
                           <i className="fas fa-expand-alt text-slate-300 text-xs shrink-0"></i>
                           <p className="text-[11px] text-slate-400">
-                            Click any photo to open full-screen · Use <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">←</kbd> <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">→</kbd> to navigate · <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">Esc</kbd> to close
+                            Click any photo to open full-screen · Use <kbd className="px-1 py-px bg-white border border-slate-400 rounded text-[10px] font-mono">←</kbd> <kbd className="px-1 py-px bg-white border border-slate-400 rounded text-[10px] font-mono">→</kbd> to navigate · <kbd className="px-1 py-px bg-white border border-slate-400 rounded text-[10px] font-mono">Esc</kbd> to close
                           </p>
                         </div>
                       </div>
@@ -1939,7 +1924,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
                   {/* Processing record – only when processed */}
                   {selectedRequest.processedAt && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div className="bg-slate-50 border border-slate-400 rounded-xl p-5 shadow-sm">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-[3px] h-4 bg-slate-400 rounded-full"></div>
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Processing Record</p>
@@ -2037,7 +2022,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                               isCurrent              ? 'border-2 border-blue-400 shadow-lg shadow-blue-100/50' :
                               stage.status === 'passed' ? 'border border-emerald-200' :
                               stage.status === 'failed'  ? 'border border-red-200' :
-                                                           'border border-slate-200'
+                                                           'border border-slate-400'
                             } ${isLocked ? 'opacity-40' : ''}`}
                           >
                             {/* Card header — colour changes per state */}
@@ -2137,7 +2122,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                                   placeholder="Stage notes…"
                                   className={`w-full text-xs rounded-lg px-3 py-2 resize-none transition-colors focus:outline-none ${
                                     isEnabled
-                                      ? 'border border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-300'
+                                      ? 'border border-slate-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-300'
                                       : 'bg-slate-50 border border-slate-100 text-slate-500 cursor-default'
                                   }`}
                                 />
@@ -2156,7 +2141,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Admin Notes</p>
                     </div>
                     {selectedRequest.notes && selectedRequest.status !== 'pending' && (
-                      <div className="mb-3 bg-slate-50 rounded-lg p-3.5 text-sm text-slate-700 border border-slate-200 leading-relaxed">
+                      <div className="mb-3 bg-slate-50 rounded-lg p-3.5 text-sm text-slate-700 border border-slate-400 leading-relaxed">
                         {selectedRequest.notes}
                       </div>
                     )}
@@ -2164,7 +2149,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       value={adminNotes}
                       onChange={(e) => setAdminNotes(e.target.value)}
                       rows="3"
-                      className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 text-sm text-slate-700 placeholder-slate-400 resize-none transition-colors"
+                      className="w-full border border-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 text-sm text-slate-700 placeholder-slate-400 resize-none transition-colors"
                       placeholder="Add notes about your decision or any additional context…"
                     />
                   </div>
@@ -2202,7 +2187,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   <button
                     onClick={closeModal}
                     disabled={actionLoading || saveLoading}
-                    className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-400 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
                   >
                     Close
                   </button>
@@ -2250,7 +2235,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <div className="p-6 space-y-5">
 
                 {/* Claimant + item summary */}
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-400">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
                       <span className="text-white text-sm font-bold">
@@ -2332,7 +2317,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 <button
                   onClick={() => setCollectionModal({ open: false, request: null, pin: '', loading: false, error: '' })}
                   disabled={collectionModal.loading}
-                  className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-400 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>

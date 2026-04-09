@@ -40,6 +40,7 @@ html, body, #root {
 
 html {
   height: 100vh;
+  font-size: 17px;
 }
 
 body {

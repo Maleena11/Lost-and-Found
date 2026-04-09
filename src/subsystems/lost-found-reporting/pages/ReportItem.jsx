@@ -713,17 +713,17 @@ export default function ReportItem() {
                           className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white ${errors.location ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                         >
                           <option value="">Select location</option>
-                          <option value="Main Library">Main Library</option>
-                          <option value="Block A">Block A</option>
-                          <option value="Block B">Block B</option>
-                          <option value="Block C">Block C</option>
-                          <option value="Lab Block">Lab Block</option>
-                          <option value="Lecture Hall Complex">Lecture Hall Complex</option>
-                          <option value="Canteen / Cafeteria">Canteen / Cafeteria</option>
-                          <option value="Sports Complex">Sports Complex</option>
-                          <option value="Admin Building">Admin Building</option>
+                          <option value="Library">Library</option>
+                          <option value="A101 hall">A101 hall</option>
+                          <option value="A102 hall">A102 hall</option>
+                          <option value="A403 Lab">A403 Lab</option>
+                          <option value="A404 lab">A404 lab</option>
+                          <option value="Study Area">Study Area</option>
+                          <option value="Campus Canteen">Campus Canteen</option>
+                          <option value="Game Room">Game Room</option>
+                          <option value="Ground">Ground</option>
                           <option value="Auditorium">Auditorium</option>
-                          <option value="Student Center">Student Center</option>
+                          <option value="Cafe">Cafe</option>
                           <option value="Parking Area">Parking Area</option>
                           <option value="Other">Other</option>
                         </select>

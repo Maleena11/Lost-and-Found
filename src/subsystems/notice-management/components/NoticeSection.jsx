@@ -367,7 +367,7 @@ export default function NoticeSection() {
       <div>
         {/* Smart Search Bar */}
         <div className="relative mb-6" ref={searchRef}>
-        <div className={`flex items-center gap-3 bg-white border-2 rounded-xl px-4 py-3 shadow-sm transition-colors ${showDropdown ? 'border-blue-400' : 'border-gray-200 hover:border-gray-300'}`}>
+        <div className={`notice-search-bar flex items-center gap-3 bg-white border-2 rounded-xl px-4 py-3 shadow-sm transition-colors ${showDropdown ? 'border-blue-400' : 'border-gray-200 hover:border-gray-300'}`}>
           <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -391,18 +391,18 @@ export default function NoticeSection() {
 
         {/* Hint text */}
         {!searchQuery && (
-          <p className="mt-1.5 text-xs text-gray-400 px-1">
+          <p className="notice-search-tip mt-1.5 text-xs text-gray-400 px-1">
             Tip: Type <span className="font-medium text-blue-500">"lost black wallet"</span> — the system suggests matching <span className="font-medium">found</span> notices automatically.
           </p>
         )}
 
         {/* Filter Panel — Dropdown */}
-        <div className="mt-4 bg-gray-50 border-2 border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="notice-filter-panel mt-4 bg-gray-50 border-2 border-gray-200 rounded-2xl shadow-sm overflow-hidden">
 
           {/* Main Toggle Header */}
           <button
             onClick={() => setShowFilterPanel(prev => !prev)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-150 hover:to-gray-100 transition-colors group"
+            className="notice-filter-header w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-150 hover:to-gray-100 transition-colors group"
           >
             <div className="flex items-center gap-2">
               <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${showFilterPanel ? 'bg-blue-500' : 'bg-blue-100'}`}>
@@ -650,7 +650,7 @@ export default function NoticeSection() {
             <div
               id={`notice-${notice._id}`}
               key={notice._id}
-              className={`group flex flex-col rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1.5 relative bg-white ${
+              className={`notice-card group flex flex-col rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1.5 relative bg-white ${
                 highlightedNoticeId === notice._id ? 'ring-4 ring-blue-600 ring-offset-2 scale-105' : ''
               } ${
                 isUrgent
@@ -670,10 +670,10 @@ export default function NoticeSection() {
 
               {/* Header area — "Official Notice" label + category + circular priority seal */}
               <div className={`px-4 pt-4 pb-3.5 flex items-start justify-between gap-3 ${
-                isUrgent ? 'bg-gradient-to-br from-red-50/60 to-orange-50/20'
-                : isMedium ? 'bg-gradient-to-br from-green-50/60 to-emerald-50/20'
-                : isLow ? 'bg-gradient-to-br from-yellow-50/60 to-amber-50/20'
-                : 'bg-gradient-to-br from-gray-50/60 to-white'
+                isUrgent ? 'card-header-urgent bg-gradient-to-br from-red-50/60 to-orange-50/20'
+                : isMedium ? 'card-header-medium bg-gradient-to-br from-green-50/60 to-emerald-50/20'
+                : isLow ? 'card-header-low bg-gradient-to-br from-yellow-50/60 to-amber-50/20'
+                : 'card-header-default bg-gradient-to-br from-gray-50/60 to-white'
               }`}>
                 <div className="flex-1 min-w-0">
                   {/* Official Notice label */}
@@ -768,11 +768,11 @@ export default function NoticeSection() {
 
               {/* Content body */}
               <div className="px-4 pt-3 pb-2 flex-1 flex flex-col">
-                <h3 className="font-extrabold text-base leading-tight tracking-wide mb-2 text-black">
+                <h3 className="card-title font-extrabold text-base leading-tight tracking-wide mb-2 text-black">
                   {notice.title}
                 </h3>
                 {notice.category !== 'found-item' && (
-                  <p className="text-gray-500 text-xs flex-1 leading-relaxed line-clamp-3">
+                  <p className="card-body-text text-gray-500 text-xs flex-1 leading-relaxed line-clamp-3">
                     {notice.content.length > 120 ? `${notice.content.substring(0, 120)}...` : notice.content}
                   </p>
                 )}

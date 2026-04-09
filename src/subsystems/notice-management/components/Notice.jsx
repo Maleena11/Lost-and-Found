@@ -2,10 +2,17 @@ import { Link } from "react-router-dom";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import NoticeSection from "./NoticeSection";
+import { useTheme } from "../../../context/ThemeContext";
+import "./NoticeDark.css";
 
 export default function Notice() {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === "dark";
+
+  const toggleTheme = () => setTheme(isDark ? "light" : "dark");
+
   return (
-    <div className="flex flex-col min-h-screen w-full bg-gray-50">
+    <div id="notice-page" className="flex flex-col min-h-screen w-full bg-gray-50">
       <Header />
 
       {/* Page Banner */}
@@ -79,7 +86,30 @@ export default function Notice() {
         <NoticeSection />
       </main>
 
+      <div id="notice-footer-divider" />
       <Footer />
+
+      {/* Dark / Light mode toggle — fixed bottom-right */}
+      <button
+        onClick={toggleTheme}
+        title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
+        style={{
+          background: isDark
+            ? "linear-gradient(135deg, #1e293b, #334155)"
+            : "linear-gradient(135deg, #1e3a5f, #1d4ed8)",
+          color: "#f1f5f9",
+          border: isDark ? "1px solid #475569" : "1px solid #3b82f6",
+          boxShadow: isDark
+            ? "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)"
+            : "0 8px 32px rgba(29,78,216,0.4), 0 0 0 1px rgba(255,255,255,0.1)",
+        }}
+      >
+        <span className="text-base leading-none">
+          {isDark ? "☀️" : "🌙"}
+        </span>
+        <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+      </button>
     </div>
   );
 }

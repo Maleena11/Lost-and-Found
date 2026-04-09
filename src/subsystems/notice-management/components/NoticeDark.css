@@ -1,0 +1,230 @@
+/* ── Notice Board Dark Mode Overrides ───────────────────────────────────────
+   Applied when <html class="dark"> is set by ThemeContext.
+   Scoped to #notice-page so other pages are unaffected.
+   To revert: delete this file and remove its import from Notice.jsx
+──────────────────────────────────────────────────────────────────────────── */
+
+/* Page background — distinct navy, different from footer's #111827 */
+html.dark #notice-page {
+  background-color: #0a1628;
+}
+
+/* Main content area */
+html.dark #notice-page main {
+  background-color: #0a1628;
+}
+
+/* Hidden in light mode */
+#notice-footer-divider {
+  display: none;
+}
+
+/* Separator line between content and footer */
+@keyframes divider-twinkle {
+  0%   { background-position: 0% 0%; opacity: 0.6; }
+  25%  { opacity: 1; }
+  50%  { background-position: 100% 0%; opacity: 0.7; }
+  75%  { opacity: 1; }
+  100% { background-position: 0% 0%; opacity: 0.6; }
+}
+
+html.dark #notice-footer-divider {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(148, 163, 184, 0.1) 5%,
+    rgba(203, 213, 225, 0.5) 20%,
+    rgba(226, 232, 240, 0.9) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(226, 232, 240, 0.9) 60%,
+    rgba(203, 213, 225, 0.5) 80%,
+    rgba(148, 163, 184, 0.1) 95%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: divider-twinkle 3s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(203, 213, 225, 0.4), 0 0 12px rgba(148, 163, 184, 0.2);
+}
+
+/* ── Search bar ── */
+html.dark #notice-page .notice-search-bar {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9;
+}
+html.dark #notice-page .notice-search-bar input {
+  background-color: transparent;
+  color: #f1f5f9;
+}
+html.dark #notice-page .notice-search-bar input::placeholder {
+  color: #64748b;
+}
+html.dark #notice-page .notice-search-bar svg {
+  color: #64748b;
+}
+
+/* Tip text under search */
+html.dark #notice-page .notice-search-tip {
+  color: #64748b;
+}
+
+/* ── Filter panel ── */
+html.dark #notice-page .notice-filter-panel {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark #notice-page .notice-filter-header {
+  background: linear-gradient(to right, #1e293b, #1e293b) !important;
+  color: #cbd5e1;
+}
+html.dark #notice-page .notice-filter-header:hover {
+  background: linear-gradient(to right, #273548, #273548) !important;
+}
+html.dark #notice-page .notice-filter-header span {
+  color: #cbd5e1 !important;
+}
+html.dark #notice-page .notice-filter-body {
+  border-color: #334155 !important;
+  background-color: #1e293b;
+}
+html.dark #notice-page .notice-filter-body button {
+  color: #94a3b8;
+}
+html.dark #notice-page .notice-filter-body button:hover {
+  background-color: #273548 !important;
+}
+
+/* ── Notice cards ── */
+html.dark #notice-page .notice-card {
+  background-color: #1e293b !important;
+  border: 1px solid rgba(148, 163, 184, 0.15) !important;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(148, 163, 184, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+html.dark #notice-page .notice-card:hover {
+  border-color: rgba(148, 163, 184, 0.28) !important;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(148, 163, 184, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Card header gradient areas */
+html.dark #notice-page .notice-card .card-header-urgent {
+  background: linear-gradient(to bottom right, rgba(127,29,29,0.3), rgba(124,45,18,0.1)) !important;
+}
+html.dark #notice-page .notice-card .card-header-medium {
+  background: linear-gradient(to bottom right, rgba(6,78,59,0.3), rgba(6,95,70,0.1)) !important;
+}
+html.dark #notice-page .notice-card .card-header-low {
+  background: linear-gradient(to bottom right, rgba(113,63,18,0.3), rgba(120,53,15,0.1)) !important;
+}
+html.dark #notice-page .notice-card .card-header-default {
+  background: linear-gradient(to bottom right, rgba(30,41,59,0.8), rgba(15,23,42,0.6)) !important;
+}
+
+/* Official notice badge */
+html.dark #notice-page .notice-card .official-badge {
+  background-color: #1e3a5f !important;
+  border-color: #1d4ed8 !important;
+  color: #93c5fd !important;
+}
+html.dark #notice-page .notice-card .official-badge i {
+  color: #60a5fa !important;
+}
+
+/* Card title */
+html.dark #notice-page .notice-card .card-title {
+  color: #cbd5e1 !important;
+  font-weight: 800;
+}
+
+/* Card content/body text */
+html.dark #notice-page .notice-card .card-content {
+  color: #94a3b8 !important;
+  background-color: #162032 !important;
+  border-color: #334155 !important;
+}
+html.dark #notice-page .notice-card .card-body-text {
+  color: #94a3b8 !important;
+}
+
+/* Card footer */
+html.dark #notice-page .notice-card .card-footer {
+  background-color: #162032 !important;
+  border-color: #334155 !important;
+  color: #64748b !important;
+}
+html.dark #notice-page .notice-card .card-footer span,
+html.dark #notice-page .notice-card .card-footer p {
+  color: #64748b !important;
+}
+
+/* View details button on card */
+html.dark #notice-page .notice-card .card-view-btn {
+  color: #60a5fa !important;
+}
+html.dark #notice-page .notice-card .card-view-btn:hover {
+  background-color: #1e3a5f !important;
+}
+
+/* ── Empty / error states ── */
+html.dark #notice-page .notice-empty-state,
+html.dark #notice-page .notice-error-state {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+html.dark #notice-page .notice-empty-state p,
+html.dark #notice-page .notice-error-state p {
+  color: #94a3b8 !important;
+}
+html.dark #notice-page .notice-empty-state .empty-icon-bg {
+  background-color: #334155 !important;
+}
+
+/* ── Detail modal ── */
+html.dark #notice-page .notice-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+html.dark #notice-page .notice-modal {
+  background-color: #1e293b !important;
+  border-color: #334155;
+}
+html.dark #notice-page .notice-modal h2,
+html.dark #notice-page .notice-modal h3 {
+  color: #f1f5f9 !important;
+}
+html.dark #notice-page .notice-modal p,
+html.dark #notice-page .notice-modal span {
+  color: #94a3b8;
+}
+html.dark #notice-page .notice-modal .modal-section {
+  background-color: #162032 !important;
+  border-color: #334155 !important;
+}
+html.dark #notice-page .notice-modal-close {
+  background-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+html.dark #notice-page .notice-modal-close:hover {
+  background-color: #475569 !important;
+}
+
+/* Suggestion dropdown */
+html.dark #notice-page .notice-suggestions {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark #notice-page .notice-suggestions li {
+  color: #cbd5e1 !important;
+}
+html.dark #notice-page .notice-suggestions li:hover {
+  background-color: #273548 !important;
+}

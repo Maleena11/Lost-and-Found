@@ -7,7 +7,8 @@ const {
   updateItem,
   updateItemStatus,
   deleteItem,
-  searchItems
+  searchItems,
+  getHeatmapData
 } = require('../controllers/lostFoundController');
 
 // Get all items and create new item
@@ -18,6 +19,9 @@ router
 
 // Search endpoint
 router.get('/search', searchItems);
+
+// Heatmap data endpoint
+router.get('/heatmap', getHeatmapData);
 
 // Get, update, and delete specific item
 router

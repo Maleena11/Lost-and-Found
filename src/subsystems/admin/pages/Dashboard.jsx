@@ -11,6 +11,7 @@ import UserStats from '../components/UserStats';
 import VerificationStats from '../components/VerificationStats';
 import TopReporters from '../components/TopReporters';
 import PotentialMatches from '../components/PotentialMatches';
+import CampusHeatmap from '../components/CampusHeatmap';
 
 
 
@@ -62,34 +63,6 @@ export default function Dashboard() {
     fetchSystemStats();
   }, [dateRange]);
 
-  useEffect(() => {
-    if (loading) return;
-    const sectionIds = ['kpis', 'analytics', 'performance', 'recent', 'locations', 'modules'];
-    const visible = new Set();
-    const observers = [];
-
-    const pickActive = () => {
-      for (const id of sectionIds) {
-        if (visible.has(id)) { setActiveNav(id); return; }
-      }
-    };
-
-    sectionIds.forEach(id => {
-      const el = document.getElementById(`section-${id}`);
-      if (!el) return;
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) visible.add(id); else visible.delete(id);
-          pickActive();
-        },
-        { threshold: 0.1, rootMargin: '-100px 0px 0px 0px' }
-      );
-      obs.observe(el);
-      observers.push(obs);
-    });
-
-    return () => observers.forEach(o => o.disconnect());
-  }, [loading]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -610,10 +583,7 @@ export default function Dashboard() {
             ].map(({ id, label, icon }) => (
               <button
                 key={id}
-                onClick={() => {
-                  document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  setActiveNav(id);
-                }}
+                onClick={() => setActiveNav(id)}
                 className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${
                   activeNav === id
                     ? 'border-blue-600 text-blue-600'
@@ -801,6 +771,7 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {activeNav === 'kpis' && (<>
           {/* ── KPI Cards ── */}
           <div id="section-kpis" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
@@ -846,9 +817,10 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
+          </>)}
 
           {/* ── Analytics Overview ── */}
-          <div id="section-analytics">
+          {activeNav === 'analytics' && <div id="section-analytics">
             <div className="flex items-center gap-3 mb-4 cursor-pointer select-none" onClick={() => toggleSection('analytics')}>
               <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex-1">Analytics Overview</h2>
@@ -1011,10 +983,10 @@ export default function Dashboard() {
               </div>
             </div>
             </>)}
-          </div>
+          </div>}
 
           {/* ── Performance Metrics ── */}
-          <div id="section-performance">
+          {activeNav === 'performance' && <div id="section-performance">
             <div className="flex items-center gap-3 mb-4 cursor-pointer select-none" onClick={() => toggleSection('performance')}>
               <div className="w-1 h-5 bg-indigo-500 rounded-full"></div>
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex-1">Performance Metrics</h2>
@@ -1129,10 +1101,10 @@ export default function Dashboard() {
               </div>
             </div>
             </>)}
-          </div>
+          </div>}
 
           {/* ── Recent Items ── */}
-          {(() => {
+          {activeNav === 'recent' && (() => {
             const filteredRecent = recentFilter === 'all'
               ? stats.recentItems
               : stats.recentItems.filter(i => i.itemType === recentFilter);
@@ -1258,7 +1230,7 @@ export default function Dashboard() {
           })()}
 
         {/* ── Location & Trend Analytics ── */}
-        {(() => {
+        {activeNav === 'locations' && (() => {
           const items = stats.rawItems || [];
           const total = items.length;
 
@@ -1324,6 +1296,12 @@ export default function Dashboard() {
                 <i className={`fas fa-chevron-${collapsedSections.location ? 'down' : 'up'} text-gray-400 text-xs`}></i>
               </div>
               {!collapsedSections.location && (
+              <>
+
+              {/* Campus Heatmap */}
+              <div className="mb-5">
+                <CampusHeatmap rawItems={stats.rawItems} />
+              </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
@@ -1423,13 +1401,14 @@ export default function Dashboard() {
                 </div>
 
               </div>
+              </>
               )}
             </div>
           );
         })()}
 
           {/* ── Module Stats ── */}
-          <div id="section-modules">
+          {activeNav === 'modules' && <div id="section-modules">
             <div className="flex items-center gap-3 mb-4 cursor-pointer select-none" onClick={() => toggleSection('modules')}>
               <div className="w-1 h-5 bg-slate-400 rounded-full"></div>
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex-1">Module Statistics</h2>
@@ -1450,7 +1429,7 @@ export default function Dashboard() {
 
           <PotentialMatches />
             </>)}
-          </div>
+          </div>}
 
         </main>
       </div>

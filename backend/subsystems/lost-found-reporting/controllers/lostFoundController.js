@@ -51,6 +51,45 @@ exports.getAllItems = async (req, res) => {
   }
 };
 
+// Get aggregated location counts for the campus heatmap
+// Supports ?category=&itemType=lost|found&timeRange=week|month|semester|year|all
+exports.getHeatmapData = async (req, res) => {
+  try {
+    const { category, itemType, timeRange } = req.query;
+    const query = {};
+
+    if (category && category !== 'all') query.category = category;
+    if (itemType && itemType !== 'all') query.itemType = itemType;
+
+    if (timeRange && timeRange !== 'all') {
+      const now = Date.now();
+      const ms = { week: 7, month: 30, semester: 120, year: 365 };
+      const days = ms[timeRange];
+      if (days) query.createdAt = { $gte: new Date(now - days * 86400000) };
+    }
+
+    const items = await LostFoundItem.find(query, { location: 1, itemType: 1 }).lean();
+
+    const locationMap = {};
+    items.forEach(item => {
+      const loc = (item.location || '').trim();
+      if (!loc) return;
+      if (!locationMap[loc]) locationMap[loc] = { total: 0, lost: 0, found: 0 };
+      locationMap[loc].total++;
+      if (item.itemType === 'lost') locationMap[loc].lost++;
+      else locationMap[loc].found++;
+    });
+
+    const data = Object.entries(locationMap)
+      .map(([location, counts]) => ({ location, ...counts }))
+      .sort((a, b) => b.total - a.total);
+
+    res.status(200).json({ success: true, data, totalItems: items.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Get a specific item by ID
 exports.getItemById = async (req, res) => {
   try {

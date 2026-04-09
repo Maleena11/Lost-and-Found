@@ -60,7 +60,7 @@ function SectionCard({ icon, title, description, children, iconBg = "bg-blue-100
         </div>
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-          {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+          {description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>}
         </div>
       </div>
       <div className="p-6">{children}</div>
@@ -687,7 +687,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
                                   style={{ width: `${Math.min((settings.retentionDays / 365) * 100, 100)}%` }}
                                 />
                               </div>
-                              <span className="text-xs text-gray-400 w-12 text-right">
+                              <span className="text-xs text-gray-400 dark:text-gray-300 w-12 text-right">
                                 {settings.retentionDays}d
                               </span>
                             </div>

@@ -25,13 +25,19 @@ async function generateThumbnail(base64DataUrl) {
 // Supports ?page=1&limit=50 for pagination
 exports.getAllItems = async (req, res) => {
   try {
-    const projection = req.query.lean === 'true' ? { images: { $slice: 1 }, thumbnail: 0 } : {};
+    const isLean = req.query.lean === 'true';
+    const projection = isLean
+      ? { images: 0 }
+      : {};
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
     const skip = (page - 1) * limit;
 
+    const query = LostFoundItem.find({}, projection).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    if (isLean) query.lean();
+
     const [items, total] = await Promise.all([
-      LostFoundItem.find({}, projection).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      query,
       LostFoundItem.countDocuments()
     ]);
 

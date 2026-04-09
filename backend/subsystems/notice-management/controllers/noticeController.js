@@ -412,8 +412,10 @@ const getArchivedNotices = async (_req, res) => {
     }
 
     // Step 3: Return all archived notices sorted by archivedAt descending
-    const archived = await Notice.findWithArchived({ isArchived: true });
-    archived.sort((a, b) => new Date(b.archivedAt) - new Date(a.archivedAt));
+    const archived = await Notice.collection
+      .find({ isArchived: true })
+      .sort({ archivedAt: -1 })
+      .toArray();
 
     res.status(200).json({ success: true, data: archived });
   } catch (error) {

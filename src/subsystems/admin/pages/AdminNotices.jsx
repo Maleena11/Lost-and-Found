@@ -31,7 +31,7 @@ export default function AdminNotices() {
   const [showArchived, setShowArchived]       = useState(false);
   const [archivedLoading, setArchivedLoading] = useState(false);
 
-  useEffect(() => { fetchNotices(); fetchArchivedNotices(); }, []);
+  useEffect(() => { fetchNotices(); }, []);
 
   useEffect(() => {
     const handler = (e) => { if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) setShowMoreMenu(false); };

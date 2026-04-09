@@ -17,7 +17,7 @@ function applyTheme(t) {
 
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => {
-    return localStorage.getItem("theme") || "light";
+    return localStorage.getItem("app_theme") || "light";
   });
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   const setTheme = (t) => {
-    localStorage.setItem("theme", t);
+    localStorage.setItem("app_theme", t);
     setThemeState(t);
   };
 

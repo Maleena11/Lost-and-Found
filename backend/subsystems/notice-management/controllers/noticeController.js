@@ -394,28 +394,28 @@ const getArchivedNotices = async (_req, res) => {
   try {
     const now = new Date();
 
-    // Step 1: Find any urgent notices that have expired but are not yet archived
-    const urgentExpired = await Notice.findWithArchived({
+    // Return archived notices immediately
+    const archived = await Notice.collection
+      .find({ isArchived: true })
+      .sort({ archivedAt: -1 })
+      .toArray();
+
+    res.status(200).json({ success: true, data: archived });
+
+    // Archive expired urgent notices in the background (after response sent)
+    Notice.findWithArchived({
       priority: 'urgent',
       isArchived: { $ne: true },
       endDate: { $exists: true, $lt: now }
-    });
-
-    // Step 2: Archive them immediately before returning results
-    if (urgentExpired.length > 0) {
+    }).then(urgentExpired => {
+      if (urgentExpired.length === 0) return;
       const urgentIds = urgentExpired.map(n => n._id);
-      await Notice.collection.updateMany(
+      return Notice.collection.updateMany(
         { _id: { $in: urgentIds } },
         { $set: { isArchived: true, archivedAt: now } }
-      );
-      console.log(`[Archive] Archived ${urgentExpired.length} expired urgent notice(s) on-demand.`);
-    }
+      ).then(() => console.log(`[Archive] Archived ${urgentExpired.length} expired urgent notice(s).`));
+    }).catch(err => console.error('[Archive] Background archiving error:', err.message));
 
-    // Step 3: Return all archived notices sorted by archivedAt descending
-    const archived = await Notice.findWithArchived({ isArchived: true });
-    archived.sort((a, b) => new Date(b.archivedAt) - new Date(a.archivedAt));
-
-    res.status(200).json({ success: true, data: archived });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

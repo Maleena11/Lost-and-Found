@@ -605,10 +605,20 @@ export default function CreateNotice() {
                     <button
                       type="button"
                       onClick={handleOpenReportPicker}
-                      className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                      disabled={preloadedReports === null && !preloadError}
+                      className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-wait"
                     >
-                      <i className="fas fa-file-alt text-xs"></i>
-                      Select Item Report
+                      {preloadedReports === null && !preloadError ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin text-xs"></i>
+                          Loading Reports...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-file-alt text-xs"></i>
+                          Select Item Report
+                        </>
+                      )}
                     </button>
                   </div>
                 ) : (

@@ -39,11 +39,12 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: "linear-gradient(180deg, #1e3a8a 0%, #172554 100%)" }}>
       {/* Background decorative circles */}
       <div className="absolute top-[-80px] left-[-80px] w-72 h-72 bg-white opacity-3 rounded-full"></div>
       <div className="absolute bottom-[-100px] right-[-60px] w-96 h-96 bg-white opacity-3 rounded-full"></div>
-      <div className="absolute top-1/2 left-[-120px] w-56 h-56 bg-slate-600 opacity-10 rounded-full"></div>
+      <div className="absolute top-1/2 left-[-120px] w-56 h-56 rounded-full" style={{ background: "rgba(59,130,246,0.15)" }}></div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo / Brand */}
@@ -56,15 +57,15 @@ export default function AdminLogin() {
         </div>
 
         {/* Card */}
-        <div className="bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-800">
+        <div className="rounded-2xl shadow-2xl overflow-hidden" style={{ background: "#172554", border: "1px solid rgba(59,130,246,0.2)" }}>
           {/* Card header */}
-          <div className="bg-gradient-to-r from-gray-800 to-slate-800 px-8 py-5 text-center">
+          <div className="px-8 py-5 text-center" style={{ background: "linear-gradient(180deg, #1e3a8a 0%, #172554 100%)", borderBottom: "1px solid rgba(59,130,246,0.2)" }}>
             <h2 className="text-lg font-semibold text-white">Staff Sign In</h2>
-            <p className="text-gray-400 text-xs mt-1">University Lost &amp; Found Management System</p>
+            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>University Lost &amp; Found Management System</p>
           </div>
 
           {/* Form */}
-          <div className="bg-gray-900 px-8 py-7">
+          <div className="px-8 py-7" style={{ background: "#172554" }}>
             {error && (
               <div className="mb-5 flex items-start gap-3 p-4 bg-red-950 border border-red-800 text-red-400 rounded-xl text-sm">
                 <i className="fas fa-exclamation-circle mt-0.5 flex-shrink-0"></i>
@@ -75,7 +76,7 @@ export default function AdminLogin() {
             <form onSubmit={handleLogin} className="flex flex-col gap-5">
               {/* Username */}
               <div>
-                <label className="block mb-1.5 text-sm font-medium text-gray-300">
+                <label className="block mb-1.5 text-sm font-medium text-white">
                   Username
                 </label>
                 <div className="relative">
@@ -84,7 +85,8 @@ export default function AdminLogin() {
                   </span>
                   <input
                     type="text"
-                    className="w-full border border-gray-700 rounded-xl px-4 py-3 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-gray-800 text-gray-100 placeholder-gray-600"
+                    className="w-full rounded-xl px-4 py-3 pl-10 text-sm focus:outline-none focus:ring-2 focus:border-transparent text-gray-100 placeholder-gray-500"
+                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(59,130,246,0.25)", focusRingColor: "#3b82f6" }}
                     placeholder="Enter your username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -95,7 +97,7 @@ export default function AdminLogin() {
 
               {/* Password */}
               <div>
-                <label className="block mb-1.5 text-sm font-medium text-gray-300">
+                <label className="block mb-1.5 text-sm font-medium text-white">
                   Password
                 </label>
                 <div className="relative">
@@ -104,7 +106,8 @@ export default function AdminLogin() {
                   </span>
                   <input
                     type={showPassword ? "text" : "password"}
-                    className="w-full border border-gray-700 rounded-xl px-4 py-3 pl-10 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-gray-800 text-gray-100 placeholder-gray-600"
+                    className="w-full rounded-xl px-4 py-3 pl-10 pr-11 text-sm focus:outline-none focus:ring-2 focus:border-transparent text-gray-100 placeholder-gray-500"
+                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(59,130,246,0.25)" }}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -123,7 +126,7 @@ export default function AdminLogin() {
 
               {/* Remember me + Forgot */}
               <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-gray-400">
+                <label className="flex items-center gap-2 cursor-pointer select-none" style={{ color: "rgba(255,255,255,0.65)" }}>
                   <input
                     type="checkbox"
                     checked={rememberMe}
@@ -132,7 +135,7 @@ export default function AdminLogin() {
                   />
                   Remember me
                 </label>
-                <a href="#" className="text-slate-400 font-medium hover:text-slate-200 hover:underline transition-colors">
+                <a href="#" className="font-medium hover:underline transition-colors" style={{ color: "#60a5fa" }}>
                   Forgot Password?
                 </a>
               </div>
@@ -141,7 +144,10 @@ export default function AdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-gray-700 to-slate-700 text-white py-3 rounded-xl font-semibold text-sm hover:from-gray-600 hover:to-slate-600 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
+                className="w-full text-white py-3 rounded-xl font-semibold text-sm transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
+                style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
+                onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "linear-gradient(135deg, #60a5fa, #2563eb)"; }}
+                onMouseLeave={e => { if (!loading) e.currentTarget.style.background = "linear-gradient(135deg, #3b82f6, #1d4ed8)"; }}
               >
                 {loading ? (
                   <>
@@ -158,10 +164,13 @@ export default function AdminLogin() {
             </form>
 
             {/* Back to site */}
-            <div className="text-center mt-6 pt-5 border-t border-gray-700">
+            <div className="text-center mt-6 pt-5" style={{ borderTop: "1px solid rgba(59,130,246,0.2)" }}>
               <Link
                 to="/"
-                className="text-sm text-gray-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-1.5"
+                className="text-sm transition-colors flex items-center justify-center gap-1.5"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
+                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
               >
                 <i className="fas fa-arrow-left text-xs"></i>
                 Back to UniFind Portal
@@ -171,7 +180,7 @@ export default function AdminLogin() {
         </div>
 
         {/* Footer note */}
-        <p className="text-center text-gray-600 text-xs mt-6">
+        <p className="text-center text-xs mt-6" style={{ color: "rgba(255,255,255,0.35)" }}>
           © {new Date().getFullYear()} UniFind — University Lost &amp; Found Management System
         </p>
       </div>

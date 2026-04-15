@@ -8,7 +8,11 @@ const {
   updateItemStatus,
   deleteItem,
   searchItems,
-  getHeatmapData
+  getHeatmapData,
+  addSighting,
+  reactToSighting,
+  getSightingNotifications,
+  markSightingNotificationRead,
 } = require('../controllers/lostFoundController');
 
 // Get all items and create new item
@@ -33,6 +37,12 @@ router
 // Update item status
 router.patch('/:id/status', updateItemStatus);
 
+// Sighting notifications (must be before /:id routes to avoid ID clash)
+router.get('/sighting-notifications/:email', getSightingNotifications);
+router.patch('/sighting-notifications/:notifId/read', markSightingNotificationRead);
 
+// Sightings on a specific item
+router.post('/:id/sightings', addSighting);
+router.patch('/:id/sightings/:sightingId', reactToSighting);
 
 module.exports = router;

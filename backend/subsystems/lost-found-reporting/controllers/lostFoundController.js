@@ -1,4 +1,5 @@
 const LostFoundItem = require('../models/LostFoundItem');
+const SightingNotification = require('../models/SightingNotification');
 const { Jimp, JimpMime } = require('jimp');
 
 const THUMB_SIZE = 80;
@@ -284,6 +285,105 @@ exports.deleteItem = async (req, res) => {
       success: false,
       error: 'Server Error'
     });
+  }
+};
+
+// Add a sighting to a lost item
+// POST /api/lost-found/:id/sightings
+exports.addSighting = async (req, res) => {
+  try {
+    const item = await LostFoundItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, error: 'Item not found' });
+    if (item.itemType !== 'lost') return res.status(400).json({ success: false, error: 'Sightings are only for lost items' });
+
+    const { location, dateTime, note, reporterEmail } = req.body;
+    if (!location || !dateTime) return res.status(400).json({ success: false, error: 'Location and dateTime are required' });
+
+    // Prevent item owner from adding sightings to their own item
+    if (reporterEmail && item.contactInfo?.email &&
+        reporterEmail.toLowerCase() === item.contactInfo.email.toLowerCase()) {
+      return res.status(403).json({ success: false, error: 'You cannot add a sighting to your own item.' });
+    }
+
+    const sighting = { location, dateTime: new Date(dateTime), note: note || '' };
+    item.sightings.push(sighting);
+    await item.save();
+
+    const newSighting = item.sightings[item.sightings.length - 1];
+
+    // Create in-app notification for the item owner
+    if (item.contactInfo && item.contactInfo.email) {
+      await SightingNotification.create({
+        recipientEmail: item.contactInfo.email,
+        itemId:         item._id,
+        itemName:       item.itemName,
+        sightingLocation: location,
+        message: note || '',
+      });
+    }
+
+    res.status(201).json({ success: true, data: newSighting, sightings: item.sightings });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+// Owner reacts to a sighting — helpful or dismissed
+// PATCH /api/lost-found/:id/sightings/:sightingId
+exports.reactToSighting = async (req, res) => {
+  try {
+    const item = await LostFoundItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, error: 'Item not found' });
+
+    // Only the item owner can react — check by userId or by contact email (handles legacy tempUserId items)
+    const { userId, userEmail, reaction } = req.body;
+    const ownerById    = userId && item.userId === String(userId);
+    const ownerByEmail = userEmail && item.contactInfo?.email &&
+                         userEmail.toLowerCase() === item.contactInfo.email.toLowerCase();
+    if (!ownerById && !ownerByEmail) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+
+    const sighting = item.sightings.id(req.params.sightingId);
+    if (!sighting) return res.status(404).json({ success: false, error: 'Sighting not found' });
+
+    // reaction already destructured above: 'helpful' | 'dismissed'
+    if (reaction === 'helpful')   { sighting.helpful = true;  sighting.dismissed = false; }
+    if (reaction === 'dismissed') { sighting.dismissed = true; sighting.helpful = false; }
+
+    await item.save();
+    res.status(200).json({ success: true, data: sighting, sightings: item.sightings });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+// Get unread sighting notifications for an item owner by email
+// GET /api/lost-found/sighting-notifications/:email
+exports.getSightingNotifications = async (req, res) => {
+  try {
+    const notifications = await SightingNotification.find({
+      recipientEmail: req.params.email.toLowerCase(),
+    }).sort({ createdAt: -1 }).limit(50);
+    res.status(200).json({ success: true, data: notifications });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+// Mark a sighting notification as read
+// PATCH /api/lost-found/sighting-notifications/:notifId/read
+exports.markSightingNotificationRead = async (req, res) => {
+  try {
+    const notif = await SightingNotification.findByIdAndUpdate(
+      req.params.notifId,
+      { isRead: true },
+      { new: true }
+    );
+    if (!notif) return res.status(404).json({ success: false, error: 'Notification not found' });
+    res.status(200).json({ success: true, data: notif });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
 

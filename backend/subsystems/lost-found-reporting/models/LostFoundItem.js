@@ -85,6 +85,14 @@ const lostFoundItemSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  sightings: [{
+    location:  { type: String, required: true },
+    dateTime:  { type: Date,   required: true },
+    note:      { type: String, default: '' },
+    helpful:   { type: Boolean, default: false },
+    dismissed: { type: Boolean, default: false },
+    createdAt: { type: Date,   default: Date.now }
+  }],
   createdAt: {
     type: Date,
     default: Date.now

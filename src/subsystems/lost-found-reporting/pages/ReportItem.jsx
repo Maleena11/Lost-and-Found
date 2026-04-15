@@ -399,14 +399,15 @@ export default function ReportItem() {
     }
 
     try {
-      if (!tempUser) {
-        throw new Error("User information not available");
+      const userId = authUser?.id || tempUser?.id;
+      if (!userId) {
+        throw new Error("User information not available. Please log in.");
       }
 
       // Add the current timestamp if not provided
       const dataToSubmit = {
         ...formData,
-        userId: tempUser.id, // Use the temp user ID
+        userId,
         dateTime: formData.dateTime || new Date().toISOString()
       };
 

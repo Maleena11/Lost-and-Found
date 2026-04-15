@@ -1,4 +1,5 @@
 require("dotenv").config();
+const http = require("http");
 const express = require("express");
 const dbConnection = require("./config/db");
 const cors = require("cors");
@@ -8,6 +9,7 @@ const logger = require("./middleware/logger");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const alertRoutes = require("./subsystems/admin/routes/alerts");
+const socketInstance = require("./socketInstance");
 
 // Import Admin model (make sure this exists)
 const Admin = require("./subsystems/admin/models/admin");
@@ -127,4 +129,6 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
+const httpServer = http.createServer(app);
+socketInstance.init(httpServer);
+httpServer.listen(PORT, () => console.log(`Server running on PORT ${PORT} (Socket.IO enabled)`));

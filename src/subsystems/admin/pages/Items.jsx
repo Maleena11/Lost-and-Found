@@ -99,23 +99,49 @@ function StatusBadge({ itemType, status }) {
 }
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon, color }) {
-  const colorMap = {
-    blue:    "from-blue-500 to-blue-600",
-    orange:  "from-orange-400 to-orange-500",
-    green:   "from-emerald-500 to-emerald-600",
-    amber:   "from-amber-400 to-amber-500",
-    gray:    "from-gray-400 to-gray-500",
-    purple:  "from-purple-500 to-purple-600",
+function StatCard({ label, value, icon, color, total }) {
+  const themes = {
+    blue:   { gradient: "from-blue-500 to-indigo-600",    iconBg: "bg-blue-100",    iconText: "text-blue-600",    pillBg: "bg-blue-100",    pillText: "text-blue-700",    bar: "bg-blue-500",    border: "border-blue-100"    },
+    orange: { gradient: "from-orange-400 to-amber-500",   iconBg: "bg-orange-100",  iconText: "text-orange-600",  pillBg: "bg-orange-100",  pillText: "text-orange-700",  bar: "bg-orange-400",  border: "border-orange-100"  },
+    green:  { gradient: "from-emerald-500 to-teal-600",   iconBg: "bg-emerald-100", iconText: "text-emerald-600", pillBg: "bg-emerald-100", pillText: "text-emerald-700", bar: "bg-emerald-500", border: "border-emerald-100" },
+    amber:  { gradient: "from-amber-400 to-yellow-500",   iconBg: "bg-amber-100",   iconText: "text-amber-600",   pillBg: "bg-amber-100",   pillText: "text-amber-700",   bar: "bg-amber-400",   border: "border-amber-100"   },
+    purple: { gradient: "from-purple-500 to-violet-600",  iconBg: "bg-purple-100",  iconText: "text-purple-600",  pillBg: "bg-purple-100",  pillText: "text-purple-700",  bar: "bg-purple-500",  border: "border-purple-100"  },
+    gray:   { gradient: "from-gray-400 to-gray-600",      iconBg: "bg-gray-100",    iconText: "text-gray-600",    pillBg: "bg-gray-100",    pillText: "text-gray-700",    bar: "bg-gray-400",    border: "border-gray-200"    },
   };
+  const t   = themes[color] ?? themes.blue;
+  const pct = total ? Math.round((value / total) * 100) : null;
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colorMap[color] ?? colorMap.blue} flex items-center justify-center flex-shrink-0`}>
-        <span className="text-white text-lg">{icon}</span>
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-800 leading-tight">{value}</p>
-        <p className="text-xs text-gray-500 font-medium mt-0.5">{label}</p>
+    <div className={`bg-white rounded-2xl shadow-sm border ${t.border} overflow-hidden hover:shadow-md transition-all duration-200 group`}>
+      {/* Colored top accent bar */}
+      <div className={`h-1 w-full bg-gradient-to-r ${t.gradient}`} />
+
+      <div className="p-4">
+        {/* Icon + percentage pill */}
+        <div className="flex items-start justify-between mb-3">
+          <div className={`w-10 h-10 rounded-xl ${t.iconBg} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-200`}>
+            <i className={`${icon} ${t.iconText} text-sm`}></i>
+          </div>
+          {pct !== null && (
+            <span className={`text-[10px] font-bold ${t.pillText} ${t.pillBg} px-2 py-0.5 rounded-full leading-none`}>
+              {pct}%
+            </span>
+          )}
+        </div>
+
+        {/* Value + label */}
+        <p className="text-[26px] font-extrabold text-gray-800 leading-none tracking-tight">{value}</p>
+        <p className="text-xs text-gray-500 font-medium mt-1 leading-snug">{label}</p>
+
+        {/* Mini progress bar */}
+        {pct !== null && (
+          <div className="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${t.bar} transition-all duration-700`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -237,7 +263,23 @@ export default function AllItems({ activeSection, setActiveSection, sidebarOpen,
   const totalPages      = Math.ceil(filteredItems.length / itemsPerPage);
   const indexOfFirst    = (currentPage - 1) * itemsPerPage;
   const currentItems    = filteredItems.slice(indexOfFirst, indexOfFirst + itemsPerPage);
-  const categories      = ["all", ...new Set(items.map(i => i.category))];
+  const CATEGORY_LABELS = {
+    "student-id":       "Student ID / Access Card",
+    "laptop-tablet":    "Laptop / Tablet",
+    "books-notes":      "Books & Lecture Notes",
+    "stationery":       "Stationery / USB Drive",
+    "electronics":      "Electronics",
+    "lab-equipment":    "Lab Equipment",
+    "sports-equipment": "Sports Equipment",
+    "clothing":         "Clothing",
+    "jewelry":          "Jewelry / Accessories",
+    "keys":             "Keys",
+    "wallet":           "Wallet / Purse",
+    "documents":        "Documents / Certificates",
+    "water-bottle":     "Water Bottle / Lunch Box",
+    "other":            "Other",
+  };
+  const CATEGORY_KEYS = Object.keys(CATEGORY_LABELS);
 
   const formatDate = (d) =>
     new Date(d).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -287,58 +329,83 @@ export default function AllItems({ activeSection, setActiveSection, sidebarOpen,
 
   return (
     <Shell>
-      {/* ── Page header ───────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">All Lost &amp; Found Items</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Track, manage, and update every reported item</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <PDFGenerator data={getPDFData()} />
-          <button
-            onClick={fetchItems}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
-          </button>
+      {/* ── Page Header Banner ────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl text-white shadow-xl shadow-black/20 mb-6" style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}>
+        <div className="h-[3px] w-full" style={{ background: "linear-gradient(90deg, #34d399, #60a5fa, #a78bfa, #f472b6, #34d399)", backgroundSize: "200% 100%", animation: "shimmer 4s linear infinite" }} />
+        <style>{`
+          @keyframes shimmer { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }
+          .dark-select option { background-color: #0d1f40; color: rgba(255,255,255,0.85); }
+          .dark-select option:hover, .dark-select option:focus, .dark-select option:checked { background-color: #1a3a6e; color: #fff; }
+        `}</style>
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        <div className="absolute inset-0 opacity-[0.04]" style={{ background: "linear-gradient(120deg, transparent 30%, white 50%, transparent 70%)" }} />
+
+        <div className="relative px-6 py-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-purple-200 mb-3 backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+                Lost &amp; Found Management
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight leading-tight">
+                All{" "}
+                <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #5eead4, #67e8f9)" }}>
+                  Lost &amp; Found Items
+                </span>
+              </h1>
+              <p className="text-blue-300 text-sm mt-1.5 flex items-center gap-1.5">
+                <i className="fas fa-boxes text-[11px] text-teal-400"></i>
+                Track, manage, and update every reported item
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <PDFGenerator data={getPDFData()} />
+              <button
+                onClick={fetchItems}
+                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/15 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <StatCard label="Total Items"   value={stats.total}    icon="📦" color="blue"   />
-        <StatCard label="Lost Reports"  value={stats.lost}     icon="🔍" color="orange" />
-        <StatCard label="Found Reports" value={stats.found}    icon="✅" color="green"  />
-        <StatCard label="Pending"       value={stats.pending}  icon="⏳" color="amber"  />
-        <StatCard label="Claim Approved"value={stats.claimed}  icon="🏷️" color="purple" />
-        <StatCard label="Collected"     value={stats.returned} icon="🎉" color="green"  />
+        <StatCard label="Total Items"    value={stats.total}    icon="fas fa-layer-group"     color="blue"   />
+        <StatCard label="Lost Reports"   value={stats.lost}     icon="fas fa-search-location" color="orange" total={stats.total} />
+        <StatCard label="Found Reports"  value={stats.found}    icon="fas fa-check-circle"    color="green"  total={stats.total} />
+        <StatCard label="Pending"        value={stats.pending}  icon="fas fa-hourglass-half"  color="amber"  total={stats.total} />
+        <StatCard label="Claim Approved" value={stats.claimed}  icon="fas fa-tag"             color="purple" total={stats.total} />
+        <StatCard label="Collected"      value={stats.returned} icon="fas fa-hand-holding"    color="blue"   total={stats.total} />
       </div>
 
       {/* ── Filters ───────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="rounded-xl shadow-md mb-5" style={{ background: "linear-gradient(135deg, #1e2d4a 0%, #1e3461 100%)", border: "1px solid rgba(147,197,253,0.15)" }}>
+        {/* Top row: search + selects + actions */}
+        <div className="flex flex-wrap items-end gap-2 p-3">
           {/* Search */}
-          <div className="lg:col-span-2 relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+          <div className="relative flex-1 min-w-[180px]">
+            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs"></i>
             <input
               type="text"
               name="search"
               value={filters.search}
               onChange={handleFilterChange}
               placeholder="Search by name, description, location…"
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              className="w-full pl-8 pr-3 py-2 text-sm border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-transparent bg-white/10 placeholder-white/35 text-white/85 transition-all"
             />
           </div>
 
           {/* Item type */}
           <select name="itemType" value={filters.itemType} onChange={handleFilterChange}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all">
             <option value="all">All Types</option>
             <option value="lost">Lost</option>
             <option value="found">Found</option>
@@ -346,7 +413,7 @@ export default function AllItems({ activeSection, setActiveSection, sidebarOpen,
 
           {/* Status */}
           <select name="status" value={filters.status} onChange={handleFilterChange}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all">
             <option value="all">All Stages</option>
             <option value="pending">Pending / Not Found Yet</option>
             <option value="claimed">Claim Approved / Match Found</option>
@@ -356,145 +423,195 @@ export default function AllItems({ activeSection, setActiveSection, sidebarOpen,
 
           {/* Category */}
           <select name="category" value={filters.category} onChange={handleFilterChange}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-            {categories.map(c => (
-              <option key={c} value={c}>
-                {c === "all" ? "All Categories" : c.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-              </option>
+            className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all">
+            <option value="all">All Categories</option>
+            {CATEGORY_KEYS.map(c => (
+              <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
             ))}
           </select>
 
-          {/* Sort by date */}
+          {/* Sort */}
           <select name="sort" value={filters.sort} onChange={handleFilterChange}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all">
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
           </select>
+
+          {/* Action buttons */}
+          <div className="flex gap-1.5 ml-auto shrink-0">
+            {(filters.search || filters.itemType !== "all" || filters.status !== "all" || filters.category !== "all" || filters.sort !== "newest") && (
+              <button
+                onClick={resetFilters}
+                className="px-3 py-2 border border-white/20 text-white/60 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-1.5 text-sm font-medium"
+              >
+                <i className="fas fa-times text-xs"></i>
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Active filter pills + reset */}
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex flex-wrap gap-2">
-            {filters.search && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
-                "{filters.search}"
-                <button onClick={() => setFilters(f => ({ ...f, search: "" }))} className="ml-0.5 hover:text-blue-900">×</button>
-              </span>
-            )}
-            {filters.itemType !== "all" && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
-                Type: {filters.itemType}
-                <button onClick={() => setFilters(f => ({ ...f, itemType: "all" }))} className="ml-0.5 hover:text-blue-900">×</button>
-              </span>
-            )}
-            {filters.status !== "all" && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
-                Stage: {filters.status}
-                <button onClick={() => setFilters(f => ({ ...f, status: "all" }))} className="ml-0.5 hover:text-blue-900">×</button>
-              </span>
-            )}
-            {filters.category !== "all" && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
-                {filters.category}
-                <button onClick={() => setFilters(f => ({ ...f, category: "all" }))} className="ml-0.5 hover:text-blue-900">×</button>
-              </span>
-            )}
-            {filters.sort !== "newest" && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
-                Oldest First
-                <button onClick={() => setFilters(f => ({ ...f, sort: "newest" }))} className="ml-0.5 hover:text-blue-900">×</button>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            <span>{filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""}</span>
-            <button onClick={resetFilters} className="text-gray-400 hover:text-gray-600 underline underline-offset-2">Reset</button>
-          </div>
+        {/* Results summary bar */}
+        <div className="px-3 py-2 border-t border-white/10 bg-white/[0.04] rounded-b-xl flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+            <i className="fas fa-list-ul text-[10px]"></i>
+            {filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""}
+          </span>
+          {filters.search && (
+            <span className="text-xs text-white/40">matching <span className="text-blue-300 font-medium">"{filters.search}"</span></span>
+          )}
+          {filters.itemType !== "all" && (
+            <span className="text-xs text-white/40">· type: <span className="font-medium text-white/70 capitalize">{filters.itemType}</span></span>
+          )}
+          {filters.status !== "all" && (
+            <span className="text-xs text-white/40">· stage: <span className="font-medium text-white/70 capitalize">{filters.status}</span></span>
+          )}
+          {filters.category !== "all" && (
+            <span className="inline-flex items-center gap-1 bg-indigo-400/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+              <i className="fas fa-tag text-[9px]"></i>
+              {CATEGORY_LABELS[filters.category] ?? filters.category}
+              <button onClick={() => setFilters(f => ({ ...f, category: "all" }))} className="ml-0.5 hover:text-white">
+                <i className="fas fa-times text-[8px]"></i>
+              </button>
+            </span>
+          )}
+          {filters.sort !== "newest" && (
+            <span className="inline-flex items-center gap-1 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+              <i className="fas fa-sort text-[9px]"></i>
+              Oldest First
+              <button onClick={() => setFilters(f => ({ ...f, sort: "newest" }))} className="ml-0.5 hover:text-white">
+                <i className="fas fa-times text-[8px]"></i>
+              </button>
+            </span>
+          )}
         </div>
       </div>
 
       {/* ── Table ─────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+
+            {/* ── Header ── */}
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reported</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Stage</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Update Stage</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              <tr style={{ background: "linear-gradient(135deg, #e8eef7 0%, #dce6f5 100%)" }}>
+                <th className="px-5 py-3.5 text-left">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 uppercase tracking-widest">
+                    <i className="fas fa-box text-blue-500 text-[10px]"></i>Item
+                  </span>
+                </th>
+                <th className="px-5 py-3.5 text-left">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 uppercase tracking-widest">
+                    <i className="fas fa-tags text-blue-500 text-[10px]"></i>Type
+                  </span>
+                </th>
+                <th className="px-5 py-3.5 text-left">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 uppercase tracking-widest">
+                    <i className="fas fa-map-marker-alt text-blue-500 text-[10px]"></i>Location
+                  </span>
+                </th>
+                <th className="px-5 py-3.5 text-left">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 uppercase tracking-widest">
+                    <i className="fas fa-calendar-alt text-blue-500 text-[10px]"></i>Reported
+                  </span>
+                </th>
+                <th className="px-5 py-3.5 text-left">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 uppercase tracking-widest">
+                    <i className="fas fa-stream text-blue-500 text-[10px]"></i>Stage
+                  </span>
+                </th>
+                <th className="px-5 py-3.5 text-left">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 uppercase tracking-widest">
+                    <i className="fas fa-pen text-blue-500 text-[10px]"></i>Update Stage
+                  </span>
+                </th>
+                <th className="px-5 py-3.5 text-center">
+                  <span className="text-[11px] font-semibold text-blue-700 uppercase tracking-widest">Actions</span>
+                </th>
               </tr>
             </thead>
+
+            {/* ── Body ── */}
             <tbody className="divide-y divide-gray-50">
-              {currentItems.length > 0 ? currentItems.map(item => (
+              {currentItems.length > 0 ? currentItems.map((item, idx) => (
                 <>
                   <tr
                     key={item._id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => setExpandedRow(expandedRow === item._id ? null : item._id)}
+                    className={`group cursor-pointer transition-all duration-150 border-l-4 ${
+                      expandedRow === item._id
+                        ? "bg-blue-50/60 border-l-blue-500"
+                        : idx % 2 === 0
+                          ? "bg-white border-l-transparent hover:bg-blue-50/30 hover:border-l-blue-400"
+                          : "bg-gray-50/40 border-l-transparent hover:bg-blue-50/30 hover:border-l-blue-400"
+                    }`}
                   >
+
                     {/* Item */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-100">
+                        <div className="flex-shrink-0 w-11 h-11 rounded-xl overflow-hidden ring-1 ring-gray-200 shadow-sm">
                           {item.images?.length > 0 ? (
                             <img src={item.images[0]} alt={item.itemName} className="w-full h-full object-cover" />
                           ) : (
-                            <div className={`w-full h-full flex items-center justify-center text-base font-bold ${
-                              item.itemType === "lost" ? "bg-orange-100 text-orange-500" : "bg-emerald-100 text-emerald-600"
+                            <div className={`w-full h-full flex items-center justify-center text-base font-extrabold ${
+                              item.itemType === "lost" ? "bg-gradient-to-br from-orange-100 to-amber-100 text-orange-500"
+                                                      : "bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600"
                             }`}>
                               {item.itemName.charAt(0).toUpperCase()}
                             </div>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-gray-800 truncate max-w-[140px]">{item.itemName}</p>
-                          <p className="text-xs text-gray-400 capitalize mt-0.5">{item.category?.replace(/-/g, " ")}</p>
+                          <p className="font-semibold text-gray-800 truncate max-w-[150px] leading-snug">{item.itemName}</p>
+                          <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] font-medium capitalize">
+                            <i className="fas fa-tag text-[8px]"></i>
+                            {item.category?.replace(/-/g, " ") || "—"}
+                          </span>
                         </div>
                       </div>
                     </td>
 
                     {/* Type */}
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                    <td className="px-5 py-3.5">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
                         item.itemType === "lost"
-                          ? "bg-orange-50 text-orange-600 border border-orange-200"
-                          : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                          ? "bg-orange-50 text-orange-600 border-orange-200"
+                          : "bg-emerald-50 text-emerald-600 border-emerald-200"
                       }`}>
-                        {item.itemType === "lost" ? "🔍" : "✅"} {item.itemType.charAt(0).toUpperCase() + item.itemType.slice(1)}
+                        <i className={`${item.itemType === "lost" ? "fas fa-search text-orange-400" : "fas fa-check-circle text-emerald-400"} text-[10px]`}></i>
+                        {item.itemType === "lost" ? "Lost" : "Found"}
                       </span>
                     </td>
 
                     {/* Location */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-1.5 text-gray-600">
-                        <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="text-sm capitalize">{item.location}</span>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center">
+                          <i className="fas fa-map-marker-alt text-blue-400 text-[9px]"></i>
+                        </span>
+                        <span className="text-gray-700 text-xs capitalize leading-snug max-w-[110px] truncate">{item.location || "—"}</span>
                       </div>
                     </td>
 
                     {/* Date */}
-                    <td className="px-5 py-4 text-gray-500 whitespace-nowrap">{formatDate(item.createdAt)}</td>
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <p className="text-gray-700 text-xs font-medium">{formatDate(item.createdAt)}</p>
+                    </td>
 
-                    {/* Stage progress */}
-                    <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
+                    {/* Stage */}
+                    <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                       <StageProgress itemType={item.itemType} status={item.status} />
                     </td>
 
-                    {/* Update stage dropdown */}
-                    <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
-                      <div className="relative">
+                    {/* Update stage */}
+                    <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
+                      <div className="relative inline-flex items-center">
                         <select
                           value={item.status}
                           onChange={e => handleStatusUpdate(item._id, e.target.value)}
                           disabled={statusUpdateLoading === item._id}
-                          className={`appearance-none pl-3 pr-7 py-1.5 text-xs font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors disabled:opacity-50 ${
+                          className={`appearance-none pl-2.5 pr-7 py-1.5 text-xs font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all disabled:opacity-50 cursor-pointer ${
                             item.status === "pending"  ? "bg-amber-50   border-amber-300   text-amber-700"   :
                             item.status === "claimed"  ? "bg-blue-50    border-blue-300    text-blue-700"    :
                             item.status === "returned" ? "bg-emerald-50 border-emerald-300 text-emerald-700" :
@@ -517,74 +634,110 @@ export default function AllItems({ activeSection, setActiveSection, sidebarOpen,
                             </>
                           )}
                         </select>
-                        {statusUpdateLoading === item._id && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                            <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                          </div>
-                        )}
+                        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
+                          {statusUpdateLoading === item._id
+                            ? <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                            : <i className="fas fa-chevron-down text-[8px] text-gray-400"></i>
+                          }
+                        </div>
                       </div>
                     </td>
 
                     {/* Actions */}
-                    <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
+                    <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
+                          title="View details"
                           onClick={() => setExpandedRow(expandedRow === item._id ? null : item._id)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                            expandedRow === item._id
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600"
+                          }`}
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View
+                          <i className={`${expandedRow === item._id ? "fas fa-chevron-up" : "fas fa-eye"} text-xs`}></i>
                         </button>
                         <button
+                          title="Delete item"
                           onClick={() => confirmDelete(item)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all"
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Delete
+                          <i className="fas fa-trash-alt text-xs"></i>
                         </button>
                       </div>
                     </td>
                   </tr>
 
-                  {/* ── Expanded detail row ──────────────────────────────── */}
+                  {/* ── Expanded detail panel ── */}
                   {expandedRow === item._id && (
-                    <tr key={`${item._id}-detail`} className="bg-blue-50/40">
-                      <td colSpan="7" className="px-6 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                          {/* Description */}
-                          <div>
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Description</p>
-                            <p className="text-gray-700">{item.description || "—"}</p>
+                    <tr key={`${item._id}-detail`}>
+                      <td colSpan="7" className="px-0 py-0">
+                        <div className="mx-4 my-3 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 overflow-hidden shadow-inner">
+                          {/* Panel header */}
+                          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-blue-100 bg-blue-50/60">
+                            <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
+                              <i className="fas fa-info text-white text-[9px]"></i>
+                            </div>
+                            <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">Item Details</p>
+                            <span className="ml-auto text-[10px] text-blue-400">ID: {item._id?.slice(-8)}</span>
                           </div>
-                          {/* Contact */}
-                          <div>
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Reported By</p>
-                            <p className="text-gray-700 font-medium">{item.contactInfo?.name || "—"}</p>
-                            <p className="text-gray-500">{item.contactInfo?.email || ""}</p>
-                            <p className="text-gray-500">{item.contactInfo?.phone || ""}</p>
-                          </div>
-                          {/* Stage summary */}
-                          <div>
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Current Stage</p>
-                            <StatusBadge itemType={item.itemType} status={item.status} />
-                            <p className="text-xs text-gray-400 mt-2">
-                              {item.itemType === "found" ? (
-                                item.status === "pending"  ? "Item submitted — awaiting admin review." :
-                                item.status === "claimed"  ? "Claim verified — owner notified to collect from office." :
-                                item.status === "returned" ? "Owner has collected the item from the office." :
-                                                             "Item was not collected and has expired."
-                              ) : (
-                                item.status === "pending"  ? "Report submitted — no matching found item yet." :
-                                item.status === "claimed"  ? "A matching found item has been identified." :
-                                item.status === "returned" ? "Owner has been reunited with their item." :
-                                                             "Case closed — no match found within the time limit."
-                              )}
-                            </p>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-blue-100">
+                            {/* Description */}
+                            <div className="px-5 py-4">
+                              <p className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">
+                                <i className="fas fa-align-left"></i>Description
+                              </p>
+                              <p className="text-gray-700 text-sm leading-relaxed">{item.description || <span className="text-gray-400 italic">No description provided</span>}</p>
+                            </div>
+
+                            {/* Reporter */}
+                            <div className="px-5 py-4">
+                              <p className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">
+                                <i className="fas fa-user"></i>Reported By
+                              </p>
+                              <div className="flex items-start gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                                  <span className="text-white text-xs font-bold">
+                                    {item.contactInfo?.name?.charAt(0)?.toUpperCase() || "?"}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-gray-800 font-semibold text-sm leading-snug">{item.contactInfo?.name || "—"}</p>
+                                  {item.contactInfo?.email && (
+                                    <p className="text-gray-500 text-xs flex items-center gap-1 mt-0.5">
+                                      <i className="fas fa-envelope text-[9px] text-gray-400"></i>{item.contactInfo.email}
+                                    </p>
+                                  )}
+                                  {item.contactInfo?.phone && (
+                                    <p className="text-gray-500 text-xs flex items-center gap-1 mt-0.5">
+                                      <i className="fas fa-phone text-[9px] text-gray-400"></i>{item.contactInfo.phone}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Stage summary */}
+                            <div className="px-5 py-4">
+                              <p className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">
+                                <i className="fas fa-stream"></i>Current Stage
+                              </p>
+                              <StatusBadge itemType={item.itemType} status={item.status} />
+                              <p className="text-xs text-gray-500 mt-2.5 leading-relaxed">
+                                {item.itemType === "found" ? (
+                                  item.status === "pending"  ? "Item submitted — awaiting admin review." :
+                                  item.status === "claimed"  ? "Claim verified — owner notified to collect from office." :
+                                  item.status === "returned" ? "Owner has collected the item from the office." :
+                                                               "Item was not collected and has expired."
+                                ) : (
+                                  item.status === "pending"  ? "Report submitted — no matching found item yet." :
+                                  item.status === "claimed"  ? "A matching found item has been identified." :
+                                  item.status === "returned" ? "Owner has been reunited with their item." :
+                                                               "Case closed — no match found within the time limit."
+                                )}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -593,11 +746,21 @@ export default function AllItems({ activeSection, setActiveSection, sidebarOpen,
                 </>
               )) : (
                 <tr>
-                  <td colSpan="7" className="px-6 py-16 text-center">
+                  <td colSpan="7" className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <span className="text-4xl">🔎</span>
-                      <p className="text-gray-500 font-medium">No items match your filters</p>
-                      <button onClick={resetFilters} className="text-sm text-blue-600 hover:underline">Clear filters</button>
+                      <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
+                        <i className="fas fa-search text-gray-300 text-2xl"></i>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-semibold text-sm">No items match your filters</p>
+                        <p className="text-gray-400 text-xs mt-1">Try adjusting or clearing your filters to see results.</p>
+                      </div>
+                      <button
+                        onClick={resetFilters}
+                        className="mt-1 inline-flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <i className="fas fa-times text-[10px]"></i>Clear Filters
+                      </button>
                     </div>
                   </td>
                 </tr>

@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import Sidebar from './Sidebar';
 import TopBar from '../components/TopBar';
 import { CSVLink } from 'react-csv';
+import { useSocket } from '../../../shared/hooks/useSocket';
 
 const EMPTY_STAGES = {
   stage1: { status: 'pending', notes: '' },
@@ -354,6 +355,36 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
   // Quick-action confirm popup: { id, status, name } or null
   const [quickConfirm, setQuickConfirm] = useState(null);
+
+  // Real-time flash tracker: requestId → true for 3s after an update
+  const [liveFlash, setLiveFlash] = useState({});
+
+  // Socket.IO — receive live claim updates emitted by the server
+  const handleClaimUpdated = useCallback((payload) => {
+    const { claim } = payload;
+    if (!claim) return;
+
+    setVerificationRequests(prev => {
+      const idx = prev.findIndex(r => r._id === claim._id);
+      if (idx === -1) {
+        // New claim not yet in the list — prepend it
+        return [claim, ...prev];
+      }
+      const next = [...prev];
+      // Preserve populated itemId if the socket stripped images
+      next[idx] = { ...next[idx], ...claim, itemId: claim.itemId || next[idx].itemId };
+      return next;
+    });
+
+    // Flash the row/card
+    setLiveFlash(prev => ({ ...prev, [claim._id]: true }));
+    setTimeout(() => setLiveFlash(prev => { const n = { ...prev }; delete n[claim._id]; return n; }), 3000);
+
+    setSuccess(`Live update: claim for "${claim.itemId?.itemName || 'item'}" was ${claim.status}`);
+    setTimeout(() => setSuccess(''), 4000);
+  }, []);
+
+  useSocket({ isAdmin: true, handlers: { claimUpdated: handleClaimUpdated } });
 
   useEffect(() => {
     fetchVerificationRequests();
@@ -937,6 +968,14 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             </div>
           )}
 
+          {/* Real-time indicator */}
+          <div className="no-print mb-4 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live — updates automatically via Socket.IO
+            </span>
+          </div>
+
           {/* Stats Row */}
           <div className="no-print mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -1348,13 +1387,20 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       const isStale = request.status === 'pending' && ageDays > 3;
                       const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays} days ago`;
 
-                      const rowBg = bulkSelected.has(request._id) ? 'bg-rose-50/60' : 'bg-white hover:bg-slate-50/60';
-                      const leftAccent = {
-                        pending:   'border-l-4 border-l-blue-400',
-                        approved:  'border-l-4 border-l-emerald-400',
-                        rejected:  'border-l-4 border-l-rose-400',
-                        processed: 'border-l-4 border-l-sky-400',
-                      }[request.status] || 'border-l-4 border-l-slate-300';
+                      const isLive = !!liveFlash[request._id];
+                      const rowBg = bulkSelected.has(request._id)
+                        ? 'bg-rose-50/60'
+                        : isLive
+                        ? 'bg-blue-50'
+                        : 'bg-white hover:bg-slate-50/60';
+                      const leftAccent = isLive
+                        ? 'border-l-4 border-l-blue-500'
+                        : ({
+                          pending:   'border-l-4 border-l-blue-400',
+                          approved:  'border-l-4 border-l-emerald-400',
+                          rejected:  'border-l-4 border-l-rose-400',
+                          processed: 'border-l-4 border-l-sky-400',
+                        }[request.status] || 'border-l-4 border-l-slate-300');
 
                       return (
                         <tr key={request._id} className={`transition-colors ${rowBg} ${leftAccent}`}>
@@ -1432,6 +1478,11 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
                                 {badge}
                               </span>
+                              {isLive && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded w-fit animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> LIVE
+                                </span>
+                              )}
                               {subtitle && (
                                 <p className={`text-[11px] font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
                               )}

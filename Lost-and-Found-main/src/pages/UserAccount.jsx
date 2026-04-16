@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../shared/utils/AuthContext";
 import Header from "../shared/components/Header";
 import Footer from "../shared/components/Footer";
+import { useSocket } from "../shared/hooks/useSocket";
 
 const API = "http://localhost:3001/api";
 
@@ -101,6 +102,70 @@ function Toast({ toasts }) {
   );
 }
 
+/* ── Timeline event config ───────────────────────────────────── */
+const HISTORY_EVENT = {
+  submitted:       { icon: "fas fa-paper-plane", bg: "bg-blue-100",   text: "text-blue-600"   },
+  stage_updated:   { icon: "fas fa-tasks",        bg: "bg-purple-100", text: "text-purple-600" },
+  status_changed:  { icon: "fas fa-sync-alt",     bg: "bg-amber-100",  text: "text-amber-600"  },
+  pin_regenerated: { icon: "fas fa-key",          bg: "bg-teal-100",   text: "text-teal-600"   },
+  collected:       { icon: "fas fa-box-open",     bg: "bg-green-100",  text: "text-green-600"  },
+};
+
+/* ── ClaimTimeline ───────────────────────────────────────────── */
+function ClaimTimeline({ claimId, cachedHistory }) {
+  const [history, setHistory] = useState(cachedHistory || null);
+  const [loading, setLoading] = useState(!cachedHistory);
+
+  useEffect(() => {
+    if (cachedHistory) { setHistory(cachedHistory); return; }
+    axios.get(`${API}/verification/${claimId}/history`)
+      .then(r => setHistory(r.data.data || []))
+      .catch(() => setHistory([]))
+      .finally(() => setLoading(false));
+  }, [claimId, cachedHistory]);
+
+  useEffect(() => {
+    if (cachedHistory) setHistory(cachedHistory);
+  }, [cachedHistory]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-3 text-xs text-slate-400">
+        <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+        Loading timeline…
+      </div>
+    );
+  }
+  if (!history || history.length === 0) {
+    return <p className="text-xs text-slate-400 py-2 italic">No events recorded yet.</p>;
+  }
+
+  return (
+    <div className="relative pl-5 pt-1">
+      <div className="absolute left-[9px] top-0 bottom-0 w-px bg-slate-200" />
+      {history.map((entry, i) => {
+        const ev = HISTORY_EVENT[entry.event] || HISTORY_EVENT.status_changed;
+        return (
+          <div key={entry._id || i} className={`relative flex gap-3 ${i < history.length - 1 ? "mb-3.5" : ""}`}>
+            <div className={`absolute -left-5 w-5 h-5 rounded-full flex items-center justify-center ${ev.bg} border-2 border-white shadow-sm flex-shrink-0`}>
+              <i className={`${ev.icon} text-[8px] ${ev.text}`} />
+            </div>
+            <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+              <p className="text-xs font-semibold text-slate-700 leading-snug">{entry.description}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                {new Date(entry.createdAt).toLocaleString("en-GB", {
+                  day: "numeric", month: "short", year: "numeric",
+                  hour: "2-digit", minute: "2-digit",
+                })}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── main page ───────────────────────────────────────────────── */
 export default function UserAccount() {
   const { user, logout } = useAuth();
@@ -116,6 +181,10 @@ export default function UserAccount() {
   const [claimSort, setClaimSort] = useState("newest");
   const [claimFilter, setClaimFilter] = useState("all");
   const [toasts, setToasts] = useState([]);
+  // Real-time tracking
+  const [claimHistories, setClaimHistories] = useState({}); // { claimId: history[] }
+  const [expandedTimeline, setExpandedTimeline] = useState(null); // claimId with open timeline
+  const [liveFlash, setLiveFlash] = useState(null); // claimId recently updated
 
   const showToast = (message, type = "success") => {
     const id = Date.now();
@@ -125,6 +194,36 @@ export default function UserAccount() {
 
   const email = user?.email || "";
   const initials = (user?.name || email || "U").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+
+  // Socket.IO — real-time claim updates
+  const handleClaimUpdated = useCallback((payload) => {
+    const { claim, history } = payload;
+    if (!claim) return;
+
+    setClaims(prev => {
+      const idx = prev.findIndex(c => c._id === claim._id);
+      if (idx === -1) return prev; // not a claim belonging to this user
+      const next = [...prev];
+      // Preserve itemId populated data if the socket payload stripped it
+      next[idx] = { ...next[idx], ...claim, itemId: claim.itemId || next[idx].itemId };
+      return next;
+    });
+
+    if (history) {
+      setClaimHistories(prev => ({ ...prev, [claim._id]: history }));
+    }
+
+    // Flash the updated card briefly
+    setLiveFlash(claim._id);
+    setTimeout(() => setLiveFlash(null), 3000);
+
+    showToast(`Your claim status was updated: ${claim.status}`, "success");
+  }, []);
+
+  useSocket({
+    userEmail: email,
+    handlers: { claimUpdated: handleClaimUpdated },
+  });
 
   useEffect(() => {
     if (!email) return;
@@ -413,8 +512,9 @@ export default function UserAccount() {
                     );
                     return filtered.map(claim => {
                     const s = CLAIM_STATUS[claim.status] || CLAIM_STATUS.pending;
+                    const isFlashing = liveFlash === claim._id;
                     return (
-                      <div key={claim._id} className="bg-white rounded-2xl border-2 border-gray-400 shadow-md hover:shadow-xl hover:border-gray-500 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col">
+                      <div key={claim._id} className={`bg-white rounded-2xl border-2 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col ${isFlashing ? "border-blue-400 shadow-blue-100" : "border-gray-400 hover:border-gray-500"}`}>
 
                         {/* Image / thumbnail area */}
                         <div className="relative h-48 bg-slate-200 flex-shrink-0">
@@ -436,6 +536,12 @@ export default function UserAccount() {
                             <span className={`w-2 h-2 rounded-full ${s.dot}`} />
                             {s.label}
                           </span>
+                          {/* Live update flash indicator */}
+                          {isFlashing && (
+                            <span className="absolute top-3 left-3 inline-flex items-center gap-1 text-[10px] font-bold bg-blue-500 text-white px-2 py-1 rounded-lg shadow-lg animate-pulse">
+                              <span className="w-1.5 h-1.5 rounded-full bg-white" /> LIVE
+                            </span>
+                          )}
                           {/* Top accent bar — thicker */}
                           <div className={`absolute top-0 left-0 right-0 h-1.5 ${s.accent}`} />
                         </div>
@@ -565,6 +671,27 @@ export default function UserAccount() {
                               <p className="text-xs text-slate-700"><span className="font-semibold">Admin note:</span> {claim.notes}</p>
                             </div>
                           )}
+
+                          {/* ── Event Timeline ─────────────────────── */}
+                          <div className="border border-slate-200 rounded-xl overflow-hidden">
+                            <button
+                              onClick={() => setExpandedTimeline(prev => prev === claim._id ? null : claim._id)}
+                              className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-semibold text-slate-600"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <i className="fas fa-history text-slate-400" /> Activity Timeline
+                              </span>
+                              <i className={`fas fa-chevron-${expandedTimeline === claim._id ? "up" : "down"} text-slate-400 text-[10px]`} />
+                            </button>
+                            {expandedTimeline === claim._id && (
+                              <div className="px-3 pb-3 pt-2 bg-white">
+                                <ClaimTimeline
+                                  claimId={claim._id}
+                                  cachedHistory={claimHistories[claim._id] || null}
+                                />
+                              </div>
+                            )}
+                          </div>
 
                           {/* Delete — rejected claims only */}
                           {claim.status === "rejected" && (

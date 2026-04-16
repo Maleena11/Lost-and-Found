@@ -2,14 +2,6 @@ const express = require("express");
 const router = express.Router();
 const twilio = require("twilio");
 
-// Get Twilio credentials from environment variables (.env file)
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM; // e.g. "whatsapp:+14155238886"
-
-// Twilio client object (used to send messages)
-const client = twilio(accountSid, authToken);
-
 // Helper function: Convert local Sri Lankan phone numbers to E.164 format
 // Example: "0712345678" -> "+94712345678"
 function formatPhoneNumber(localNumber) {
@@ -22,6 +14,17 @@ function formatPhoneNumber(localNumber) {
 // POST endpoint -> /api/alerts/whatsapp
 router.post("/whatsapp", async (req, res) => {
   try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM;
+
+    if (!accountSid || !authToken || !whatsappFrom) {
+      return res.status(500).json({
+        error: "WhatsApp service not configured",
+        details: "TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_FROM must be set in .env",
+      });
+    }
+
     const { phone, message } = req.body;
 
     // Check if phone and message are provided
@@ -32,9 +35,10 @@ router.post("/whatsapp", async (req, res) => {
     // Format number into WhatsApp-compatible format
     const formattedPhone = "whatsapp:" + formatPhoneNumber(phone);
 
-    // Send WhatsApp message using Twilio
+    // Initialize Twilio client and send message
+    const client = twilio(accountSid, authToken);
     const sentMessage = await client.messages.create({
-      from: whatsappFrom, // Twilio WhatsApp sandbox/number
+      from: whatsappFrom,
       to: formattedPhone,
       body: message,
     });

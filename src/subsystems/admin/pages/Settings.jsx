@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "../../../context/ThemeContext";
+
+const API_BASE = "http://localhost:3001";
 import Sidebar from "./Sidebar";
 import TopBar from "../components/TopBar";
 import WhatsAppAlertsPanel from "../components/WhatsAppAlertsPanel";
+import ZoneManager from "../components/ZoneManager";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ toasts, remove }) {
@@ -127,6 +130,7 @@ const NAV = [
   { id: "data",          label: "Data & Retention",  icon: <DatabaseIcon />,                 activeBg: "bg-emerald-50 dark:bg-emerald-900/30",activeText: "text-emerald-700 dark:text-emerald-400",iconActive: "text-emerald-600",iconDefault: "text-emerald-400 dark:text-emerald-500",defaultBg: "bg-emerald-50/50 dark:bg-emerald-900/10",iconBg: "bg-emerald-100",topBorder: "border-t-emerald-500" },
   { id: "security",      label: "Security",          icon: <ShieldIcon />,                   activeBg: "bg-red-50 dark:bg-red-900/30",      activeText: "text-red-700 dark:text-red-400",      iconActive: "text-red-600",     iconDefault: "text-red-400 dark:text-red-500",      defaultBg: "bg-red-50/50 dark:bg-red-900/10",      iconBg: "bg-red-100",     topBorder: "border-t-red-500"     },
   { id: "about",         label: "About",             icon: <InfoIcon className="w-4 h-4" />, activeBg: "bg-sky-50 dark:bg-sky-900/30",      activeText: "text-sky-700 dark:text-sky-400",      iconActive: "text-sky-600",     iconDefault: "text-sky-400 dark:text-sky-500",      defaultBg: "bg-sky-50/50 dark:bg-sky-900/10",      iconBg: "bg-sky-100",     topBorder: "border-t-sky-500"     },
+  { id: "zones",         label: "Zones",             icon: <LocationIcon className="w-4 h-4" />, activeBg: "bg-indigo-50 dark:bg-indigo-900/30", activeText: "text-indigo-700 dark:text-indigo-400", iconActive: "text-indigo-600",  iconDefault: "text-indigo-400 dark:text-indigo-500",defaultBg: "bg-indigo-50/50 dark:bg-indigo-900/10",iconBg: "bg-indigo-100",  topBorder: "border-t-indigo-500"  },
 ];
 
 // ─── Default settings ─────────────────────────────────────────────────────────
@@ -177,7 +181,7 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
 
   const { theme: contextTheme, setTheme } = useTheme();
 
-  const loadPersistedSettings = () => {
+  const loadCachedSettings = () => {
     try {
       const raw = localStorage.getItem("adminSettings");
       return raw ? { ...DEFAULTS, ...JSON.parse(raw), theme: contextTheme } : { ...DEFAULTS, theme: contextTheme };
@@ -186,14 +190,30 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
     }
   };
 
-  const [settings, setSettings]   = useState(loadPersistedSettings);
-  const [saved, setSaved]         = useState(loadPersistedSettings);
+  const [settings, setSettings]   = useState(loadCachedSettings);
+  const [saved, setSaved]         = useState(loadCachedSettings);
   const [activeNav, setActiveNav] = useState("general");
   const [isSaving, setIsSaving]   = useState(false);
   const [toasts, setToasts]       = useState([]);
   const [exportLoading, setExportLoading] = useState({});
   const [apiStatus, setApiStatus]         = useState(null); // null | "checking" | "online" | "offline"
   const contentRef = useRef(null);
+
+  // ── Load settings from API on mount ───────────────────────────────────────
+  useEffect(() => {
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const merged = { ...DEFAULTS, ...data, theme: data.theme || contextTheme };
+        setSettings(merged);
+        setSaved(merged);
+        localStorage.setItem("adminSettings", JSON.stringify(merged));
+        setTheme(merged.theme);
+      })
+      .catch(() => {/* use cached values already in state */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(saved);
 
@@ -276,13 +296,28 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
   const handleSave = async e => {
     e?.preventDefault();
     setIsSaving(true);
-    // Simulate async save
-    await new Promise(r => setTimeout(r, 900));
-    localStorage.setItem("adminSettings", JSON.stringify(settings));
-    setSaved({ ...settings });
-    setTheme(settings.theme);
-    setIsSaving(false);
-    addToast("Settings saved successfully!", "success");
+    try {
+      const res = await fetch(`${API_BASE}/api/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const saved_ = await res.json();
+      const merged = { ...DEFAULTS, ...saved_, theme: saved_.theme || settings.theme };
+      localStorage.setItem("adminSettings", JSON.stringify(merged));
+      setSaved(merged);
+      setTheme(merged.theme);
+      addToast("Settings saved successfully!", "success");
+    } catch (err) {
+      // Persist locally as fallback so the user doesn't lose their changes
+      localStorage.setItem("adminSettings", JSON.stringify(settings));
+      setSaved({ ...settings });
+      setTheme(settings.theme);
+      addToast(`Saved locally (API error: ${err.message})`, "info");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // ── Discard ────────────────────────────────────────────────────────────────
@@ -426,7 +461,20 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
 
             {/* Content */}
             <div ref={contentRef} className="flex-1 overflow-y-auto">
-              <form onSubmit={handleSave}>
+              {activeNav === "zones" ? (
+                <div className="p-6 max-w-2xl">
+                  <SectionCard
+                    icon={<LocationIcon className="text-indigo-600" />}
+                    title="Campus Zone Management"
+                    description="Add, edit, disable, or remove heatmap zones and their location keywords."
+                    iconBg="bg-indigo-100"
+                    topBorder="border-t-indigo-500"
+                  >
+                    <ZoneManager />
+                  </SectionCard>
+                </div>
+              ) : null}
+              <form onSubmit={handleSave} style={{ display: activeNav === "zones" ? "none" : undefined }}>
                 <div className="p-6 space-y-6 max-w-2xl">
 
                   {/* ════════════════ GENERAL ════════════════ */}

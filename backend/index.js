@@ -26,6 +26,9 @@ const lostFoundRoutes = require('./subsystems/lost-found-reporting/routes/lostFo
 const noticeRoutes = require('./subsystems/notice-management/routes/noticeRoutes');
 const verificationRoutes = require('./subsystems/claim-verification/routes/verificationRoutes');
 const notificationRoutes = require('./subsystems/claim-verification/routes/notificationRoutes');
+const settingsRoutes = require('./subsystems/admin/routes/settingsRoutes');
+const zoneRoutes = require('./subsystems/admin/routes/zoneRoutes');
+const { seedZones } = require('./subsystems/admin/controllers/zoneController');
 
 const app = express(); 
 
@@ -98,6 +101,7 @@ async function createAdmin() {
 mongoose.connection.once('open', async () => {
   console.log("Connected to MongoDB");
   await createAdmin();
+  await seedZones();
 });
 
 app.get("/", (req, res) => res.send("Hello World"));
@@ -112,6 +116,8 @@ app.use('/api/lost-found', lostFoundRoutes);
 app.use('/api/notices', noticeRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/zones', zoneRoutes);
 app.use("/api/users", userRoutes);
 app.use("/items", itemRoutes);
 app.use("/routes", RouteRoutes);

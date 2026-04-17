@@ -11,7 +11,15 @@ const {
   getNoticesByAudience,
   deleteExpiredNotices,
   searchNotices,
-  getArchivedNotices
+  getArchivedNotices,
+  createSecureTip,
+  getAllSecureTips,
+  forwardNoticeAlert,
+  createSmartReport,
+  getPendingNotices,
+  updateNoticeStatus,
+  getComments,
+  createComment
 } = require('../controllers/noticeController');
 
 // Smart keyword search (must be before /:id)
@@ -19,6 +27,20 @@ router.get('/search', searchNotices);
 
 // Archived notices
 router.get('/archived', getArchivedNotices);
+
+// Secure tips
+router.get('/tips/all', getAllSecureTips);
+router.post('/:id/tips', createSecureTip);
+router.post('/:id/forward-alert', forwardNoticeAlert);
+
+// Community sightings comments
+router.get('/:id/comments', getComments);
+router.post('/:id/comments', createComment);
+
+// Smart Report Routes
+router.post('/smart-report', createSmartReport);
+router.get('/pending', getPendingNotices);
+router.patch('/:id/status', updateNoticeStatus);
 
 // Get latest notices
 router.get('/latest', getLatestNotices);

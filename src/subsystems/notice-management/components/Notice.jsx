@@ -93,16 +93,16 @@ export default function Notice() {
       <button
         onClick={toggleTheme}
         title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl shadow-2xl text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
         style={{
           background: isDark
             ? "linear-gradient(135deg, #1e293b, #334155)"
-            : "linear-gradient(135deg, #1e3a5f, #1d4ed8)",
+            : "linear-gradient(90deg, #1e3a8a 0%, #4338ca 52%, #6d28d9 100%)",
           color: "#f1f5f9",
-          border: isDark ? "1px solid #475569" : "1px solid #3b82f6",
+          border: isDark ? "1px solid #475569" : "1px solid rgba(196,181,253,0.3)",
           boxShadow: isDark
             ? "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)"
-            : "0 8px 32px rgba(29,78,216,0.4), 0 0 0 1px rgba(255,255,255,0.1)",
+            : "0 10px 24px rgba(67,56,202,0.24), 0 0 0 1px rgba(255,255,255,0.08)",
         }}
       >
         <span className="text-base leading-none">

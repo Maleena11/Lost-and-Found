@@ -9,6 +9,7 @@ import ReportItem from "./subsystems/lost-found-reporting/pages/ReportItem";
 import ItemBoard from "./subsystems/lost-found-reporting/pages/ItemBoard";
 import Contact from "./shared/components/contact";
 import Notice from "./subsystems/notice-management/components/Notice";
+import NoticeSightings from "./subsystems/notice-management/pages/NoticeSightings";
 import Verification from "./subsystems/claim-verification/components/Verification";
 import AdminLogin from "./subsystems/admin/pages/AdminLogin";
 import Dashboard from "./subsystems/admin/pages/Dashboard";
@@ -19,6 +20,8 @@ import EditItem from "./subsystems/lost-found-reporting/pages/EditItem";
 import CreateNotice from "./subsystems/notice-management/pages/CreateNotice";
 import EditNotice from "./subsystems/notice-management/pages/EditNotice";
 import AdminNotices from "./subsystems/admin/pages/AdminNotices";
+import AdminPendingNotices from "./subsystems/admin/pages/AdminPendingNotices";
+import AdminSecureTips from "./subsystems/admin/pages/AdminSecureTips";
 import NotificationSettings from "./subsystems/claim-verification/pages/NotificationSettings";
 import ChatBotWidget from "./shared/components/ChatBotWidget";
 import AllItems from "./subsystems/admin/pages/Items";
@@ -55,6 +58,7 @@ export default function App() {
         <Route path="/item-board" element={<ProtectedRoute><ItemBoard /></ProtectedRoute>} />
         <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
         <Route path="/notice" element={<ProtectedRoute><Notice /></ProtectedRoute>} />
+        <Route path="/notice-sightings/:id" element={<ProtectedRoute><NoticeSightings /></ProtectedRoute>} />
         <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
 
         {/* Admin Routes */}
@@ -64,6 +68,8 @@ export default function App() {
         <Route path="/admin/dashboard/users" element={<AdminRoute><Users /></AdminRoute>} />
         <Route path="/admin/dashboard/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="/admin/dashboard/notices" element={<AdminRoute><AdminNotices /></AdminRoute>} />
+        <Route path="/admin/dashboard/pending-notices" element={<AdminRoute><AdminPendingNotices /></AdminRoute>} />
+        <Route path="/admin/dashboard/secure-tips" element={<AdminRoute><AdminSecureTips /></AdminRoute>} />
         <Route path="/admin/dashboard/verification" element={<AdminRoute><VerificationRequests /></AdminRoute>} />
         <Route path="/admin/dashboard/verification/confirm-collection" element={<AdminRoute><ConfirmCollection /></AdminRoute>} />
         {/* Other Protected Routes */}

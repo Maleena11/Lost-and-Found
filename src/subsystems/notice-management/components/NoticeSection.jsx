@@ -2,20 +2,48 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { getTempUser } from "../../../shared/utils/tempUserAuth";
+import { translateText, speakText, stopSpeaking, t } from "../../../shared/utils/accessibilityUtils";
+import SmartReportModal, { preloadSmartReportModel } from "./SmartReportModal";
 
 export default function NoticeSection() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showSmartReportModal, setShowSmartReportModal] = useState(false);
+  const [isAlertItem, setIsAlertItem] = useState(false);
+  const [showForwardAlertModal, setShowForwardAlertModal] = useState(false);
+  const [forwardAlertEmail, setForwardAlertEmail] = useState('');
+  const [sendingForwardAlert, setSendingForwardAlert] = useState(false);
+  const [forwardAlertSuccess, setForwardAlertSuccess] = useState(false);
+  const [forwardAlertError, setForwardAlertError] = useState('');
   const [tempUser, setTempUser] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [noticeToDelete, setNoticeToDelete] = useState(null);
+
+  // Accessibility state
+  const [targetLang, setTargetLang] = useState('en');
+  const [translatedTitle, setTranslatedTitle] = useState('');
+  const [translatedContent, setTranslatedContent] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Comments state
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
+
+  // Secure Tips state
+  const [secureTipContent, setSecureTipContent] = useState('');
+  const [postingSecureTip, setPostingSecureTip] = useState(false);
+  const [secureTipSuccess, setSecureTipSuccess] = useState(false);
 
   // Smart search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +82,30 @@ export default function NoticeSection() {
     fetchNotices();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const startPreload = () => {
+      if (!cancelled) {
+        preloadSmartReportModel();
+      }
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(startPreload, { timeout: 1500 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(startPreload, 800);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
   // Auto-trigger search if ?q= param is present (e.g. from Hero search)
   useEffect(() => {
     const q = searchParams.get("q");
@@ -72,7 +124,7 @@ export default function NoticeSection() {
         setFilteredNotices(matched);
       }
     }
-  }, [searchParams, notices]);
+  }, [searchParams, notices, selectedNotice]);
 
   const [highlightedNoticeId, setHighlightedNoticeId] = useState(null);
 
@@ -80,6 +132,7 @@ export default function NoticeSection() {
   useEffect(() => {
     const noticeId = searchParams.get('noticeId');
     if (noticeId && notices.length > 0) {
+      const targetNotice = notices.find(n => String(n._id) === noticeId);
       setHighlightedNoticeId(noticeId);
       setTimeout(() => {
         const el = document.getElementById(`notice-${noticeId}`);
@@ -87,10 +140,28 @@ export default function NoticeSection() {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
+      if (targetNotice && (!selectedNotice || String(selectedNotice._id) !== noticeId)) {
+        setIsAlertItem(false);
+        setSelectedNotice(targetNotice);
+        setShowModal(true);
+      }
       // Remove highlight after 3 seconds
       setTimeout(() => setHighlightedNoticeId(null), 3000);
     }
   }, [searchParams, notices]);
+
+  // Auto-open Notice Modal if alertItem is in URL
+  useEffect(() => {
+    const alertItemId = searchParams.get('alertItem');
+    if (alertItemId && notices.length > 0) {
+      const targetNotice = notices.find(n => String(n._id) === alertItemId);
+      if (targetNotice && (!selectedNotice || String(selectedNotice._id) !== alertItemId)) {
+        setIsAlertItem(true);
+        setSelectedNotice(targetNotice);
+        setShowModal(true);
+      }
+    }
+  }, [searchParams, notices, selectedNotice]);
 
   const fetchNotices = async () => {
     setLoading(true);
@@ -106,6 +177,143 @@ export default function NoticeSection() {
     }
   };
 
+  const fetchComments = async (noticeId) => {
+    setLoadingComments(true);
+    try {
+      const response = await axios.get(`http://localhost:3001/api/notices/${noticeId}/comments`);
+      setComments(response.data.data);
+    } catch (err) {
+      console.error("Error fetching comments:", err);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!newComment.trim() || !tempUser) return;
+    setPostingComment(true);
+    try {
+      const response = await axios.post(`http://localhost:3001/api/notices/${selectedNotice._id}/comments`, {
+        userId: tempUser.id,
+        userName: tempUser.name || 'Student',
+        text: newComment.trim(),
+        isAnonymous: isAnonymous
+      });
+      setComments([response.data.data, ...comments]);
+      setNewComment('');
+      setIsAnonymous(false);
+    } catch (err) {
+      console.error("Error posting comment:", err);
+      alert("Failed to post comment.");
+    } finally {
+      setPostingComment(false);
+    }
+  };
+
+  const handleForwardAlertSubmit = async () => {
+    if (!forwardAlertEmail.trim()) return;
+    
+    const emailRegex = /^it\d{8}@my\.sliit\.lk$/i;
+    if (!emailRegex.test(forwardAlertEmail)) {
+      setForwardAlertError('Please enter a valid SLIIT student email (e.g., itxxxxxxxx@my.sliit.lk).');
+      return;
+    }
+
+    setSendingForwardAlert(true);
+    setForwardAlertError('');
+    setForwardAlertSuccess(false);
+
+    try {
+      await axios.post(`http://localhost:3001/api/notices/${selectedNotice._id}/forward-alert`, {
+        friendEmail: forwardAlertEmail.trim()
+      });
+      setForwardAlertSuccess(true);
+      setForwardAlertEmail('');
+      setTimeout(() => {
+        setShowForwardAlertModal(false);
+        setForwardAlertSuccess(false);
+      }, 3000);
+    } catch (err) {
+      console.error("Error sending forward alert:", err);
+      setForwardAlertError(err.response?.data?.message || "Failed to send alert. Try again.");
+    } finally {
+      setSendingForwardAlert(false);
+    }
+  };
+
+  const handlePostSecureTip = async () => {
+    if (!secureTipContent.trim() || !tempUser) return;
+    setPostingSecureTip(true);
+    setSecureTipSuccess(false);
+    try {
+      await axios.post(`http://localhost:3001/api/notices/${selectedNotice._id}/tips`, {
+        userId: tempUser.id,
+        userName: tempUser.name || 'Student',
+        text: secureTipContent.trim()
+      });
+      setSecureTipContent('');
+      setSecureTipSuccess(true);
+      setTimeout(() => setSecureTipSuccess(false), 4000);
+    } catch (err) {
+      console.error("Error posting secure tip:", err);
+      alert("Failed to send private tip.");
+    } finally {
+      setPostingSecureTip(false);
+    }
+  };
+
+  const handleSpeakText = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+      setIsSpeaking(false);
+    } else {
+      setIsSpeaking(true);
+      const contentToSpeak = selectedNotice.category === 'found-item' 
+        ? "Description hidden for security reasons. Please contact poster directly."
+        : (translatedContent || selectedNotice.content);
+        
+      const textToRead = `${translatedTitle || selectedNotice.title}. ${contentToSpeak}`;
+      
+      let speakLang = 'en-US';
+      if (targetLang === 'si') speakLang = 'si-LK';
+      if (targetLang === 'ta') speakLang = 'ta-IN';
+      if (targetLang === 'fr') speakLang = 'fr-FR';
+      if (targetLang === 'zh-CN') speakLang = 'zh-CN';
+
+      speakText(textToRead, speakLang, () => setIsSpeaking(false));
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedNotice) {
+      setTargetLang('en');
+      setTranslatedTitle('');
+      setTranslatedContent('');
+      stopSpeaking();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (targetLang === 'en') {
+      setTranslatedTitle(selectedNotice.title);
+      setTranslatedContent(selectedNotice.content);
+      return;
+    }
+
+    const translateNotice = async () => {
+      setIsTranslating(true);
+      const [newTitle, newContent] = await Promise.all([
+        translateText(selectedNotice.title, targetLang),
+        translateText(selectedNotice.content, targetLang)
+      ]);
+      setTranslatedTitle(newTitle);
+      setTranslatedContent(newContent);
+      setIsTranslating(false);
+    };
+
+    translateNotice();
+  }, [targetLang, selectedNotice]);
+
   const openNoticeDetails = (notice) => {
     setSelectedNotice(notice);
     setShowModal(true);
@@ -114,6 +322,18 @@ export default function NoticeSection() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedNotice(null);
+    setSecureTipContent('');
+    setSecureTipSuccess(false);
+    setIsAlertItem(false);
+    stopSpeaking();
+    setIsSpeaking(false);
+    setTargetLang('en');
+    
+    if (searchParams.get('alertItem')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('alertItem');
+      setSearchParams(newParams, { replace: true });
+    }
   };
 
   const formatDate = (dateString) => {
@@ -151,7 +371,7 @@ export default function NoticeSection() {
 
   const getCategoryBadgeStyle = (category) => {
     switch (category) {
-      case 'lost-item':     return "bg-white text-gray-700 border border-gray-500 font-bold";
+      case 'lost-item':     return "bg-orange-50 text-orange-800 border border-orange-400 font-bold";
       case 'found-item':    return "bg-cyan-50 text-cyan-800 border border-cyan-300 font-bold";
       case 'announcement':  return "bg-purple-100 text-purple-700 border border-purple-200";
       case 'service-update':return "bg-blue-100 text-blue-700 border border-blue-200";
@@ -367,7 +587,8 @@ export default function NoticeSection() {
       <div>
         {/* Smart Search Bar */}
         <div className="relative mb-6" ref={searchRef}>
-        <div className={`notice-search-bar flex items-center gap-3 bg-white border-2 rounded-xl px-4 py-3 shadow-sm transition-colors ${showDropdown ? 'border-blue-400' : 'border-gray-200 hover:border-gray-300'}`}>
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch w-full">
+        <div className={`notice-search-bar flex-1 flex items-center gap-3 bg-white border-2 rounded-xl px-4 py-2 shadow-sm transition-colors ${showDropdown ? 'border-blue-400' : 'border-gray-200 hover:border-gray-300'}`}>
           <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -387,6 +608,45 @@ export default function NoticeSection() {
               </svg>
             </button>
           )}
+        </div>
+        
+        <button onClick={() => setShowSmartReportModal(true)} className="group relative flex items-center justify-center gap-3 px-6 py-2 rounded-xl font-bold text-white overflow-hidden shadow-[0_10px_24px_rgba(67,56,202,0.24)] hover:shadow-[0_14px_30px_rgba(109,40,217,0.3)] hover:-translate-y-0.5 transition-all duration-300 flex-shrink-0 border border-violet-300/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 via-violet-800 to-purple-800 bg-[length:200%_100%] animate-[gradient_4s_ease-in-out_infinite]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-fuchsia-200/10 opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
+            <span className="relative z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-white/25 bg-white/12 shadow-[0_10px_22px_rgba(255,255,255,0.1)] backdrop-blur-sm overflow-hidden">
+              <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.48),transparent_38%),radial-gradient(circle_at_75%_78%,rgba(254,240,138,0.28),transparent_36%),linear-gradient(160deg,rgba(125,211,252,0.38),rgba(244,114,182,0.3)_46%,rgba(253,224,71,0.24))]"></span>
+              <span className="absolute inset-[2px] rounded-[10px] bg-gradient-to-br from-white/26 via-white/12 to-transparent"></span>
+              <svg
+                viewBox="0 0 48 48"
+                className="relative z-10 h-6 w-6 drop-shadow-[0_4px_12px_rgba(255,255,255,0.42)]"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M22 10c-2.8 0-5 1.8-6 4.2a5.9 5.9 0 0 0-8 5.5c0 2 .9 3.7 2.3 4.8A6.3 6.3 0 0 0 10 36c1.2 1.2 2.9 2 4.8 2H22V10Z"
+                  fill="#ffffff"
+                />
+                <path
+                  d="M26 10c2.8 0 5 1.8 6 4.2a5.9 5.9 0 0 1 8 5.5c0 2-.9 3.7-2.3 4.8A6.3 6.3 0 0 1 38 36c-1.2 1.2-2.9 2-4.8 2H26V10Z"
+                  fill="#ffffff"
+                />
+                <path
+                  d="M24 10v28"
+                  stroke="rgba(167,139,250,0.95)"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M18 15.5c1.8 0 3.2 1.4 3.2 3.2M16.5 23.5c2.7 0 4.7 2 4.7 4.7M30 15.5c-1.8 0-3.2 1.4-3.2 3.2M31.5 23.5c-2.7 0-4.7 2-4.7 4.7"
+                  stroke="rgba(196,181,253,0.9)"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+            <span className="relative z-10 tracking-wide text-sm whitespace-nowrap">Smart Notice Creator</span>
+            <style>{`@keyframes gradient { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }`}</style>
+          </button>
         </div>
 
         {/* Hint text */}
@@ -607,6 +867,13 @@ export default function NoticeSection() {
         )}
       </div>
 
+      {showSmartReportModal && (
+        <SmartReportModal 
+          tempUser={tempUser}
+          onClose={() => setShowSmartReportModal(false)}
+        />
+      )}
+
       {/* Content */}
       <div className="mt-8">
       {loading ? (
@@ -810,7 +1077,16 @@ export default function NoticeSection() {
       {/* Notice Detail Modal */}
       {showModal && selectedNotice && (
         <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl">
+          <div className={`bg-white rounded-t-2xl sm:rounded-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl transition-all duration-700 ${isAlertItem ? 'border-4 border-blue-400 shadow-[0_0_45px_rgba(96,165,250,0.8)] animate-pulse-light' : ''}`}>
+            {isAlertItem && (
+               <style>{`
+                 @keyframes pulse-light {
+                   0%, 100% { box-shadow: 0 0 20px rgba(191,219,254,0.6); border-color: rgba(147,197,253,0.7); }
+                   50% { box-shadow: 0 0 50px rgba(59,130,246,0.9); border-color: rgba(59,130,246,1); }
+                 }
+                 .animate-pulse-light { animation: pulse-light 2s ease-in-out infinite; }
+               `}</style>
+            )}
 
             {/* Image header (if available) */}
             {selectedNotice.attachments && selectedNotice.attachments.some(att => isBase64Image(att)) ? (
@@ -859,8 +1135,64 @@ export default function NoticeSection() {
                       {getTargetAudienceLabel(selectedNotice.targetAudience)}
                     </span>
                   )}
+                  {selectedNotice.category === 'found-item' && (
+                    <div className="relative inline-block ml-1">
+                      <button
+                        onClick={() => setShowForwardAlertModal(!showForwardAlertModal)}
+                        className="text-xs px-3.5 py-1.5 rounded-full font-bold flex items-center gap-2 text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] hover:bg-right hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ring-2 ring-indigo-500/30 ring-offset-1"
+                      >
+                        <i className="fas fa-paper-plane text-white/90 text-xs z-10 animate-pulse"></i>
+                        {t('forwardAlert', targetLang)}
+                      </button>
+                      
+                      {showForwardAlertModal && (
+                        <div className="absolute top-full right-0 mt-3 w-[360px] max-w-[90vw] bg-white/95 backdrop-blur-[12px] border border-indigo-100/80 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] z-[100] p-6 text-left origin-top-right ring-1 ring-black/5">
+                          <h4 className="text-base font-bold text-gray-900 mb-2 flex items-center gap-2"><i className="fas fa-envelope text-indigo-500"></i> Alert a Friend</h4>
+                          <p className="text-sm text-gray-500 mb-5 leading-relaxed whitespace-normal">Send an anonymous email alert to a friend if you recognize this item. Only SLIIT student emails allowed.</p>
+                          
+                          {forwardAlertSuccess ? (
+                            <div className="bg-green-50 text-green-700 text-sm p-3.5 rounded-xl border border-green-200 flex items-center gap-2.5 font-semibold">
+                              <i className="fas fa-check-circle text-lg"></i> Alert Sent Successfully!
+                            </div>
+                          ) : (
+                            <div>
+                              <input 
+                                type="email" 
+                                placeholder="itxxxxxxxx@my.sliit.lk" 
+                                value={forwardAlertEmail}
+                                onChange={(e) => setForwardAlertEmail(e.target.value)}
+                                className="w-full text-sm px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40 mb-3.5 bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-all placeholder-gray-400"
+                              />
+                              {forwardAlertError && <p className="text-xs text-red-600 mb-4 leading-relaxed bg-red-50/80 p-3 rounded-xl border border-red-100 font-medium">{forwardAlertError}</p>}
+                              <div className="flex gap-2.5 pt-1">
+                                <button 
+                                  onClick={handleForwardAlertSubmit} 
+                                  disabled={sendingForwardAlert}
+                                  className="group flex-1 flex flex-row items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] text-white text-sm font-bold py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-right disabled:opacity-60 disabled:hover:bg-left disabled:hover:translate-y-0 disabled:cursor-not-allowed transition-all duration-300 ring-2 ring-indigo-500/30 ring-offset-1"
+                                >
+                                  {sendingForwardAlert ? (
+                                    <><i className="fas fa-circle-notch fa-spin"></i> Sending...</>
+                                  ) : (
+                                    <>{t('forwardAlert', targetLang)} <i className="fas fa-paper-plane text-white/80 group-hover:animate-pulse text-xs"></i></>
+                                  )}
+                                </button>
+                                <button 
+                                  onClick={() => { setShowForwardAlertModal(false); setForwardAlertError(''); }}
+                                  className="flex-1 bg-gray-100 text-gray-700 text-sm font-bold py-2.5 rounded-xl hover:bg-gray-200 hover:shadow-sm focus:ring-2 focus:ring-gray-300 transition-all"
+                                >
+                                  {t('cancel', targetLang)}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">{selectedNotice.title}</h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {isTranslating ? <div className="h-6 bg-gray-200 animate-pulse rounded w-3/4"></div> : (translatedTitle || selectedNotice.title)}
+                </h3>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Show close button in header only when there is no image */}
@@ -880,20 +1212,52 @@ export default function NoticeSection() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-400 mb-5 pb-4 border-b border-gray-100">
                 <div className="flex items-center gap-1.5">
                   <i className="fas fa-calendar-alt"></i>
-                  <span>Posted on {formatDate(selectedNotice.createdAt || new Date())}</span>
+                  <span>{t('postedOn', targetLang)} {formatDate(selectedNotice.createdAt || new Date())}</span>
                 </div>
                 {selectedNotice.startDate && (
                   <div className="flex items-center gap-1.5">
                     <i className="fas fa-calendar-check"></i>
-                    <span>Active from {formatDate(selectedNotice.startDate)}</span>
+                    <span>{t('activeFrom', targetLang)} {formatDate(selectedNotice.startDate)}</span>
                   </div>
                 )}
                 {selectedNotice.endDate && (
                   <div className="flex items-center gap-1.5">
                     <i className="fas fa-clock"></i>
-                    <span>Valid until {formatDate(selectedNotice.endDate)}</span>
+                    <span>{t('validUntil', targetLang)} {formatDate(selectedNotice.endDate)}</span>
                   </div>
                 )}
+              </div>
+
+              {/* Accessibility Bar */}
+              <div className="flex flex-wrap items-center gap-3 mb-6 px-4 py-2 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                <div className="flex items-center gap-2 text-sm text-blue-700 font-medium">
+                  <i className="fas fa-universal-access text-blue-500"></i>
+                </div>
+                <div className="h-4 w-px bg-blue-200 mx-1 hidden sm:block"></div>
+                
+                <select 
+                  value={targetLang}
+                  onChange={(e) => setTargetLang(e.target.value)}
+                  className="bg-white border border-blue-200 text-blue-800 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-2.5 py-1.5 outline-none font-medium cursor-pointer hover:bg-blue-50 transition-colors"
+                >
+                  <option value="en">English (Default)</option>
+                  <option value="si">සිංහල (Sinhala)</option>
+                  <option value="ta">தமிழ் (Tamil)</option>
+                  <option value="fr">Français (French)</option>
+                  <option value="zh-CN">中文 (Chinese)</option>
+                </select>
+                
+                <button 
+                  onClick={handleSpeakText}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${isSpeaking ? 'bg-indigo-500 text-white shadow-md animate-pulse' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50 hover:shadow-sm'}`}
+                >
+                  {isSpeaking ? (
+                    <><i className="fas fa-stop"></i> {t('stop', targetLang)}</>
+                  ) : (
+                    <><i className="fas fa-volume-up"></i> {t('listen', targetLang)}</>
+                  )}
+                </button>
+                {isTranslating && <i className="fas fa-circle-notch fa-spin text-blue-500 text-xs ml-2"></i>}
               </div>
 
               {/* Content */}
@@ -903,25 +1267,32 @@ export default function NoticeSection() {
                     <i className="fas fa-shield-alt text-blue-500 text-sm"></i>
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-blue-800">Description hidden</p>
+                    <p className="text-sm font-bold text-blue-800">{t('descriptionHidden', targetLang)}</p>
                     <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                      The description for found item notices is restricted to prevent fraudulent claims.
-                      If you believe this item belongs to you, please contact the notice poster directly using the contact details below.
+                      {t('hiddenWarning', targetLang)}
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed mb-6">
-                  {selectedNotice.content}
-                </p>
+                isTranslating ? (
+                  <div className="space-y-2 mb-6">
+                    <div className="h-4 bg-gray-200 animate-pulse rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 animate-pulse rounded w-5/6"></div>
+                    <div className="h-4 bg-gray-200 animate-pulse rounded w-3/4"></div>
+                  </div>
+                ) : (
+                  <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed mb-6">
+                    {translatedContent || selectedNotice.content}
+                  </p>
+                )
               )}
 
               {/* Image gallery */}
               {selectedNotice.attachments && selectedNotice.attachments.some(att => isBase64Image(att)) && (
                 <div className="mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                    <i className="fas fa-images"></i> Attached Images
-                    <span className="text-gray-400 font-normal normal-case tracking-normal">(click to enlarge)</span>
+                    <i className="fas fa-images"></i> {t('attachedImages', targetLang)}
+                    <span className="text-gray-400 font-normal normal-case tracking-normal">{t('clickToEnlarge', targetLang)}</span>
                   </p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {selectedNotice.attachments
@@ -991,6 +1362,113 @@ export default function NoticeSection() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Premium Community Sightings Link Banner (Only for Lost Items) */}
+              {selectedNotice.category === 'lost-item' && (
+                <div className="mb-6 mt-2 mx-4 sm:mx-6 relative overflow-hidden rounded-2xl shadow-md border border-indigo-100/60 group">
+                  {/* Animated Gradient Background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-indigo-50/50 to-purple-50/80 z-0"></div>
+                  
+                  {/* Decorative Glows */}
+                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full blur-3xl opacity-[0.15] group-hover:opacity-30 transition-opacity duration-700"></div>
+                  <div className="absolute -left-8 -bottom-8 w-24 h-24 bg-gradient-to-tr from-teal-300 to-blue-300 rounded-full blur-2xl opacity-[0.15] group-hover:opacity-30 transition-opacity duration-700"></div>
+
+                  <div className="relative z-10 p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5">
+                    {/* Icon Container */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-[2px] shadow-lg shadow-blue-500/20 transform group-hover:-translate-y-1 group-hover:shadow-indigo-500/40 transition-all duration-300">
+                        <div className="w-full h-full bg-white/95 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                          <i className="fas fa-users text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-indigo-600 text-2xl group-hover:scale-110 transition-transform duration-300"></i>
+                        </div>
+                      </div>
+                      {/* Pulse indicator */}
+                      <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white animate-pulse shadow-sm"></div>
+                    </div>
+
+                    {/* Text Content */}
+                    <div className="flex-1 text-center sm:text-left">
+                      <h4 className="font-extrabold text-gray-800 text-lg sm:text-xl mb-1.5 tracking-tight flex items-center justify-center sm:justify-start gap-2.5">
+                        Community Sightings
+                        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-r from-orange-400 to-red-500 text-white px-2 py-0.5 rounded-full shadow-sm">
+                          <i className="fas fa-search text-[8px]"></i> Explore
+                        </span>
+                      </h4>
+                      <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto sm:mx-0">
+                        Join the search! Check tips from others or post a clue to help reunite this item with its owner.
+                      </p>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                      <button
+                        onClick={() => navigate(`/notice-sightings/${selectedNotice._id}`)}
+                        className="w-full sm:w-auto relative overflow-hidden bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300 text-blue-800 font-extrabold px-6 py-3 rounded-xl shadow-[0_4px_14px_0_rgba(147,197,253,0.5)] border-[1.5px] border-blue-400/80 hover:border-blue-500 hover:text-blue-900 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2.5 group/btn"
+                      >
+                        {/* CSS-based Shimmer effect (moves left to right) */}
+                        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/70 to-transparent group-hover/btn:animate-[shimmer_1.5s_infinite]"></div>
+                        <style>{`@keyframes shimmer { 100% { transform: translateX(100%); } }`}</style>
+                        <span>View Sightings</span>
+                        <i className="fas fa-arrow-right text-[13px] text-blue-600 transform group-hover/btn:translate-x-1 transition-transform"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Secure Tip Drop (Only for Found Items) */}
+              {selectedNotice.category === 'found-item' && (
+                <div className="mb-6 mt-4 mx-4 sm:mx-6 relative overflow-hidden rounded-2xl shadow-md border border-cyan-100/60 bg-gradient-to-br from-cyan-50/50 via-blue-50/30 to-cyan-50/50 p-5 sm:p-6 group">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 mb-5">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white shrink-0">
+                      <i className="fas fa-user-secret text-xl"></i>
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <h4 className="font-extrabold text-gray-800 text-lg flex items-center justify-center sm:justify-start gap-2">
+                        Secure Tip Drop
+                        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-extrabold bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm">
+                          <i className="fas fa-lock text-[8px]"></i> Private
+                        </span>
+                      </h4>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">Send a secure lead directly to the finder and system admins.</p>
+                    </div>
+                  </div>
+
+                  {tempUser ? (
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-cyan-100 shadow-inner focus-within:ring-2 focus-within:ring-cyan-300/50 transition-all">
+                      <textarea
+                        value={secureTipContent}
+                        onChange={(e) => setSecureTipContent(e.target.value)}
+                        placeholder="e.g., I know who this belongs to, let me text them..."
+                        className="w-full bg-transparent border-none outline-none text-sm text-gray-700 resize-none placeholder-gray-400 p-1"
+                        rows="2"
+                      />
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100/80">
+                        <p className="text-[10px] text-gray-400 font-medium max-w-[60%] leading-tight flex items-start gap-1">
+                          <i className="fas fa-shield-alt text-cyan-400 mt-0.5"></i> 
+                          <span>This tip is encrypted and will NOT be publicly visible.</span>
+                        </p>
+                        <button
+                          onClick={handlePostSecureTip}
+                          disabled={!secureTipContent.trim() || postingSecureTip}
+                          className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white text-[11px] font-bold px-4 py-2.5 rounded-xl shadow-md disabled:shadow-none transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 active:translate-y-0"
+                        >
+                          {postingSecureTip ? <i className="fas fa-circle-notch fa-spin"></i> : <i className="fas fa-paper-plane"></i>}
+                          {postingSecureTip ? 'Sending...' : 'Send Tip'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-xl text-center border border-amber-200 font-medium shadow-inner">
+                      <i className="fas fa-exclamation-circle mr-1.5 text-amber-500"></i> Please log in to submit a secure tip.
+                    </p>
+                  )}
+                  {secureTipSuccess && (
+                    <div className="mt-4 bg-cyan-100 text-cyan-800 p-3 rounded-xl text-xs font-bold flex items-center gap-2 animate-[pulse_0.5s_ease-in-out]">
+                      <i className="fas fa-check-circle text-cyan-600 text-sm"></i> Secure tip sent successfully! Admins have been notified.
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -147,6 +147,9 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
   // ── Report generation ──
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  // ── Copy to clipboard ──
+  const [copiedEmail, setCopiedEmail] = useState(null);
+
   // ── Add User Form ──
   const [showAddForm, setShowAddForm]   = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -154,6 +157,8 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
   const [newUserErrors, setNewUserErrors]   = useState({});
   const [newUserTouched, setNewUserTouched] = useState({});
   const [isFormValid, setIsFormValid]       = useState(false);
+  const [showPwd, setShowPwd]               = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   // ── Edit Modal ──
   const [showEditModal, setShowEditModal] = useState(false);
@@ -177,10 +182,29 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
   // ── Role Promotion Confirmation ──
   const [showRoleConfirm, setShowRoleConfirm] = useState(false);
 
+  // ── Status Toggle Confirmation ──
+  const [pendingStatusToggle, setPendingStatusToggle] = useState(null); // { id, currentStatus }
+
   // ── Bulk Selection ──
   const [selectedIds, setSelectedIds]             = useState(new Set());
   const [isBulkProcessing, setIsBulkProcessing]   = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  // ── Escape key closes any open modal ─────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== "Escape") return;
+      if (showAddForm)           { setShowAddForm(false);           return; }
+      if (showEditModal)         { setShowEditModal(false);         return; }
+      if (showDeleteModal)       { setShowDeleteModal(false);       return; }
+      if (showViewModal)         { setShowViewModal(false);         return; }
+      if (showRoleConfirm)       { setShowRoleConfirm(false);       return; }
+      if (showBulkDeleteConfirm) { setShowBulkDeleteConfirm(false); return; }
+      if (pendingStatusToggle)   { setPendingStatusToggle(null);    return; }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showAddForm, showEditModal, showDeleteModal, showViewModal, showRoleConfirm, showBulkDeleteConfirm, pendingStatusToggle]);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => { fetchUsers(); }, []);
@@ -263,6 +287,9 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
   const activeUsers   = users.filter(u => u.status === "Active").length;
   const adminUsers    = users.filter(u => u.role === "Admin").length;
   const inactiveUsers = users.filter(u => u.status === "Inactive").length;
+  const nowMs         = Date.now();
+  const newThisWeek   = users.filter(u => u.createdAt && (nowMs - new Date(u.createdAt)) < 7  * 86400000).length;
+  const newThisMonth  = users.filter(u => u.createdAt && (nowMs - new Date(u.createdAt)) < 30 * 86400000).length;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNewUserChange = e => {
@@ -353,9 +380,21 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
         axios.get("http://localhost:3001/api/lost-found"),
         axios.get("http://localhost:3001/api/verification"),
       ]);
-      const userId = user._id || user.id;
-      const itemsReported   = itemsRes.data.filter(i => i.userId === userId).length;
-      const claimsSubmitted = claimsRes.data.filter(c => c.claimantInfo?.email === user.email).length;
+      const userId = (user._id || user.id).toString();
+      // lost-found API wraps results in { data: [...] }
+      const itemsList = Array.isArray(itemsRes.data)
+        ? itemsRes.data
+        : (itemsRes.data?.data || []);
+      const claimsList = Array.isArray(claimsRes.data)
+        ? claimsRes.data
+        : (claimsRes.data?.data || []);
+      const itemsReported = itemsList.filter(i => {
+        const iid = (i.userId || i.user?._id || i.reportedBy || "").toString();
+        return iid === userId;
+      }).length;
+      const claimsSubmitted = claimsList.filter(
+        c => c.claimantInfo?.email === user.email
+      ).length;
       setViewStats({ itemsReported, claimsSubmitted });
     } catch {
       // stats stay at 0 if fetch fails
@@ -477,6 +516,25 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
     }
   };
 
+  const copyEmail = (email) => {
+    navigator.clipboard.writeText(email).then(() => {
+      setCopiedEmail(email);
+      setTimeout(() => setCopiedEmail(null), 2000);
+    }).catch(() => {});
+  };
+
+  const relativeDate = dateStr => {
+    if (!dateStr) return "—";
+    const diff = nowMs - new Date(dateStr);
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7)   return `${days}d ago`;
+    if (days < 30)  return `${Math.floor(days / 7)}w ago`;
+    if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+    return `${Math.floor(days / 365)}y ago`;
+  };
+
   const formatDate = dateStr => {
     if (!dateStr) return "—";
     const d = new Date(dateStr);
@@ -546,10 +604,11 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
 
                 <div className="flex gap-3 flex-wrap">
                   {[
-                    { label: 'Total Users', value: totalUsers,    icon: 'fa-users',       accent: 'bg-white/10 border-white/15' },
-                    { label: 'Active',      value: activeUsers,   icon: 'fa-user-check',  accent: 'bg-teal-500/20 border-teal-400/30' },
-                    { label: 'Admins',      value: adminUsers,    icon: 'fa-user-shield', accent: 'bg-sky-500/20 border-sky-400/30' },
-                    { label: 'Inactive',    value: inactiveUsers, icon: 'fa-user-times',  accent: 'bg-amber-500/20 border-amber-400/30' },
+                    { label: 'Total Users',   value: totalUsers,    icon: 'fa-users',        accent: 'bg-white/10 border-white/15' },
+                    { label: 'Active',        value: activeUsers,   icon: 'fa-user-check',   accent: 'bg-teal-500/20 border-teal-400/30' },
+                    { label: 'Admins',        value: adminUsers,    icon: 'fa-user-shield',  accent: 'bg-sky-500/20 border-sky-400/30' },
+                    { label: 'Inactive',      value: inactiveUsers, icon: 'fa-user-times',   accent: 'bg-amber-500/20 border-amber-400/30' },
+                    { label: 'New This Week', value: newThisWeek,   icon: 'fa-user-plus',    accent: 'bg-emerald-500/20 border-emerald-400/30' },
                   ].map(({ label, value, icon, accent }) => (
                     <div key={label} className={`${accent} border rounded-xl px-4 py-3 text-center min-w-[84px] backdrop-blur-sm`}>
                       <i className={`fas ${icon} text-blue-300 text-[11px] mb-1 block`}></i>
@@ -597,6 +656,64 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
               icon={<svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>}
             />
           </div>
+
+          {/* ── User Composition & Growth ── */}
+          {totalUsers > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-6 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                {/* Composition bar */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">User Composition</span>
+                    <span className="text-xs text-gray-400">{totalUsers} total</span>
+                  </div>
+                  <div className="w-full h-2.5 rounded-full bg-gray-100 overflow-hidden flex">
+                    <div
+                      className="bg-blue-500 h-full transition-all duration-700"
+                      style={{ width: `${Math.round(((totalUsers - adminUsers) / totalUsers) * 100)}%` }}
+                      title={`${totalUsers - adminUsers} regular users`}
+                    />
+                    <div
+                      className="bg-purple-500 h-full transition-all duration-700"
+                      style={{ width: `${Math.round((adminUsers / totalUsers) * 100)}%` }}
+                      title={`${adminUsers} admins`}
+                    />
+                  </div>
+                  <div className="flex items-center gap-5 mt-2 flex-wrap">
+                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+                      Users <span className="font-semibold text-gray-700 ml-0.5">{totalUsers - adminUsers}</span>
+                      <span className="text-gray-400">({Math.round(((totalUsers - adminUsers) / totalUsers) * 100)}%)</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"></span>
+                      Admins <span className="font-semibold text-gray-700 ml-0.5">{adminUsers}</span>
+                      <span className="text-gray-400">({Math.round((adminUsers / totalUsers) * 100)}%)</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                      Active Rate <span className="font-semibold text-emerald-600 ml-0.5">{Math.round((activeUsers / totalUsers) * 100)}%</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="hidden sm:block w-px bg-gray-100 self-stretch" />
+
+                {/* Growth stats */}
+                <div className="flex gap-6 flex-shrink-0">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-blue-600">{newThisWeek}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">New this week</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-indigo-600">{newThisMonth}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">New this month</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Toolbar ── */}
           <div className="rounded-xl shadow-md p-4 space-y-3" style={{ background: "linear-gradient(to right, #1e3a5f, #2a4d7a)" }}>
@@ -856,11 +973,34 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                   ) : pagedUsers.length === 0 ? (
                     <tr>
                       <td colSpan="8" className="px-6 py-16 text-center">
-                        <svg className="mx-auto w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <p className="text-sm text-gray-500 font-medium">No users found</p>
-                        <p className="text-xs text-gray-400 mt-1">Try adjusting your search or filters</p>
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-600">No users found</p>
+                        <p className="text-xs text-gray-400 mt-1 mb-4">
+                          {search || filterRole !== "All" || filterStatus !== "All"
+                            ? "Try adjusting your search or filters"
+                            : "Add your first user to get started"}
+                        </p>
+                        {(search || filterRole !== "All" || filterStatus !== "All") ? (
+                          <button
+                            onClick={() => { setSearch(""); setFilterRole("All"); setFilterStatus("All"); }}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            Clear all filters
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setShowAddForm(true); setNewUserTouched({}); }}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                            Add First User
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -884,14 +1024,38 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                           >
                             <UserAvatar name={user.name} size="lg" />
                             <div>
-                              <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition">{user.name}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition">{user.name}</p>
+                                {user.createdAt && (Date.now() - new Date(user.createdAt)) < 7 * 86400000 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 leading-none">NEW</span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-400">#{(user._id || user.id).toString().slice(-6)}</p>
                             </div>
                           </button>
                         </td>
 
                         {/* Email */}
-                        <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 group/email">
+                            <span className="text-sm text-gray-600 truncate max-w-[180px]">{user.email}</span>
+                            <button
+                              onClick={() => copyEmail(user.email)}
+                              title={copiedEmail === user.email ? "Copied!" : "Copy email"}
+                              className="opacity-0 group-hover/email:opacity-100 transition p-1 rounded hover:bg-gray-100 flex-shrink-0"
+                            >
+                              {copiedEmail === user.email ? (
+                                <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </td>
 
                         {/* Phone */}
                         <td className="px-6 py-4 text-sm text-gray-600">{user.phonenumber || "—"}</td>
@@ -913,8 +1077,8 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                         {/* Status toggle */}
                         <td className="px-6 py-4">
                           <button
-                            onClick={() => toggleStatus(user._id || user.id)}
-                            title="Click to toggle status"
+                            onClick={() => setPendingStatusToggle({ id: user._id || user.id, currentStatus: user.status })}
+                            title={`Click to ${user.status === "Active" ? "deactivate" : "activate"}`}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition ${
                               user.status === "Active"
                                 ? "bg-green-100 text-green-700 hover:bg-green-200"
@@ -927,7 +1091,11 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                         </td>
 
                         {/* Joined */}
-                        <td className="px-6 py-4 text-sm text-gray-500">{formatDate(user.createdAt)}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-500" title={formatDate(user.createdAt)}>
+                            {relativeDate(user.createdAt)}
+                          </span>
+                        </td>
 
                         {/* Actions */}
                         <td className="px-6 py-4">
@@ -973,38 +1141,76 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
             </div>
 
             {/* ── Pagination ── */}
-            {!loading && filteredUsers.length > pageSize && (
-              <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            {!loading && filteredUsers.length > 0 && (
+              <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-3">
                 <p className="text-xs text-gray-500">
-                  Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filteredUsers.length)} of {filteredUsers.length} users
+                  Showing <span className="font-semibold text-gray-700">{(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filteredUsers.length)}</span> of <span className="font-semibold text-gray-700">{filteredUsers.length}</span> users
                 </p>
                 <div className="flex items-center gap-1">
+                  {/* First page */}
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={safePage === 1}
+                    title="First page"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+                  </button>
+                  {/* Prev page */}
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={safePage === 1}
+                    title="Previous page"
                     className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                   </button>
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`w-8 h-8 rounded-lg text-xs font-medium transition ${
-                        safePage === i + 1
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                  {/* Smart page numbers */}
+                  {(() => {
+                    const pages = [];
+                    const delta = 1; // siblings on each side of current
+                    const left  = Math.max(2, safePage - delta);
+                    const right = Math.min(totalPages - 1, safePage + delta);
+                    pages.push(1);
+                    if (left > 2) pages.push("...");
+                    for (let i = left; i <= right; i++) pages.push(i);
+                    if (right < totalPages - 1) pages.push("...");
+                    if (totalPages > 1) pages.push(totalPages);
+                    return pages.map((p, idx) =>
+                      p === "..." ? (
+                        <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-xs select-none">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p)}
+                          className={`w-8 h-8 rounded-lg text-xs font-medium transition ${
+                            safePage === p
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    );
+                  })()}
+                  {/* Next page */}
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={safePage === totalPages}
+                    title="Next page"
                     className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                  {/* Last page */}
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={safePage === totalPages}
+                    title="Last page"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
                   </button>
                 </div>
               </div>
@@ -1058,6 +1264,58 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
         </div>
       )}
 
+      {/* ── Status Toggle Confirmation Modal ── */}
+      {pendingStatusToggle && (() => {
+        const target = users.find(u => (u._id || u.id) === pendingStatusToggle.id);
+        const nextStatus = pendingStatusToggle.currentStatus === "Active" ? "Inactive" : "Active";
+        const isDeactivating = nextStatus === "Inactive";
+        return (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+              <div className="p-6 text-center">
+                <div className={`mx-auto mb-4 w-14 h-14 rounded-full flex items-center justify-center ${isDeactivating ? "bg-amber-100" : "bg-emerald-100"}`}>
+                  {isDeactivating
+                    ? <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                    : <svg className="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  }
+                </div>
+                <h2 className="text-base font-semibold text-gray-900 mb-1">
+                  {isDeactivating ? "Deactivate User?" : "Activate User?"}
+                </h2>
+                <p className="text-sm text-gray-500 mb-1">
+                  <span className="font-semibold text-gray-800">{target?.name}</span> will be set to
+                </p>
+                <div className="flex items-center justify-center gap-2 mb-5">
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${pendingStatusToggle.currentStatus === "Active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${pendingStatusToggle.currentStatus === "Active" ? "bg-green-500" : "bg-red-500"}`} />
+                    {pendingStatusToggle.currentStatus}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${nextStatus === "Active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${nextStatus === "Active" ? "bg-green-500" : "bg-red-500"}`} />
+                    {nextStatus}
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setPendingStatusToggle(null)}
+                    className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { toggleStatus(pendingStatusToggle.id); setPendingStatusToggle(null); }}
+                    className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white transition ${isDeactivating ? "bg-amber-500 hover:bg-amber-600" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── View User Modal ── */}
       {showViewModal && viewingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1110,18 +1368,21 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
               </div>
               <div className="bg-gray-50 rounded-2xl overflow-hidden divide-y divide-gray-100">
                 {[
-                  { icon: "fa-fingerprint", label: "User ID",  value: `#${(viewingUser._id || viewingUser.id).toString().slice(-10)}`, mono: true, color: "text-indigo-500" },
-                  { icon: "fa-envelope",    label: "Email",    value: viewingUser.email,                    color: "text-blue-500"    },
-                  { icon: "fa-phone",       label: "Phone",    value: viewingUser.phonenumber || "—",       color: "text-emerald-500" },
-                  { icon: "fa-user-tag",    label: "Role",     value: viewingUser.role,                     color: "text-purple-500"  },
-                  { icon: "fa-calendar",    label: "Joined",   value: formatDate(viewingUser.createdAt),    color: "text-amber-500"   },
+                  { icon: "fa-fingerprint", label: "User ID",  value: `#${(viewingUser._id || viewingUser.id).toString().slice(-10)}`, mono: true, color: "text-indigo-500", extra: null },
+                  { icon: "fa-envelope",    label: "Email",    value: viewingUser.email,                    color: "text-blue-500",    extra: null },
+                  { icon: "fa-phone",       label: "Phone",    value: viewingUser.phonenumber || "—",       color: "text-emerald-500", extra: null },
+                  { icon: "fa-user-tag",    label: "Role",     value: viewingUser.role,                     color: "text-purple-500",  extra: null },
+                  { icon: "fa-calendar",    label: "Joined",   value: formatDate(viewingUser.createdAt),    color: "text-amber-500",   extra: relativeDate(viewingUser.createdAt) },
                 ].map(row => (
                   <div key={row.label} className="flex items-center gap-3 px-4 py-3">
                     <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0">
                       <i className={`fas ${row.icon} text-xs ${row.color}`}></i>
                     </div>
                     <span className="text-xs font-medium text-gray-400 w-16 flex-shrink-0 uppercase tracking-wide">{row.label}</span>
-                    <span className={`text-sm font-medium text-gray-800 truncate flex-1 text-right ${row.mono ? "font-mono" : ""}`}>{row.value}</span>
+                    <span className={`text-sm font-medium text-gray-800 truncate flex-1 text-right ${row.mono ? "font-mono" : ""}`}>
+                      {row.value}
+                      {row.extra && <span className="text-xs text-gray-400 ml-1.5 font-normal">({row.extra})</span>}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1293,9 +1554,18 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Password <span className="text-red-500">*</span></label>
-                  <input type="password" name="password" value={newUser.password} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
-                    placeholder="Min. 8 characters"
-                    className={getFieldClassName("password", newUserTouched, newUserErrors)} />
+                  <div className="relative">
+                    <input type={showPwd ? "text" : "password"} name="password" value={newUser.password} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
+                      placeholder="Min. 8 characters"
+                      className={`${getFieldClassName("password", newUserTouched, newUserErrors)} pr-10`} />
+                    <button type="button" onClick={() => setShowPwd(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                      {showPwd
+                        ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                        : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      }
+                    </button>
+                  </div>
                   {showFieldError("password", newUserTouched, newUserErrors) && (
                     <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
@@ -1305,9 +1575,18 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Confirm Password <span className="text-red-500">*</span></label>
-                  <input type="password" name="confirmPassword" value={newUser.confirmPassword} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
-                    placeholder="Re-enter password"
-                    className={getFieldClassName("confirmPassword", newUserTouched, newUserErrors)} />
+                  <div className="relative">
+                    <input type={showConfirmPwd ? "text" : "password"} name="confirmPassword" value={newUser.confirmPassword} onChange={handleNewUserChange} onBlur={handleNewUserBlur}
+                      placeholder="Re-enter password"
+                      className={`${getFieldClassName("confirmPassword", newUserTouched, newUserErrors)} pr-10`} />
+                    <button type="button" onClick={() => setShowConfirmPwd(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                      {showConfirmPwd
+                        ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                        : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      }
+                    </button>
+                  </div>
                   {showFieldError("confirmPassword", newUserTouched, newUserErrors) && (
                     <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
@@ -1603,25 +1882,45 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
       {/* ── Delete Confirmation Modal ── */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="p-6 text-center">
-              <div className="mx-auto mb-4 w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.998L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16.002C2.57 17.333 3.532 19 5.072 19z" />
-                </svg>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            {/* Red accent header */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-red-400 via-rose-500 to-red-600" />
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">Delete User Account</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">This action cannot be undone</p>
+                </div>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Delete User</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                Are you sure you want to delete <span className="font-medium text-gray-800">{userToDelete?.name}</span>?
-                This action cannot be undone.
+
+              {/* User preview card */}
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 mb-5 border border-gray-100">
+                <UserAvatar name={userToDelete?.name} size="lg" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{userToDelete?.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{userToDelete?.email}</p>
+                </div>
+                <span className={`ml-auto flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  userToDelete?.role === "Admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                }`}>{userToDelete?.role}</span>
+              </div>
+
+              <p className="text-sm text-gray-500 mb-5">
+                Permanently deleting <span className="font-semibold text-gray-800">{userToDelete?.name}</span> will remove all associated data and cannot be recovered.
               </p>
+
               <div className="flex gap-3">
                 <button onClick={() => setShowDeleteModal(false)}
                   className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition">
                   Cancel
                 </button>
                 <button onClick={confirmDelete} disabled={isDeleting}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl text-white transition ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl text-white transition ${
                     isDeleting ? "bg-red-300 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
                   }`}>
                   {isDeleting ? (
@@ -1632,7 +1931,14 @@ export default function UserManagement({ activeSection, setActiveSection, sideba
                       </svg>
                       Deleting…
                     </>
-                  ) : "Delete User"}
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete User
+                    </>
+                  )}
                 </button>
               </div>
             </div>

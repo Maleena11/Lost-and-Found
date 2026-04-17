@@ -5,13 +5,13 @@ const systemSettingsSchema = new mongoose.Schema(
     _singleton: { type: String, default: 'global', unique: true },
     // General
     systemName:     { type: String, default: 'UniFind — University Lost & Found' },
-    adminEmail:     { type: String, default: 'admin@unifind.university.edu' },
-    contactPhone:   { type: String, default: '' },
+    adminEmail:     { type: String, default: 'foundsliit@gmail.com' },
+    contactPhone:   { type: String, default: '+94 11 754 4801' },
     timezone:       { type: String, default: 'Asia/Colombo' },
     language:       { type: String, default: 'en' },
     websiteUrl:     { type: String, default: '' },
-    officeLocation: { type: String, default: 'Main Building, Room 101' },
-    officeHours:    { type: String, default: 'Mon–Fri, 8:00 AM – 5:00 PM' },
+    officeLocation: { type: String, default: 'SLIIT Malabe Campus, New Kandy Road' },
+    officeHours:    { type: String, default: 'Mon–Fri, 8:30 AM – 5:00 PM' },
     // Notifications
     emailNotifications: { type: Boolean, default: true },
     smsAlerts:          { type: Boolean, default: false },

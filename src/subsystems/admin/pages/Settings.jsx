@@ -137,8 +137,8 @@ const NAV = [
 const DEFAULTS = {
   // General
   systemName:        "UniFind — University Lost & Found",
-  adminEmail:        "admin@unifind.university.edu",
-  contactPhone:      "+1 (555) 000-0000",
+  adminEmail:        "foundsliit@gmail.com",
+  contactPhone:      "+94 11 754 4801",
   timezone:          "Asia/Colombo",
   language:          "en",
   // Notifications
@@ -164,8 +164,8 @@ const DEFAULTS = {
   maxLoginAttempts:    "5",
   // General extras
   websiteUrl:          "",
-  officeLocation:      "Main Building, Room 101",
-  officeHours:         "Mon–Fri, 8:00 AM – 5:00 PM",
+  officeLocation:      "SLIIT Malabe Campus, New Kandy Road",
+  officeHours:         "Mon–Fri, 8:30 AM – 5:00 PM",
   // Display extras
   defaultItemView:     "table",
   showItemThumbnails:  true,
@@ -462,11 +462,11 @@ export default function Settings({ activeSection, setActiveSection, sidebarOpen:
             {/* Content */}
             <div ref={contentRef} className="flex-1 overflow-y-auto">
               {activeNav === "zones" ? (
-                <div className="p-6 max-w-2xl">
+                <div className="p-6 max-w-3xl">
                   <SectionCard
                     icon={<LocationIcon className="text-indigo-600" />}
                     title="Campus Zone Management"
-                    description="Add, edit, disable, or remove heatmap zones and their location keywords."
+                    description="Add, edit, disable, or remove campus zones used for heatmap location matching."
                     iconBg="bg-indigo-100"
                     topBorder="border-t-indigo-500"
                   >

@@ -50,7 +50,6 @@ function makeMapper(zones) {
   };
 }
 
-// Heat intensity levels
 function heatLevel(count, maxCount) {
   if (!count || maxCount === 0) return 0;
   const r = Math.min(count / maxCount, 1);
@@ -68,7 +67,6 @@ const HEAT_STYLES = [
   { bg: 'rgba(220,38,38,0.93)',  border: '#991B1B', text: '#fff',    badge: '#7F1D1D' },
 ];
 
-// Zone type meta
 const ZONE_TYPE_META = {
   hall:     { icon: 'fa-chalkboard-teacher', defaultBg: '#EFF6FF', defaultBorder: '#3B82F6', defaultText: '#1E40AF' },
   lab:      { icon: 'fa-laptop-code',        defaultBg: '#F0FDF4', defaultBorder: '#22C55E', defaultText: '#166534' },
@@ -80,75 +78,103 @@ const ZONE_TYPE_META = {
   security: { icon: 'fa-shield-alt',        defaultBg: '#FFF1F2', defaultBorder: '#FB7185', defaultText: '#9F1239' },
 };
 
-// Floor plan definition
+// ── Floor plan — rooms grouped into labelled sections (building outline feature) ──
 const FLOOR_PLAN = [
   {
     id: '6F', label: '6F', sub: 'Admin',
     accent: { bg: '#5B21B6', light: '#EDE9FE', border: '#7C3AED' },
-    rooms: [
-      { id: 'F6-MO',   short: 'Main\nOffice' },
-      { id: 'F6-DEAN', short: "Dean's\nOffice" },
-      { id: 'F6-ASTF', short: 'Academic\nStaff' },
-      { id: 'F6-DIN',  short: 'Staff\nDining' },
+    sections: [
+      { label: 'Admin Offices', rooms: [
+        { id: 'F6-MO',   short: 'Main\nOffice' },
+        { id: 'F6-DEAN', short: "Dean's\nOffice" },
+        { id: 'F6-ASTF', short: 'Academic\nStaff' },
+      ]},
+      { label: 'Dining', rooms: [
+        { id: 'F6-DIN', short: 'Staff\nDining' },
+      ]},
     ],
   },
   {
     id: '5F', label: '5F', sub: 'Study',
     accent: { bg: '#1D4ED8', light: '#EFF6FF', border: '#3B82F6' },
-    rooms: [
-      { id: 'F5-A502', short: 'A502' },
-      { id: 'F5-A503', short: 'A503' },
-      { id: 'F5-STU',  short: 'Study\nArea' },
-      { id: 'F5-LIB',  short: 'Library' },
+    sections: [
+      { label: 'Lecture Halls', rooms: [
+        { id: 'F5-A502', short: 'A502' },
+        { id: 'F5-A503', short: 'A503' },
+      ]},
+      { label: 'Resources', rooms: [
+        { id: 'F5-STU', short: 'Study\nArea' },
+        { id: 'F5-LIB', short: 'Library' },
+      ]},
     ],
   },
   {
     id: '4F', label: '4F', sub: 'Labs',
     accent: { bg: '#166534', light: '#F0FDF4', border: '#22C55E' },
-    rooms: [
-      { id: 'F4-A402', short: 'A402\nLab' },
-      { id: 'F4-A403', short: 'A403\nLab' },
-      { id: 'F4-A404', short: 'A404\nLab' },
-      { id: 'F4-A405', short: 'A405\nLab' },
-      { id: 'F4-A406', short: 'A406\nHall' },
+    sections: [
+      { label: 'Computer Labs', rooms: [
+        { id: 'F4-A402', short: 'A402\nLab' },
+        { id: 'F4-A403', short: 'A403\nLab' },
+        { id: 'F4-A404', short: 'A404\nLab' },
+        { id: 'F4-A405', short: 'A405\nLab' },
+      ]},
+      { label: 'Lecture Hall', rooms: [
+        { id: 'F4-A406', short: 'A406\nHall' },
+      ]},
     ],
   },
   {
     id: '3F', label: '3F', sub: 'Halls',
     accent: { bg: '#1D4ED8', light: '#EFF6FF', border: '#3B82F6' },
-    rooms: [
-      { id: 'F3-SIS',  short: 'SIS\nRoom' },
-      { id: 'F3-A301', short: 'A301' },
-      { id: 'F3-A302', short: 'A302' },
-      { id: 'F3-A303', short: 'A303' },
-      { id: 'F3-A304', short: 'A304' },
+    sections: [
+      { label: 'SIS', rooms: [
+        { id: 'F3-SIS', short: 'SIS\nRoom' },
+      ]},
+      { label: 'Lecture Halls', rooms: [
+        { id: 'F3-A301', short: 'A301' },
+        { id: 'F3-A302', short: 'A302' },
+        { id: 'F3-A303', short: 'A303' },
+        { id: 'F3-A304', short: 'A304' },
+      ]},
     ],
   },
   {
     id: '2F', label: '2F', sub: 'Halls',
     accent: { bg: '#1D4ED8', light: '#EFF6FF', border: '#3B82F6' },
-    rooms: [
-      { id: 'F2-CAF',  short: 'Cafe' },
-      { id: 'F2-A201', short: 'A201' },
-      { id: 'F2-A202', short: 'A202' },
-      { id: 'F2-A203', short: 'A203' },
-      { id: 'F2-IGR',  short: 'Game\nRoom' },
+    sections: [
+      { label: 'Café', rooms: [
+        { id: 'F2-CAF', short: 'Cafe' },
+      ]},
+      { label: 'Lecture Halls', rooms: [
+        { id: 'F2-A201', short: 'A201' },
+        { id: 'F2-A202', short: 'A202' },
+        { id: 'F2-A203', short: 'A203' },
+      ]},
+      { label: 'Recreation', rooms: [
+        { id: 'F2-IGR', short: 'Game\nRoom' },
+      ]},
     ],
   },
   {
     id: '1F', label: '1F', sub: 'Entry',
     accent: { bg: '#0369A1', light: '#F0F9FF', border: '#38BDF8' },
-    rooms: [
-      { id: 'F1-A101', short: 'A101 — Large Hall', wide: true },
-      { id: 'F1-A102', short: 'A102' },
-      { id: 'F1-NSTF', short: 'Staff\nRooms' },
+    sections: [
+      { label: 'Lecture Halls', rooms: [
+        { id: 'F1-A101', short: 'A101 — Large Hall', wide: true },
+        { id: 'F1-A102', short: 'A102' },
+      ]},
+      { label: 'Staff', rooms: [
+        { id: 'F1-NSTF', short: 'Staff\nRooms' },
+      ]},
     ],
   },
   {
     id: 'BF', label: 'BF', sub: 'Canteen',
     accent: { bg: '#9A3412', light: '#FFF7ED', border: '#F97316' },
-    rooms: [
-      { id: 'BF-CAN', short: 'Campus Canteen', wide: true },
+    sections: [
+      { label: 'Food & Beverages', rooms: [
+        { id: 'BF-CAN', short: 'Campus Canteen', wide: true },
+      ]},
     ],
   },
 ];
@@ -174,6 +200,43 @@ const STATUS_BADGE = {
   expired:  { bg: 'bg-gray-100',   text: 'text-gray-500',   border: 'border-gray-200',   dot: 'bg-gray-400',   label: 'Expired'  },
 };
 
+// ── Cluster Marker (Feature 3) ─────────────────────────────────────────────────
+// Pin-shaped marker showing count + lost/found split strip.
+// pulse=true adds a scale animation on peak-heat zones.
+function ClusterMarker({ count, lost, found, heat, pulse }) {
+  const bg      = heat?.badge || '#4F46E5';
+  const lostPct = count > 0 ? Math.round((lost  / count) * 100) : 0;
+  const fndPct  = count > 0 ? Math.round((found / count) * 100) : 0;
+
+  return (
+    <span
+      className={`absolute -top-3 -right-2 z-20 flex flex-col items-center pointer-events-none select-none${pulse ? ' cluster-pulse' : ''}`}
+    >
+      {/* Bubble */}
+      <span
+        className="min-w-[22px] h-[22px] px-1 rounded-full flex items-center justify-center text-white font-black shadow-lg border-2 border-white"
+        style={{ fontSize: '9px', background: bg, lineHeight: 1 }}
+      >
+        {count > 99 ? '99+' : count}
+      </span>
+      {/* Pin tail */}
+      <span
+        className="w-0 h-0 -mt-px"
+        style={{
+          borderLeft:  '3px solid transparent',
+          borderRight: '3px solid transparent',
+          borderTop:   `5px solid ${bg}`,
+        }}
+      />
+      {/* Lost / Found split strip */}
+      <span className="flex rounded-full overflow-hidden mt-0.5" style={{ width: '20px', height: '3px' }}>
+        <span style={{ width: `${lostPct}%`, background: '#F87171' }} />
+        <span style={{ width: `${fndPct}%`,  background: '#34D399' }} />
+      </span>
+    </span>
+  );
+}
+
 // ── Item Card ─────────────────────────────────────────────────────────────────
 function ItemCard({ item }) {
   const s = STATUS_BADGE[item.status] || STATUS_BADGE.pending;
@@ -183,7 +246,6 @@ function ItemCard({ item }) {
 
   return (
     <div className="flex gap-3 p-3 rounded-xl border border-gray-100 bg-white hover:border-indigo-200 hover:shadow-md transition-all duration-150 group">
-      {/* Thumbnail */}
       <div className={`w-11 h-11 rounded-lg flex-shrink-0 overflow-hidden border-2 flex items-center justify-center
         ${isLost ? 'border-red-100 bg-red-50' : 'border-emerald-100 bg-emerald-50'}`}>
         {item.thumbnail ? (
@@ -261,7 +323,6 @@ function ZoneDrillModal({ zone, items, onClose }) {
     >
       <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
 
-        {/* Modal header */}
         <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0"
           style={{ background: 'linear-gradient(135deg, #F8FAFF 0%, #F1F5FF 100%)' }}>
           <div className="flex items-start gap-3">
@@ -295,7 +356,6 @@ function ZoneDrillModal({ zone, items, onClose }) {
             </button>
           </div>
 
-          {/* Lost/Found ratio bar */}
           {items.length > 0 && (
             <div className="mt-3">
               <div className="flex rounded-full overflow-hidden h-1.5 bg-gray-100">
@@ -306,7 +366,6 @@ function ZoneDrillModal({ zone, items, onClose }) {
           )}
         </div>
 
-        {/* Tabs + Search */}
         <div className="px-5 pt-3 pb-3 border-b border-gray-100 flex items-center gap-2 flex-shrink-0 bg-white">
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             {[
@@ -334,7 +393,6 @@ function ZoneDrillModal({ zone, items, onClose }) {
           </div>
         </div>
 
-        {/* Item list */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2 bg-gray-50/50">
           {displayed.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 text-gray-400">
@@ -363,10 +421,15 @@ function ZoneDrillModal({ zone, items, onClose }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function CampusHeatmap({ rawItems = [] }) {
-  const [filters, setFilters]     = useState({ category: 'all', itemType: 'all', timeRange: 'semester' });
-  const [hovered, setHovered]     = useState(null);
-  const [drillZone, setDrillZone] = useState(null);
-  const [zones, setZones]         = useState(ZONES_FALLBACK.map(normaliseZone));
+  const [filters, setFilters]       = useState({ category: 'all', itemType: 'all', timeRange: 'semester' });
+  const [hovered, setHovered]       = useState(null);
+  const [drillZone, setDrillZone]   = useState(null);
+  const [zones, setZones]           = useState(ZONES_FALLBACK.map(normaliseZone));
+  // Feature 1 — timeline animation
+  const [isPlaying, setIsPlaying]   = useState(false);
+  const [animFrame, setAnimFrame]   = useState(null); // null = not in animation mode
+  // Feature 2 — full room labels toggle
+  const [showLabels, setShowLabels] = useState(false);
 
   useEffect(() => {
     fetch('http://localhost:3001/api/zones')
@@ -379,20 +442,64 @@ export default function CampusHeatmap({ rawItems = [] }) {
       .catch(() => {});
   }, []);
 
-  const zoneById             = useMemo(() => Object.fromEntries(zones.map(z => [z.id, z])), [zones]);
-  const mapLocationToZoneId  = useMemo(() => makeMapper(zones), [zones]);
+  const zoneById            = useMemo(() => Object.fromEntries(zones.map(z => [z.id, z])), [zones]);
+  const mapLocationToZoneId = useMemo(() => makeMapper(zones), [zones]);
 
-  const zoneCounts = useMemo(() => {
-    let items = rawItems;
-    if (filters.category !== 'all')  items = items.filter(i => i.category === filters.category);
-    if (filters.itemType !== 'all')  items = items.filter(i => i.itemType === filters.itemType);
-    if (filters.timeRange !== 'all') {
+  // Feature 1 — weekly animation frames across a 120-day semester (~17 frames)
+  const animFrames = useMemo(() => {
+    const semDays = 120;
+    const now     = Date.now();
+    const start   = now - semDays * 86400000;
+    const weeks   = Math.ceil(semDays / 7);
+    return Array.from({ length: weeks }, (_, w) => {
+      const cutoff = Math.min(start + (w + 1) * 7 * 86400000, now);
+      return {
+        cutoff,
+        label: new Date(cutoff).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+      };
+    });
+  }, []);
+
+  // Feature 1 — auto-advance timer
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = setInterval(() => {
+      setAnimFrame(prev => {
+        const next = prev === null ? 0 : prev + 1;
+        if (next >= animFrames.length) {
+          setIsPlaying(false);
+          return null;
+        }
+        return next;
+      });
+    }, 750);
+    return () => clearInterval(timer);
+  }, [isPlaying, animFrames.length]);
+
+  // ── Shared filter helper (respects animation frame) ──────────────────────────
+  function applyFilters(items) {
+    if (filters.category !== 'all') items = items.filter(i => i.category === filters.category);
+    if (filters.itemType !== 'all') items = items.filter(i => i.itemType === filters.itemType);
+
+    if (animFrame !== null) {
+      const semStart    = Date.now() - 120 * 86400000;
+      const frameCutoff = animFrames[animFrame]?.cutoff ?? Date.now();
+      items = items.filter(i => {
+        const t = new Date(i.createdAt).getTime();
+        return t >= semStart && t <= frameCutoff;
+      });
+    } else if (filters.timeRange !== 'all') {
       const days = { week: 7, month: 30, semester: 120, year: 365 }[filters.timeRange];
       if (days) {
         const cutoff = Date.now() - days * 86400000;
         items = items.filter(i => new Date(i.createdAt).getTime() >= cutoff);
       }
     }
+    return items;
+  }
+
+  const zoneCounts = useMemo(() => {
+    const items = applyFilters([...rawItems]);
     const counts = {};
     let unmapped = 0;
     items.forEach(item => {
@@ -404,7 +511,8 @@ export default function CampusHeatmap({ rawItems = [] }) {
       else counts[zid].found++;
     });
     return { counts, unmapped, filteredTotal: items.length };
-  }, [rawItems, filters, mapLocationToZoneId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawItems, filters, mapLocationToZoneId, animFrame, animFrames]);
 
   const maxCount = useMemo(
     () => Math.max(1, ...Object.values(zoneCounts.counts).map(z => z.total)),
@@ -421,36 +529,40 @@ export default function CampusHeatmap({ rawItems = [] }) {
 
   const drillItems = useMemo(() => {
     if (!drillZone) return [];
-    let items = rawItems;
-    if (filters.category !== 'all')  items = items.filter(i => i.category === filters.category);
-    if (filters.itemType !== 'all')  items = items.filter(i => i.itemType === filters.itemType);
-    if (filters.timeRange !== 'all') {
-      const days = { week: 7, month: 30, semester: 120, year: 365 }[filters.timeRange];
-      if (days) {
-        const cutoff = Date.now() - days * 86400000;
-        items = items.filter(i => new Date(i.createdAt).getTime() >= cutoff);
-      }
-    }
-    return items
+    return applyFilters([...rawItems])
       .filter(i => mapLocationToZoneId(i.location) === drillZone.id)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [drillZone, rawItems, filters, mapLocationToZoneId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drillZone, rawItems, filters, mapLocationToZoneId, animFrame, animFrames]);
 
   const hoveredZone   = hovered ? zoneById[hovered] : null;
   const hoveredCounts = hovered ? (zoneCounts.counts[hovered] || { total: 0, lost: 0, found: 0 }) : null;
-  const timeLabel     = TIME_RANGES.find(t => t.value === filters.timeRange)?.label ?? '';
+  const timeLabel     = animFrame !== null
+    ? `Week ${animFrame + 1} · ${animFrames[animFrame]?.label}`
+    : (TIME_RANGES.find(t => t.value === filters.timeRange)?.label ?? '');
 
   function setFilter(key, val) {
     setFilters(prev => ({ ...prev, [key]: val }));
   }
 
-  // Summary stats
-  const totalLost  = rawItems.filter(i => i.itemType === 'lost').length;
-  const totalFound = rawItems.filter(i => i.itemType === 'found').length;
+  const totalLost   = rawItems.filter(i => i.itemType === 'lost').length;
+  const totalFound  = rawItems.filter(i => i.itemType === 'found').length;
   const activeZones = Object.keys(zoneCounts.counts).length;
 
   return (
     <>
+      {/* ── Keyframe CSS for cluster pulse animation ── */}
+      <style>{`
+        @keyframes clusterPulse {
+          0%, 100% { transform: scale(1); }
+          50%       { transform: scale(1.25); }
+        }
+        .cluster-pulse > span:first-child {
+          animation: clusterPulse 1.3s ease-in-out infinite;
+          display: inline-flex;
+        }
+      `}</style>
+
       {drillZone && (
         <ZoneDrillModal zone={drillZone} items={drillItems} onClose={() => setDrillZone(null)} />
       )}
@@ -468,7 +580,12 @@ export default function CampusHeatmap({ rawItems = [] }) {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-800 leading-tight">Campus Loss Heatmap</h3>
-                <p className="text-[11px] text-gray-400 leading-tight mt-0.5">SLIIT Kandy · {timeLabel}</p>
+                <p
+                  className="text-[11px] leading-tight mt-0.5"
+                  style={{ color: animFrame !== null ? '#6366F1' : '#9CA3AF' }}
+                >
+                  SLIIT Kandy · {timeLabel}
+                </p>
               </div>
             </div>
 
@@ -520,16 +637,31 @@ export default function CampusHeatmap({ rawItems = [] }) {
               ))}
             </select>
 
-            {/* Time range */}
+            {/* Time range — disabled during animation */}
             <select
               value={filters.timeRange}
               onChange={e => setFilter('timeRange', e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 cursor-pointer shadow-sm"
+              disabled={animFrame !== null}
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {TIME_RANGES.map(t => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
+
+            {/* Feature 2 — Labels toggle */}
+            <button
+              onClick={() => setShowLabels(v => !v)}
+              title="Toggle full room names"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition shadow-sm ${
+                showLabels
+                  ? 'bg-violet-600 text-white border-violet-600 shadow-violet-200'
+                  : 'bg-white text-gray-500 border-gray-200 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <i className="fas fa-tag text-[10px]"></i>
+              Labels
+            </button>
 
             <span className="ml-auto text-[10px] text-gray-400">
               <span className="font-semibold text-gray-600">{zoneCounts.filteredTotal}</span> items mapped
@@ -538,6 +670,68 @@ export default function CampusHeatmap({ rawItems = [] }) {
               )}
             </span>
           </div>
+        </div>
+
+        {/* ── Feature 1: Timeline / Animation Controls ── */}
+        <div className="px-5 py-3 border-b border-gray-100" style={{ background: '#F8FAFF' }}>
+          <div className="flex items-center gap-3">
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider flex-shrink-0">Timeline</span>
+
+            {/* Play */}
+            <button
+              onClick={() => { if (animFrame === null) setAnimFrame(0); setIsPlaying(true); }}
+              disabled={isPlaying}
+              title="Play animation"
+              className="w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white shadow-sm transition flex-shrink-0"
+            >
+              <i className="fas fa-play text-[9px]"></i>
+            </button>
+
+            {/* Pause */}
+            <button
+              onClick={() => setIsPlaying(false)}
+              disabled={!isPlaying}
+              title="Pause"
+              className="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 text-gray-500 shadow-sm transition flex-shrink-0"
+            >
+              <i className="fas fa-pause text-[9px]"></i>
+            </button>
+
+            {/* Reset */}
+            <button
+              onClick={() => { setIsPlaying(false); setAnimFrame(null); }}
+              title="Reset to filter view"
+              className="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 shadow-sm transition flex-shrink-0"
+            >
+              <i className="fas fa-stop text-[9px]"></i>
+            </button>
+
+            {/* Scrubber */}
+            <input
+              type="range"
+              min={0}
+              max={animFrames.length - 1}
+              value={animFrame ?? 0}
+              onChange={e => { setIsPlaying(false); setAnimFrame(Number(e.target.value)); }}
+              className="flex-1 accent-indigo-600 cursor-pointer"
+              style={{ height: '6px' }}
+            />
+
+            {/* Frame label */}
+            <span
+              className="text-[10px] font-bold w-16 text-right flex-shrink-0 tabular-nums"
+              style={{ color: animFrame !== null ? '#6366F1' : '#D1D5DB' }}
+            >
+              {animFrame !== null ? animFrames[animFrame]?.label : 'Not set'}
+            </span>
+          </div>
+
+          <p className="text-[9px] mt-1.5 text-center" style={{ color: animFrame !== null ? '#818CF8' : '#9CA3AF' }}>
+            {animFrame !== null
+              ? `Week ${animFrame + 1} of ${animFrames.length} — cumulative hotspot build-up since semester start`
+              : 'Press ▶ to watch hotspots evolve across the semester'
+            }
+          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row">
@@ -550,11 +744,11 @@ export default function CampusHeatmap({ rawItems = [] }) {
               <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex-shrink-0">Heat Scale</span>
               <div className="flex items-center gap-1.5 flex-1">
                 {[
-                  { label: 'None',   bg: '#F3F4F6', border: '#E5E7EB' },
-                  { label: 'Low',    bg: 'rgba(254,243,199,0.9)', border: '#F59E0B' },
-                  { label: 'Medium', bg: 'rgba(253,186,116,0.9)', border: '#EA580C' },
-                  { label: 'High',   bg: 'rgba(249,115,22,0.92)', border: '#C2410C' },
-                  { label: 'Peak',   bg: 'rgba(220,38,38,0.93)',  border: '#991B1B' },
+                  { label: 'None',   bg: '#F3F4F6',             border: '#E5E7EB' },
+                  { label: 'Low',    bg: 'rgba(254,243,199,0.9)',border: '#F59E0B' },
+                  { label: 'Medium', bg: 'rgba(253,186,116,0.9)',border: '#EA580C' },
+                  { label: 'High',   bg: 'rgba(249,115,22,0.92)',border: '#C2410C' },
+                  { label: 'Peak',   bg: 'rgba(220,38,38,0.93)', border: '#991B1B' },
                 ].map(({ label, bg, border }) => (
                   <div key={label} className="flex items-center gap-1">
                     <span className="w-4 h-4 rounded" style={{ background: bg, border: `1.5px solid ${border}` }}></span>
@@ -565,20 +759,25 @@ export default function CampusHeatmap({ rawItems = [] }) {
               <span className="text-[10px] text-gray-400 flex-shrink-0">Click zone to explore</span>
             </div>
 
-            {/* Building header */}
+            {/* Feature 2 — Building outline header with blueprint corner markers */}
             <div className="relative mb-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-dashed border-indigo-200"></div>
+                <div className="w-full border-t-2 border-dashed border-indigo-300"></div>
               </div>
-              <div className="relative flex justify-center">
+              <div className="relative flex justify-between items-center">
+                <span className="w-3 h-3 rounded-sm bg-indigo-200 border-2 border-indigo-400 flex-shrink-0"></span>
                 <span className="px-4 py-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full tracking-wider">
                   MAIN ACADEMIC BUILDING — BASEMENT + 6 FLOORS
                 </span>
+                <span className="w-3 h-3 rounded-sm bg-indigo-200 border-2 border-indigo-400 flex-shrink-0"></span>
               </div>
             </div>
 
-            {/* Floor rows */}
-            <div className="border-2 rounded-xl overflow-hidden shadow-sm" style={{ borderColor: '#C7D2FE' }}>
+            {/* Feature 2 — Floor rows with section dividers (building outline) */}
+            <div
+              className="rounded-xl overflow-hidden shadow-sm"
+              style={{ border: '2px solid #818CF8', boxShadow: '0 0 0 1px #E0E7FF, 0 4px 12px rgba(99,102,241,0.08)' }}
+            >
               {FLOOR_PLAN.map((floor, floorIdx) => (
                 <div
                   key={floor.id}
@@ -605,59 +804,83 @@ export default function CampusHeatmap({ rawItems = [] }) {
                     >ELV</span>
                   </div>
 
-                  {/* Rooms */}
-                  <div className="flex-1 flex flex-wrap gap-1.5 p-2 items-center" style={{ background: '#FAFBFF' }}>
-                    {floor.rooms.map(room => {
-                      const zone    = zoneById[room.id];
-                      const cnt     = zoneCounts.counts[room.id];
-                      const level   = cnt ? heatLevel(cnt.total, maxCount) : 0;
-                      const heat    = HEAT_STYLES[level];
-                      const typeMeta = zone ? (ZONE_TYPE_META[zone.type] || ZONE_TYPE_META.shared) : null;
-                      const isHov   = hovered === room.id;
+                  {/* Feature 2 — Sections with labelled dividers */}
+                  <div className="flex-1 flex gap-0 p-2 items-start flex-wrap" style={{ background: '#FAFBFF' }}>
+                    {floor.sections.map((section, sIdx) => (
+                      <div
+                        key={section.label}
+                        className={`flex flex-col gap-1 ${sIdx > 0 ? 'border-l border-dashed border-indigo-200 pl-2 ml-1' : ''}`}
+                      >
+                        {/* Section label — building outline feature */}
+                        <div className="flex items-center gap-1 px-0.5">
+                          <span className="text-[7px] font-bold text-indigo-300 uppercase tracking-wider whitespace-nowrap leading-none">
+                            {section.label}
+                          </span>
+                          <span className="flex-1 h-px bg-indigo-100 min-w-[6px]"></span>
+                        </div>
 
-                      const baseStyle = typeMeta
-                        ? { background: typeMeta.defaultBg, borderColor: typeMeta.defaultBorder, color: typeMeta.defaultText }
-                        : { background: '#F3F4F6', borderColor: '#D1D5DB', color: '#6B7280' };
+                        {/* Rooms */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {section.rooms.map(room => {
+                            const zone     = zoneById[room.id];
+                            const cnt      = zoneCounts.counts[room.id];
+                            const level    = cnt ? heatLevel(cnt.total, maxCount) : 0;
+                            const heat     = HEAT_STYLES[level];
+                            const typeMeta = zone ? (ZONE_TYPE_META[zone.type] || ZONE_TYPE_META.shared) : null;
+                            const isHov    = hovered === room.id;
+                            const isPulse  = level === 4; // peak = pulse
 
-                      const style = heat
-                        ? { background: heat.bg, borderColor: heat.border, color: heat.text }
-                        : baseStyle;
+                            const baseStyle = typeMeta
+                              ? { background: typeMeta.defaultBg, borderColor: typeMeta.defaultBorder, color: typeMeta.defaultText }
+                              : { background: '#F3F4F6', borderColor: '#D1D5DB', color: '#6B7280' };
+                            const style = heat
+                              ? { background: heat.bg, borderColor: heat.border, color: heat.text }
+                              : baseStyle;
 
-                      return (
-                        <button
-                          key={room.id}
-                          onMouseEnter={() => setHovered(room.id)}
-                          onMouseLeave={() => setHovered(null)}
-                          onClick={() => zone && cnt?.total > 0 ? setDrillZone(zone) : setHovered(isHov ? null : room.id)}
-                          title={cnt?.total > 0 ? `${zone?.name}: ${cnt.total} item${cnt.total !== 1 ? 's' : ''}` : zone?.name}
-                          className={`relative rounded-lg border-2 text-center leading-tight transition-all duration-150 cursor-pointer select-none
-                            ${room.wide ? 'flex-1' : ''}
-                            ${isHov ? 'scale-[1.07] z-10 shadow-lg ring-2 ring-indigo-300' : 'hover:scale-[1.04] hover:shadow-md hover:z-10'}`}
-                          style={{
-                            ...style,
-                            minHeight: '38px',
-                            minWidth: room.wide ? '90px' : '48px',
-                            padding: '4px 6px',
-                            fontSize: '9px',
-                            fontWeight: 600,
-                            letterSpacing: '0.01em',
-                          }}
-                        >
-                          {/* Count badge */}
-                          {cnt && cnt.total > 0 && (
-                            <span
-                              className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-white font-black shadow-md border-2 border-white"
-                              style={{ fontSize: '8px', background: heat?.badge || '#4F46E5', lineHeight: 1 }}
-                            >
-                              {cnt.total > 9 ? '9+' : cnt.total}
-                            </span>
-                          )}
-                          {room.short.split('\n').map((line, i) => (
-                            <span key={i} className="block">{line}</span>
-                          ))}
-                        </button>
-                      );
-                    })}
+                            // Feature 2 — full label when showLabels is on
+                            const displayLines = showLabels && zone?.name
+                              ? [zone.name]
+                              : room.short.split('\n');
+
+                            return (
+                              <button
+                                key={room.id}
+                                onMouseEnter={() => setHovered(room.id)}
+                                onMouseLeave={() => setHovered(null)}
+                                onClick={() => zone && cnt?.total > 0 ? setDrillZone(zone) : setHovered(isHov ? null : room.id)}
+                                title={cnt?.total > 0 ? `${zone?.name}: ${cnt.total} item${cnt.total !== 1 ? 's' : ''}` : zone?.name}
+                                className={`relative rounded-lg border-2 text-center leading-tight transition-all duration-150 cursor-pointer select-none
+                                  ${room.wide ? 'flex-1' : ''}
+                                  ${isHov ? 'scale-[1.07] z-10 shadow-lg ring-2 ring-indigo-300' : 'hover:scale-[1.04] hover:shadow-md hover:z-10'}`}
+                                style={{
+                                  ...style,
+                                  minHeight: '38px',
+                                  minWidth: room.wide ? '90px' : '48px',
+                                  padding: '4px 6px',
+                                  fontSize: '9px',
+                                  fontWeight: 600,
+                                  letterSpacing: '0.01em',
+                                }}
+                              >
+                                {/* Feature 3 — Cluster marker replaces plain badge */}
+                                {cnt && cnt.total > 0 && (
+                                  <ClusterMarker
+                                    count={cnt.total}
+                                    lost={cnt.lost}
+                                    found={cnt.found}
+                                    heat={heat}
+                                    pulse={isPulse}
+                                  />
+                                )}
+                                {displayLines.map((line, i) => (
+                                  <span key={i} className={`block ${showLabels ? 'truncate max-w-[72px]' : ''}`}>{line}</span>
+                                ))}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -681,15 +904,18 @@ export default function CampusHeatmap({ rawItems = [] }) {
                   { id: 'GRD-FIELD', label: 'Open Ground / Parking', icon: 'fa-tree' },
                   { id: 'GRD-SEC',   label: 'Security Gate',         icon: 'fa-shield-alt' },
                 ].map(g => {
-                  const cnt       = zoneCounts.counts[g.id];
-                  const level     = cnt ? heatLevel(cnt.total, maxCount) : 0;
-                  const heat      = HEAT_STYLES[level];
-                  const isHov     = hovered === g.id;
+                  const cnt        = zoneCounts.counts[g.id];
+                  const level      = cnt ? heatLevel(cnt.total, maxCount) : 0;
+                  const heat       = HEAT_STYLES[level];
+                  const isHov      = hovered === g.id;
                   const groundZone = zoneById[g.id];
+                  const isPulse    = level === 4;
 
                   const style = heat
                     ? { background: heat.bg, borderColor: heat.border, color: heat.text }
                     : { background: '#F0FDF4', borderColor: '#86EFAC', color: '#166534' };
+
+                  const displayLabel = showLabels && groundZone?.name ? groundZone.name : g.label;
 
                   return (
                     <button
@@ -701,16 +927,18 @@ export default function CampusHeatmap({ rawItems = [] }) {
                         ${isHov ? 'scale-[1.02] shadow-lg ring-2 ring-green-200' : 'hover:shadow-md'}`}
                       style={style}
                     >
+                      {/* Feature 3 — Cluster marker on grounds too */}
                       {cnt && cnt.total > 0 && (
-                        <span
-                          className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-white font-black shadow-md border-2 border-white"
-                          style={{ fontSize: '8px', background: heat?.badge || '#4F46E5' }}
-                        >
-                          {cnt.total > 9 ? '9+' : cnt.total}
-                        </span>
+                        <ClusterMarker
+                          count={cnt.total}
+                          lost={cnt.lost}
+                          found={cnt.found}
+                          heat={heat}
+                          pulse={isPulse}
+                        />
                       )}
                       <i className={`fas ${g.icon} text-xs`}></i>
-                      <span>{g.label}</span>
+                      <span>{displayLabel}</span>
                       {cnt && cnt.total > 0 && (
                         <span className="ml-auto opacity-80 text-[10px] font-bold">{cnt.total} items</span>
                       )}
@@ -761,7 +989,6 @@ export default function CampusHeatmap({ rawItems = [] }) {
                       <span className="text-xs font-semibold text-emerald-600">{hoveredCounts.found}</span>
                     </div>
 
-                    {/* Mini ratio bar */}
                     {hoveredCounts.total > 0 && (
                       <div className="pt-1">
                         <div className="flex rounded-full overflow-hidden h-1.5 bg-gray-100">

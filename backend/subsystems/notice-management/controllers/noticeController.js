@@ -1,8 +1,10 @@
 const Notice = require('../models/Notice');
+const SecureTip = require('../models/SecureTip');
+const NoticeComment = require('../models/NoticeComment');
 const NotificationPreference = require('../../claim-verification/models/NotificationPreference');
 const AppNotification = require('../../claim-verification/models/AppNotification');
 const mongoose = require('mongoose');
-const { sendNoticeNotification } = require('../../../utils/emailService');
+const { sendNoticeNotification, sendForwardAlertEmail } = require('../../../utils/emailService');
 
 /**
  * @desc    Create a new notice 
@@ -421,6 +423,180 @@ const getArchivedNotices = async (_req, res) => {
   }
 };
 
+// @desc    Submit a secure tip for a notice
+// @route   POST /api/notices/:id/tips
+const createSecureTip = async (req, res) => {
+  try {
+    const { userId, userName, text } = req.body;
+    const notice = await Notice.collection.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+
+    if (!notice) {
+      return res.status(404).json({ success: false, error: 'Notice not found' });
+    }
+
+    const tip = await SecureTip.create({
+      noticeId: req.params.id,
+      userId,
+      userName,
+      text
+    });
+
+    res.status(201).json({ success: true, data: tip });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Get all secure tips for admin "Found Item Messages"
+// @route   GET /api/notices/tips/all
+const getAllSecureTips = async (_req, res) => {
+  try {
+    const tips = await SecureTip.find()
+      .populate({
+        path: 'noticeId',
+        select: 'title itemType category priority targetAudience content attachments contactPhone contactEmail endDate startDate createdAt'
+      })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: tips.length,
+      data: tips
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Send found-item alert email to a student
+// @route   POST /api/notices/:id/forward-alert
+const forwardNoticeAlert = async (req, res) => {
+  try {
+    const { friendEmail } = req.body;
+
+    if (!friendEmail) {
+      return res.status(400).json({ success: false, message: 'Recipient email is required' });
+    }
+
+    const notice = await Notice.collection.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+    if (!notice) {
+      return res.status(404).json({ success: false, message: 'Notice not found' });
+    }
+
+    if (notice.category !== 'found-item') {
+      return res.status(400).json({ success: false, message: 'Alerts can only be sent for found-item notices' });
+    }
+
+    await sendForwardAlertEmail(friendEmail, notice);
+
+    res.status(200).json({
+      success: true,
+      message: 'Alert email sent successfully'
+    });
+  } catch (error) {
+    console.error('Forward alert error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send alert email'
+    });
+  }
+};
+
+// @desc    Create a pending smart report
+// @route   POST /api/notices/smart-report
+const createSmartReport = async (req, res) => {
+  try {
+    const noticeData = { ...req.body, status: 'pending' };
+    const notice = await Notice.create(noticeData);
+    res.status(201).json({ success: true, data: notice });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Get all pending notices
+// @route   GET /api/notices/pending
+const getPendingNotices = async (req, res) => {
+  try {
+    // Read directly from the raw collection so pending items bypass the public pre('find') filter.
+    const notices = await Notice.collection
+      .find({
+        status: 'pending',
+        isArchived: { $ne: true }
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    res.status(200).json({ success: true, count: notices.length, data: notices });
+  } catch (error) {
+    console.error('Get pending notices error:', error);
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Approve or reject a pending notice
+// @route   PATCH /api/notices/:id/status
+const updateNoticeStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const notice = await Notice.findByIdAndUpdate(
+      req.params.id, 
+      { status }, 
+      { new: true, runValidators: false }
+    );
+
+    if (!notice) return res.status(404).json({ success: false, message: 'Notice not found' });
+    res.status(200).json({ success: true, data: notice });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Get all sighting comments for a notice
+// @route   GET /api/notices/:id/comments
+const getComments = async (req, res) => {
+  try {
+    const comments = await NoticeComment.find({ noticeId: req.params.id })
+      .sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: comments });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Post a sighting comment on a notice
+// @route   POST /api/notices/:id/comments
+const createComment = async (req, res) => {
+  try {
+    const { userId, userName, text, isAnonymous } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ success: false, error: 'Comment text is required' });
+    }
+
+    const notice = await Notice.findById(req.params.id);
+    if (!notice) {
+      return res.status(404).json({ success: false, error: 'Notice not found' });
+    }
+
+    const comment = await NoticeComment.create({
+      noticeId: req.params.id,
+      userId: userId || 'anonymous',
+      userName: isAnonymous ? 'Anonymous' : (userName || 'Student'),
+      text: text.trim(),
+      isAnonymous: !!isAnonymous
+    });
+
+    res.status(201).json({ success: true, data: comment });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createNotice,
   getNotices,
@@ -432,5 +608,13 @@ module.exports = {
   getNoticesByAudience,
   searchNotices,
   deleteExpiredNotices,
-  getArchivedNotices
+  getArchivedNotices,
+  createSecureTip,
+  getAllSecureTips,
+  forwardNoticeAlert,
+  createSmartReport,
+  getPendingNotices,
+  updateNoticeStatus,
+  getComments,
+  createComment
 };

@@ -27,6 +27,8 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
       label: "Communications",
       items: [
         { id: "notices", label: "Notices", icon: "fa-bullhorn", path: "/admin/dashboard/notices" },
+        { id: "secure-tips", label: "Found Item Messages", icon: "fa-hand-holding", path: "/admin/dashboard/secure-tips", sub: true },
+        { id: "pending-notices", label: "Pending Smart Reports", icon: "fa-clock", path: "/admin/dashboard/pending-notices", sub: true },
       ]
     },
     {

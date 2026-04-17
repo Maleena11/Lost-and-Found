@@ -508,4 +508,65 @@ const sendCollectionReceipt = async (toEmail, { claimantName, claimRef, itemName
   }
 };
 
-module.exports = { sendNoticeNotification, sendArchiveNotification, sendClaimConfirmation, sendApprovalWithPin, sendCollectionReceipt };
+const sendForwardAlertEmail = async (friendEmail, notice) => {
+  const transport = await getTransporter();
+
+  const redirectUrl = `http://localhost:5173/notice?alertItem=${notice._id}`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 32px; border-radius: 12px;">
+      
+      <!-- Main Email Card Container -->
+      <div style="border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); background: white; overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #4f46e5, #8b5cf6); padding: 28px 32px; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.1);">
+          <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            SLIIT Lost &amp; Found Alert
+          </h1>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px;">
+        <p style="color: #374151; font-size: 15px; margin: 0 0 12px 0;">
+          Hello,
+        </p>
+        <p style="color: #4b5563; font-size: 14px; line-height: 1.7; margin: 0 0 24px 0;">
+          A fellow student thinks an item recently posted to the <strong>Found Board</strong> might belong to you.
+        </p>
+
+        <!-- Alert Box -->
+        <div style="background: #e0f2fe; border-left: 4px solid #0284c7; padding: 16px; margin-bottom: 24px; border-radius: 0 8px 8px 0;">
+          <p style="color: #0369a1; font-weight: bold; margin: 0 0 8px 0;">Item Category: ${notice.itemType || 'Found Item'}</p>
+          <p style="color: #4b5563; font-size: 13px; margin: 0;">We cannot share specific item details here for security reasons. Please click the link below to view the item and securely claim it if it is yours.</p>
+        </div>
+
+        <div style="text-align: center; margin: 36px 0;">
+          <a href="${redirectUrl}" style="background: linear-gradient(135deg, #4f46e5, #8b5cf6); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3); letter-spacing: 0.5px;">
+            View Found Item
+          </a>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="color: #9ca3af; font-size: 11px; margin: 0; text-align: center; line-height: 1.6;">
+          This is an automated notification from the SLIIT Lost &amp; Found System.<br />
+          If this was sent by mistake, please ignore.
+        </p>
+      </div> <!-- End Main Email Card Container -->
+    </div>
+  `;
+
+  const info = await transport.sendMail({
+    from: `"SLIIT Lost & Found" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@lostfound.lk'}>`,
+    to: friendEmail,
+    subject: `Hey! Someone thinks they found your item | SLIIT`,
+    html
+  });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[Email] Forward Alert preview for ${friendEmail}: ${previewUrl}`);
+  }
+};
+
+module.exports = { sendNoticeNotification, sendArchiveNotification, sendClaimConfirmation, sendApprovalWithPin, sendCollectionReceipt, sendForwardAlertEmail };

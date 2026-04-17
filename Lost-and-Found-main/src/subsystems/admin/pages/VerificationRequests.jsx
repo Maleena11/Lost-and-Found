@@ -1346,17 +1346,17 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
               {/* ── Claims Table ── */}
               <div className="bg-white rounded-xl border border-slate-400 shadow-sm overflow-hidden">
-                <table className="w-full text-sm border-collapse border border-slate-400">
+                <table className="w-full text-sm border-collapse border border-slate-500">
                   <thead>
-                    <tr className="bg-slate-50">
-                      <th className="w-8 px-4 py-3 text-left border border-slate-400"></th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Claimant</th>
+                    <tr className="bg-slate-100">
+                      <th className="w-8 px-4 py-3 text-left border border-slate-500"></th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Claimant</th>
                       {!selectedFoundItemId && (
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Item</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Item</th>
                       )}
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Submitted</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Status</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 border border-slate-400">Actions</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Submitted</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Status</th>
+                      <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1406,7 +1406,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         <tr key={request._id} className={`transition-colors ${rowBg} ${leftAccent}`}>
 
                           {/* Checkbox */}
-                          <td className="px-4 py-3 border border-slate-400">
+                          <td className="px-4 py-3 border border-slate-500">
                             {request.status === 'pending' ? (
                               <input
                                 type="checkbox"
@@ -1421,7 +1421,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </td>
 
                           {/* Claimant */}
-                          <td className="px-4 py-3 border border-slate-400">
+                          <td className="px-4 py-3 border border-slate-500">
                             <div className="flex items-center gap-2.5">
                               <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm`}>
                                 {initials}
@@ -1432,7 +1432,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
                           {/* Item */}
                           {!selectedFoundItemId && (
-                            <td className="px-4 py-3 border border-slate-400">
+                            <td className="px-4 py-3 border border-slate-500">
                               {request.itemId?.itemName ? (
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="text-sm font-medium text-slate-700">{request.itemId.itemName}</span>
@@ -1458,7 +1458,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           )}
 
                           {/* Submitted date */}
-                          <td className="px-4 py-3 whitespace-nowrap border border-slate-400">
+                          <td className="px-4 py-3 whitespace-nowrap border border-slate-500">
                             <div className="flex flex-col gap-0.5">
                               {isStale && (
                                 <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded w-fit">
@@ -1472,7 +1472,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </td>
 
                           {/* Status */}
-                          <td className="px-4 py-3 border border-slate-400">
+                          <td className="px-4 py-3 border border-slate-500">
                             <div className="flex flex-col gap-0.5">
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap w-fit ${statusStyles[request.status] || statusStyles.processed}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
@@ -1490,7 +1490,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </td>
 
                           {/* Actions */}
-                          <td className="px-4 py-3 border border-slate-400">
+                          <td className="px-4 py-3 border border-slate-500">
                             <div className="flex items-center gap-1.5 justify-end">
                               {/* Compare toggle */}
                               {(() => {

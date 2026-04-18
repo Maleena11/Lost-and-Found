@@ -11,6 +11,30 @@ const EMPTY_STAGES = {
   stage3: { status: 'pending', notes: '' }
 };
 
+const REJECTION_REASONS = {
+  stage1: [
+    "Description doesn't match item",
+    "Category mismatch",
+    "Location details don't match",
+    "Date / time inconsistency",
+    "Not enough detail provided",
+  ],
+  stage2: [
+    "Ownership proof insufficient",
+    "Proof document unclear or unverifiable",
+    "Photos don't match item",
+    "Identity not verified",
+    "No supporting evidence submitted",
+  ],
+  stage3: [
+    "Insufficient overall evidence",
+    "Stronger claim exists for this item",
+    "Suspicious or duplicate submission",
+    "Claimant unresponsive",
+    "Other (see notes)",
+  ],
+};
+
 // ── In-modal photo gallery panel ───────────────────────────────────────────
 function PhotoGalleryPanel({ images, activeIdx, setActiveIdx, accentColor, label, onLightboxOpen }) {
   const ring   = accentColor === 'teal' ? 'ring-teal-400 border-teal-400'   : 'ring-amber-400 border-amber-400';
@@ -286,6 +310,206 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
   );
 }
 
+// ── Confidence Score Logic ────────────────────────────────────────────────────
+const STOPWORDS = new Set([
+  'a','an','the','is','are','was','were','in','on','at','of','to','for','and',
+  'or','but','it','its','this','that','i','my','have','had','with','been','be',
+  'by','from','as','so','if','up','not','can','will','do','did','he','she',
+  'they','we','you','your','our','their','has','there','some','one','all',
+]);
+
+function extractKeywords(text) {
+  return (text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOPWORDS.has(w));
+}
+
+function computeConfidenceScore(claim) {
+  if (!claim) return { total: 0, completeness: 0, textMatch: 0, imageSubmitted: 0 };
+
+  const vd  = claim.verificationDetails || {};
+  const ci  = claim.claimantInfo        || {};
+  const imgs = claim.claimantImages     || [];
+
+  // A. Completeness — 50 pts
+  let completeness = 0;
+  const desc = (vd.description || '').trim();
+  if      (desc.length >= 50) completeness += 15;
+  else if (desc.length >= 20) completeness +=  8;
+
+  if ((vd.ownershipProof || '').trim().length > 0) completeness += 15;
+  if ((vd.additionalInfo || '').trim().length > 0) completeness += 10;
+
+  const infoFields   = [ci.name, ci.email, ci.phone, ci.address];
+  const filledFields = infoFields.filter(f => f && String(f).trim().length > 0).length;
+  completeness += Math.round((filledFields / 4) * 10);
+
+  // B. Text Match — 30 pts (Jaccard similarity on keywords)
+  let textMatch = 0;
+  const claimWords = extractKeywords(desc);
+  const itemWords  = extractKeywords(claim.itemId?.description || '');
+  if (claimWords.length > 0 && itemWords.length > 0) {
+    const claimSet = new Set(claimWords);
+    const itemSet  = new Set(itemWords);
+    const intersection = [...claimSet].filter(w => itemSet.has(w)).length;
+    const union        = new Set([...claimSet, ...itemSet]).size;
+    textMatch = union > 0 ? Math.round((intersection / union) * 30) : 0;
+  }
+
+  // C. Image Submitted — 20 pts
+  const imageSubmitted = imgs.length >= 1 ? 20 : 0;
+
+  const total = Math.min(100, completeness + textMatch + imageSubmitted);
+  return { total, completeness, textMatch, imageSubmitted };
+}
+
+// ── ConfidenceScore Component ─────────────────────────────────────────────────
+function ConfidenceScore({ claim }) {
+  const [open, setOpen] = useState(false);
+  const { total, completeness, textMatch, imageSubmitted } = computeConfidenceScore(claim);
+
+  const band =
+    total >= 70 ? 'High'   :
+    total >= 40 ? 'Medium' : 'Low';
+
+  const theme = {
+    High: {
+      bar:    'bg-emerald-500',
+      glow:   'shadow-emerald-200',
+      border: 'border-emerald-200',
+      bg:     'bg-gradient-to-br from-emerald-50 to-white',
+      badge:  'bg-emerald-100 text-emerald-700 border-emerald-200',
+      track:  'bg-emerald-100',
+      label:  'text-emerald-700',
+      icon:   'text-emerald-500',
+      dot:    'bg-emerald-500',
+    },
+    Medium: {
+      bar:    'bg-amber-400',
+      glow:   'shadow-amber-200',
+      border: 'border-amber-200',
+      bg:     'bg-gradient-to-br from-amber-50 to-white',
+      badge:  'bg-amber-100 text-amber-700 border-amber-200',
+      track:  'bg-amber-100',
+      label:  'text-amber-700',
+      icon:   'text-amber-500',
+      dot:    'bg-amber-400',
+    },
+    Low: {
+      bar:    'bg-red-500',
+      glow:   'shadow-red-200',
+      border: 'border-red-200',
+      bg:     'bg-gradient-to-br from-red-50 to-white',
+      badge:  'bg-red-100 text-red-700 border-red-200',
+      track:  'bg-red-100',
+      label:  'text-red-700',
+      icon:   'text-red-500',
+      dot:    'bg-red-500',
+    },
+  }[band];
+
+  const bandIcon = band === 'High' ? 'fa-circle-check' : band === 'Medium' ? 'fa-circle-half-stroke' : 'fa-circle-xmark';
+
+  const breakdown = [
+    { label: 'Completeness',    scored: completeness,    max: 50, icon: 'fa-list-check',   desc: 'Description, proof, info, claimant fields' },
+    { label: 'Text Match',      scored: textMatch,       max: 30, icon: 'fa-spell-check',  desc: 'Keyword overlap with found item description' },
+    { label: 'Image Submitted', scored: imageSubmitted,  max: 20, icon: 'fa-images',       desc: 'Claimant uploaded at least one photo' },
+  ];
+
+  return (
+    <div className={`rounded-xl border ${theme.border} ${theme.bg} shadow-sm ${theme.glow} p-5 relative`}>
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${theme.badge} border`}>
+            <i className={`fas fa-gauge-high text-sm ${theme.icon}`}></i>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Claim Confidence Score</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Automated strength assessment</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Band badge */}
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${theme.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`}></span>
+            <i className={`fas ${bandIcon} text-[10px]`}></i>
+            {band}
+          </span>
+          {/* Score number */}
+          <span className={`text-2xl font-extrabold tabular-nums leading-none ${theme.label}`}>
+            {total}
+            <span className="text-sm font-medium text-slate-400">/100</span>
+          </span>
+          {/* Info toggle */}
+          <button
+            type="button"
+            onClick={() => setOpen(v => !v)}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all"
+            title="Show breakdown"
+          >
+            <i className={`fas ${open ? 'fa-chevron-up' : 'fa-info-circle'} text-xs`}></i>
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className={`w-full h-2.5 rounded-full ${theme.track} overflow-hidden`}>
+        <div
+          className={`h-full rounded-full ${theme.bar} transition-all duration-700`}
+          style={{ width: `${total}%` }}
+        />
+      </div>
+
+      {/* Band labels underneath bar */}
+      <div className="flex justify-between mt-1.5 px-0.5">
+        <span className={`text-[9px] font-semibold ${band === 'Low' ? theme.label : 'text-slate-300'}`}>Low (0–39)</span>
+        <span className={`text-[9px] font-semibold ${band === 'Medium' ? theme.label : 'text-slate-300'}`}>Medium (40–69)</span>
+        <span className={`text-[9px] font-semibold ${band === 'High' ? theme.label : 'text-slate-300'}`}>High (70–100)</span>
+      </div>
+
+      {/* Breakdown panel */}
+      {open && (
+        <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Score Breakdown</p>
+          {breakdown.map(({ label, scored, max, icon, desc }) => {
+            const pct = Math.round((scored / max) * 100);
+            return (
+              <div key={label}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <i className={`fas ${icon} text-[10px] ${theme.icon}`}></i>
+                    <span className="text-xs font-semibold text-slate-600">{label}</span>
+                    <span className="text-[10px] text-slate-400 hidden sm:inline">— {desc}</span>
+                  </div>
+                  <span className="text-xs font-bold tabular-nums text-slate-700">
+                    {scored}<span className="text-slate-400 font-normal">/{max}</span>
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${theme.bar} opacity-70`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Total</span>
+            <span className={`text-sm font-extrabold tabular-nums ${theme.label}`}>
+              {total}<span className="text-slate-400 font-normal text-xs">/100</span>
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VerificationRequests({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen }) {
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -299,6 +523,10 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const [quickActionLoading, setQuickActionLoading] = useState(null); // requestId being quick-actioned
 
   const [approvalStages, setApprovalStages] = useState(EMPTY_STAGES);
+
+  // Rejection reason picker
+  const [rejectionPicker, setRejectionPicker] = useState(null); // stageKey | null
+  const [pendingReason, setPendingReason]     = useState('');
 
   // Lightbox
   const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0, label: '' });
@@ -494,10 +722,17 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     }
   };
 
-  const handleStageDecision = async (stageKey, decision) => {
+  const handleStageDecision = async (stageKey, decision, rejectionNote = '') => {
     const stageNum = parseInt(stageKey.replace('stage', ''));
     const updated = { ...approvalStages };
-    updated[stageKey] = { ...updated[stageKey], status: decision };
+    const existingNotes = updated[stageKey].notes || '';
+    updated[stageKey] = {
+      ...updated[stageKey],
+      status: decision,
+      notes: rejectionNote
+        ? rejectionNote + (existingNotes ? '\n' + existingNotes : '')
+        : existingNotes,
+    };
 
     // Reset downstream stages when a stage is failed
     if (decision === 'failed') {
@@ -1384,8 +1619,12 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       const { badge, subtitle, subtitleColor } = getStatusDisplay(request);
                       const ageMs = Date.now() - new Date(request.submittedAt).getTime();
                       const ageDays = Math.floor(ageMs / 86400000);
-                      const isStale = request.status === 'pending' && ageDays > 3;
-                      const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays} days ago`;
+                      const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? '1 day' : `${ageDays} days`;
+                      const ageTier =
+                        request.status !== 'pending' ? null :
+                        ageDays === 0               ? 'new' :
+                        ageDays <= 2                ? 'amber' :
+                        ageDays <= 7                ? 'red' : 'critical';
 
                       const isLive = !!liveFlash[request._id];
                       const rowBg = bulkSelected.has(request._id)
@@ -1460,11 +1699,22 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           {/* Submitted date */}
                           <td className="px-4 py-3 whitespace-nowrap border border-slate-500">
                             <div className="flex flex-col gap-0.5">
-                              {isStale && (
-                                <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded w-fit">
-                                  <i className="fas fa-clock text-[9px] mr-0.5"></i>{ageLabel}
-                                </span>
-                              )}
+                              {ageTier && (() => {
+                                const tierStyle = {
+                                  new:      'bg-blue-50 text-blue-600 border-blue-200',
+                                  amber:    'bg-amber-50 text-amber-600 border-amber-200',
+                                  red:      'bg-red-50 text-red-600 border-red-200',
+                                  critical: 'bg-red-100 text-red-700 border-red-300',
+                                }[ageTier];
+                                const tierIcon = ageTier === 'new' ? 'fa-bolt' : 'fa-clock';
+                                const tierSuffix = ageTier === 'critical' ? ' — Action needed' : ageTier === 'red' ? ' — Overdue' : '';
+                                return (
+                                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold border px-1.5 py-0.5 rounded w-fit ${tierStyle} ${ageTier === 'critical' ? 'animate-pulse' : ''}`}>
+                                    <i className={`fas ${tierIcon} text-[9px]`}></i>
+                                    {ageLabel}{tierSuffix}
+                                  </span>
+                                );
+                              })()}
                               <span className="text-xs text-slate-500">
                                 {new Date(request.submittedAt).toLocaleDateString()}
                               </span>
@@ -1777,9 +2027,27 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </span>
                         );
                       })()}
-                      <p className="text-[11px] text-blue-300/60 mt-1.5 font-medium">
-                        Submitted&nbsp;
-                        {new Date(selectedRequest.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <p className="text-[11px] text-blue-300/60 mt-1.5 font-medium flex items-center gap-2 flex-wrap">
+                        <span>
+                          Submitted&nbsp;
+                          {new Date(selectedRequest.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        {selectedRequest.status === 'pending' && (() => {
+                          const days = Math.floor((Date.now() - new Date(selectedRequest.submittedAt).getTime()) / 86400000);
+                          const label = days === 0 ? 'Today' : days === 1 ? '1 day pending' : `${days} days pending`;
+                          const style =
+                            days === 0  ? 'bg-blue-400/20 text-blue-200 border-blue-400/30' :
+                            days <= 2   ? 'bg-amber-400/20 text-amber-200 border-amber-400/30' :
+                            days <= 7   ? 'bg-red-400/20 text-red-200 border-red-400/30' :
+                                          'bg-red-500/30 text-red-100 border-red-400/50 animate-pulse';
+                          const icon = days === 0 ? 'fa-bolt' : 'fa-hourglass-half';
+                          return (
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${style}`}>
+                              <i className={`fas ${icon} text-[9px]`}></i>
+                              {label}{days > 7 ? ' — Action needed' : days > 2 ? ' — Overdue' : ''}
+                            </span>
+                          );
+                        })()}
                       </p>
                     </div>
 
@@ -1797,6 +2065,9 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               {/* ── Scrollable Body ── */}
               <div className="overflow-y-auto flex-1 bg-[#eef0f6]">
                 <div className="p-6 space-y-4">
+
+                  {/* Confidence Score */}
+                  <ConfidenceScore claim={selectedRequest} />
 
                   {/* Section 1 – Claimant + Found Item */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2135,7 +2406,11 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                                 {isEnabled && (
                                   <div className="flex gap-2 mb-3">
                                     <button
-                                      onClick={() => handleStageDecision(stageDef.key, 'passed')}
+                                      onClick={() => {
+                                        setRejectionPicker(null);
+                                        setPendingReason('');
+                                        handleStageDecision(stageDef.key, 'passed');
+                                      }}
                                       disabled={actionLoading || saveLoading}
                                       className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${
                                         stage.status === 'passed'
@@ -2147,17 +2422,84 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                                       {stageDef.isFinal ? 'Approve Request' : 'Mark as Passed'}
                                     </button>
                                     <button
-                                      onClick={() => handleStageDecision(stageDef.key, 'failed')}
+                                      onClick={() => {
+                                        setPendingReason('');
+                                        setRejectionPicker(prev => prev === stageDef.key ? null : stageDef.key);
+                                      }}
                                       disabled={actionLoading || saveLoading}
                                       className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${
                                         stage.status === 'failed'
                                           ? 'bg-red-500 border-red-500 text-white shadow-sm'
+                                          : rejectionPicker === stageDef.key
+                                          ? 'bg-red-50 border-red-400 text-red-600'
                                           : 'bg-white border-slate-200 text-slate-600 hover:border-red-400 hover:bg-red-50 hover:text-red-600'
                                       }`}
                                     >
                                       <i className="fas fa-times text-[10px]"></i>
                                       {stageDef.isFinal ? 'Reject Request' : 'Mark as Failed'}
                                     </button>
+                                  </div>
+                                )}
+
+                                {/* Rejection reason picker */}
+                                {isEnabled && rejectionPicker === stageDef.key && (
+                                  <div className="mb-3 rounded-lg border border-red-200 bg-red-50/60 p-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-red-500 mb-2 flex items-center gap-1.5">
+                                      <i className="fas fa-circle-exclamation text-[10px]"></i>
+                                      Select a rejection reason
+                                    </p>
+                                    <div className="flex flex-col gap-1.5 mb-3">
+                                      {REJECTION_REASONS[stageDef.key].map(reason => (
+                                        <label
+                                          key={reason}
+                                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer text-xs font-medium transition-all ${
+                                            pendingReason === reason
+                                              ? 'bg-red-100 border-red-400 text-red-700'
+                                              : 'bg-white border-slate-200 text-slate-600 hover:border-red-300 hover:bg-red-50/50'
+                                          }`}
+                                        >
+                                          <input
+                                            type="radio"
+                                            name={`reason-${stageDef.key}`}
+                                            value={reason}
+                                            checked={pendingReason === reason}
+                                            onChange={() => setPendingReason(reason)}
+                                            className="accent-red-500 shrink-0"
+                                          />
+                                          {reason}
+                                        </label>
+                                      ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => { setRejectionPicker(null); setPendingReason(''); }}
+                                        className="flex-1 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={!pendingReason || actionLoading || saveLoading}
+                                        onClick={() => {
+                                          handleStageDecision(stageDef.key, 'failed', pendingReason);
+                                          setRejectionPicker(null);
+                                          setPendingReason('');
+                                        }}
+                                        className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-red-500 text-white border border-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                                      >
+                                        <i className="fas fa-times text-[10px]"></i>
+                                        Confirm {stageDef.isFinal ? 'Rejection' : 'Failure'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Show stored rejection reason on failed stages */}
+                                {stage.status === 'failed' && stage.notes && (
+                                  <div className="mb-3 flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                    <i className="fas fa-circle-xmark text-red-400 text-xs mt-0.5 shrink-0"></i>
+                                    <p className="text-xs text-red-700 font-medium leading-snug">{stage.notes.split('\n')[0]}</p>
                                   </div>
                                 )}
 

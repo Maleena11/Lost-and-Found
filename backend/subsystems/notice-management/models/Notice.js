@@ -59,6 +59,15 @@ const NoticeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved' // Staff notices are default approved
+  },
+  aiMetadata: {
+    type: Object, // Stores Edge AI prediction arrays
+    default: null
+  },
   targetAudience: {
     type: String,
     enum: ['all-students', 'undergraduate', 'postgraduate', 'academic-staff', 'non-academic-staff', 'all-university'],
@@ -85,10 +94,11 @@ const NoticeSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Exclude expired and archived notices from normal queries
+// Exclude expired, archived, and non-approved notices from normal queries
 NoticeSchema.pre('find', function() {
   this.where({
     isArchived: { $ne: true },
+    status: { $in: ['approved', null] }, // Only show approved notices publicly
     $or: [
       { endDate: { $gt: new Date() } },
       { endDate: { $exists: false } }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { io } from "socket.io-client";
 import Header from "../../../shared/components/Header";
 import Footer from "../../../shared/components/Footer";
 import { useAuth } from "../../../shared/utils/AuthContext";
@@ -317,9 +318,25 @@ function NotificationBell({ email }) {
 
   useEffect(() => {
     if (!email) return;
+    
+    // Initial fetch
     axios.get(`${API}/sighting-notifications/${email}`)
       .then(r => setNotifs(r.data.data))
       .catch(() => {});
+
+    // Setup Socket connection
+    const socket = io("http://localhost:3001");
+    
+    socket.emit("join_notifications", email);
+
+    socket.on("new_sighting_notification", (newNotif) => {
+      // Prepend the new notification to the list instantly
+      setNotifs((prev) => [newNotif, ...prev]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [email]);
 
   // close on outside click

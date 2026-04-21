@@ -313,13 +313,19 @@ exports.addSighting = async (req, res) => {
 
     // Create in-app notification for the item owner
     if (item.contactInfo && item.contactInfo.email) {
-      await SightingNotification.create({
+      const newNotif = await SightingNotification.create({
         recipientEmail: item.contactInfo.email,
         itemId:         item._id,
         itemName:       item.itemName,
         sightingLocation: location,
         message: note || '',
       });
+
+      // Emit live notification via Socket.io
+      const io = req.app.get('io');
+      if (io) {
+        io.to(item.contactInfo.email.toLowerCase()).emit('new_sighting_notification', newNotif);
+      }
     }
 
     res.status(201).json({ success: true, data: newSighting, sightings: item.sightings });

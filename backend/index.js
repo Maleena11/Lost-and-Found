@@ -30,7 +30,36 @@ const settingsRoutes = require('./subsystems/admin/routes/settingsRoutes');
 const zoneRoutes = require('./subsystems/admin/routes/zoneRoutes');
 const { seedZones } = require('./subsystems/admin/controllers/zoneController');
 
+const { Server } = require("socket.io");
+const http = require("http");
+
 const app = express(); 
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true
+  }
+});
+
+app.set('io', io);
+
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+  
+  socket.on("join_notifications", (email) => {
+    if (email) {
+      socket.join(email.toLowerCase());
+      console.log(`Socket ${socket.id} joined room: ${email}`);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Socket disconnected:", socket.id);
+  });
+});
 
 // Enhanced CORS configuration
 const corsOptions = {
@@ -133,4 +162,4 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));

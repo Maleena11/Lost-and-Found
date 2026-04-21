@@ -43,6 +43,7 @@ const verificationRoutes = require('../routes/verificationRoutes');
 const LostFoundItem      = require('../../lost-found-reporting/models/LostFoundItem');
 const VerificationRequest = require('../models/VerificationRequest');
 const ClaimHistory        = require('../models/ClaimHistory');
+const User                = require('../../admin/models/users');
 
 // ── Minimal Express app (mirrors index.js wiring, without DB connect call) ────
 const app = express();
@@ -81,6 +82,7 @@ afterEach(async () => {
   await VerificationRequest.deleteMany({});
   await ClaimHistory.deleteMany({});
   await LostFoundItem.deleteMany({});
+  await User.deleteMany({});
 });
 
 // ── Helper: seed a found item ─────────────────────────────────────────────────
@@ -98,13 +100,38 @@ async function seedFoundItem(overrides = {}) {
   });
 }
 
+async function seedStudent(overrides = {}) {
+  const password = await bcrypt.hash('password123', 10);
+  const email = overrides.email || claimantInfo.email;
+
+  let student = await User.findOne({ email });
+  if (!student) {
+    student = await User.create({
+      fullname: overrides.name || claimantInfo.name,
+      email,
+      password,
+      phonenumber: overrides.phone || claimantInfo.phone,
+      role: 'User',
+      status: 'Active',
+    });
+  }
+
+  return student;
+}
+
 // ── Helper: create a claim via API ────────────────────────────────────────────
 async function submitClaim(itemId, infoOverrides = {}) {
+  const mergedInfo = { ...claimantInfo, ...infoOverrides };
+  const student = await seedStudent(mergedInfo);
+
   return request(app)
     .post('/api/verification')
     .send({
       itemId,
-      claimantInfo: { ...claimantInfo, ...infoOverrides },
+      claimantInfo: {
+        ...mergedInfo,
+        userId: student._id.toString(),
+      },
       verificationDetails,
       claimantImages: [],
     });
@@ -127,6 +154,9 @@ describe('1. Student submits a claim', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.status).toBe('pending');
     expect(res.body.data.claimantInfo.email).toBe(claimantInfo.email);
+    expect(res.body.data.recommendation).toBeTruthy();
+    expect(res.body.data.recommendation.score).toBeGreaterThan(0);
+    expect(res.body.data.recommendation.action).toBeTruthy();
   });
 
   test('TC-02 | Reject claim if item does not exist', async () => {
@@ -178,6 +208,11 @@ describe('1. Student submits a claim', () => {
 
     const count = await VerificationRequest.countDocuments({ itemId: item._id });
     expect(count).toBe(2);
+
+    const claims = await VerificationRequest.find({ itemId: item._id }).sort({ 'claimantInfo.email': 1 });
+    expect(claims[0].recommendation.competingClaims).toBe(1);
+    expect(claims[1].recommendation.competingClaims).toBe(1);
+    expect(claims[0].recommendation.breakdown.competition.score).toBe(8);
   });
 });
 

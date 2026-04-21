@@ -77,6 +77,33 @@ const verificationRequestSchema = new mongoose.Schema({
   collectionPin: { type: String },
   collectionPinExpiry: { type: Date },
   collectedAt: { type: Date }
+  ,
+  recommendation: {
+    score: { type: Number, default: 0 },
+    band: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Low' },
+    action: {
+      type: String,
+      enum: [
+        'approve_candidate',
+        'manual_review',
+        'needs_more_evidence',
+        'reject_candidate',
+        'approved',
+        'collected',
+      ],
+      default: 'manual_review',
+    },
+    actionLabel: { type: String, default: 'Manual Review' },
+    summary: { type: String, default: '' },
+    reasons: { type: [String], default: [] },
+    risks: { type: [String], default: [] },
+    competingClaims: { type: Number, default: 0 },
+    breakdown: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    updatedAt: { type: Date, default: Date.now },
+  }
 });
 
 

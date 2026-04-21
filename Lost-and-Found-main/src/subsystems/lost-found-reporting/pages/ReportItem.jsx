@@ -306,14 +306,13 @@ export default function ReportItem() {
         throw new Error("User information not available");
       }
 
-      // Add the current timestamp if not provided
       const dataToSubmit = {
         ...formData,
-        userId: tempUser.id, // Use the temp user ID
+        userId: tempUser.id,
         dateTime: formData.dateTime || new Date().toISOString()
       };
 
-      const response = await axios.post('http://localhost:3001/api/lost-found', dataToSubmit);
+      await axios.post('http://localhost:3001/api/lost-found', dataToSubmit);
 
       setMessage({
         text: `${formData.itemType === 'lost' ? 'Lost' : 'Found'} item reported successfully!`,
@@ -800,17 +799,17 @@ export default function ReportItem() {
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <i className="fas fa-envelope text-gray-400 text-sm"></i>
                   </div>
-                  <input
-                    type="email"
-                    name="contactInfo.email"
-                    value={formData.contactInfo.email}
-                    onChange={(e) => {
-                      const regex = /^[a-zA-Z0-9@.]*$/;
-                      if (regex.test(e.target.value)) handleChange(e);
-                    }}
-                    placeholder="it12345678@my.sliit.lk"
-                    className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactEmail ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
-                  />
+                    <input
+                      type="email"
+                      name="contactInfo.email"
+                      value={formData.contactInfo.email}
+                      onChange={(e) => {
+                        const regex = /^[a-zA-Z0-9@.]*$/;
+                        if (regex.test(e.target.value)) handleChange(e);
+                      }}
+                      placeholder="it12345678@my.sliit.lk"
+                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${errors.contactEmail ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
+                    />
                 </div>
                 {errors.contactEmail && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><i className="fas fa-exclamation-circle"></i>{errors.contactEmail}</p>}
               </div>

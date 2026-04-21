@@ -368,11 +368,18 @@ function computeConfidenceScore(claim) {
 // ── ConfidenceScore Component ─────────────────────────────────────────────────
 function ConfidenceScore({ claim }) {
   const [open, setOpen] = useState(false);
-  const { total, completeness, textMatch, imageSubmitted } = computeConfidenceScore(claim);
+  const legacy = computeConfidenceScore(claim);
+  const recommendation = claim?.recommendation || null;
+  const total = recommendation?.score ?? legacy.total;
 
   const band =
-    total >= 70 ? 'High'   :
-    total >= 40 ? 'Medium' : 'Low';
+    recommendation?.band ||
+    (total >= 70 ? 'High' : total >= 40 ? 'Medium' : 'Low');
+  const actionLabel = recommendation?.actionLabel || (band === 'High' ? 'Approve Candidate' : band === 'Medium' ? 'Manual Review' : 'Needs More Evidence');
+  const summary = recommendation?.summary || 'Fallback score derived from the current claim details.';
+  const reasons = recommendation?.reasons?.length ? recommendation.reasons : ['Detailed recommendation factors will appear after the claim is refreshed.'];
+  const risks = recommendation?.risks || [];
+  const competingClaims = recommendation?.competingClaims ?? 0;
 
   const theme = {
     High: {
@@ -412,11 +419,20 @@ function ConfidenceScore({ claim }) {
 
   const bandIcon = band === 'High' ? 'fa-circle-check' : band === 'Medium' ? 'fa-circle-half-stroke' : 'fa-circle-xmark';
 
+  const breakdownSource = recommendation?.breakdown || {
+    completeness: { score: legacy.completeness, max: 50 },
+    textMatch: { score: legacy.textMatch, max: 30 },
+    imageEvidence: { score: legacy.imageSubmitted, max: 20 },
+  };
+
   const breakdown = [
-    { label: 'Completeness',    scored: completeness,    max: 50, icon: 'fa-list-check',   desc: 'Description, proof, info, claimant fields' },
-    { label: 'Text Match',      scored: textMatch,       max: 30, icon: 'fa-spell-check',  desc: 'Keyword overlap with found item description' },
-    { label: 'Image Submitted', scored: imageSubmitted,  max: 20, icon: 'fa-images',       desc: 'Claimant uploaded at least one photo' },
-  ];
+    { key: 'completeness', label: 'Completeness', icon: 'fa-list-check', desc: 'Description, proof, and claimant detail quality' },
+    { key: 'textMatch', label: 'Text Match', icon: 'fa-spell-check', desc: 'Keyword overlap with the found item description' },
+    { key: 'locationMatch', label: 'Location Match', icon: 'fa-location-dot', desc: 'Claim context versus the item location' },
+    { key: 'imageEvidence', label: 'Image Evidence', icon: 'fa-images', desc: 'Claimant submitted supporting photos' },
+    { key: 'stageProgress', label: 'Stage Progress', icon: 'fa-list-ol', desc: 'Passed verification stages so far' },
+    { key: 'competition', label: 'Competition', icon: 'fa-people-arrows', desc: 'Penalty for competing pending claims' },
+  ].filter(({ key }) => breakdownSource[key]);
 
   return (
     <div className={`rounded-xl border ${theme.border} ${theme.bg} shadow-sm ${theme.glow} p-5 relative`}>
@@ -427,8 +443,8 @@ function ConfidenceScore({ claim }) {
             <i className={`fas fa-gauge-high text-sm ${theme.icon}`}></i>
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Claim Confidence Score</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Automated strength assessment</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Claim Recommendation Engine</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Real-time decision support for this claim</p>
           </div>
         </div>
 
@@ -438,6 +454,9 @@ function ConfidenceScore({ claim }) {
             <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`}></span>
             <i className={`fas ${bandIcon} text-[10px]`}></i>
             {band}
+          </span>
+          <span className="hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border border-slate-200 bg-white text-slate-600">
+            {actionLabel}
           </span>
           {/* Score number */}
           <span className={`text-2xl font-extrabold tabular-nums leading-none ${theme.label}`}>
@@ -471,11 +490,24 @@ function ConfidenceScore({ claim }) {
         <span className={`text-[9px] font-semibold ${band === 'High' ? theme.label : 'text-slate-300'}`}>High (70–100)</span>
       </div>
 
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-3 items-start">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Recommendation Summary</p>
+          <p className="mt-1.5 text-sm font-semibold text-slate-700">{actionLabel}</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">{summary}</p>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600">
+          <i className="fas fa-code-compare text-slate-400"></i>
+          {competingClaims} competing claim{competingClaims === 1 ? '' : 's'}
+        </div>
+      </div>
+
       {/* Breakdown panel */}
       {open && (
         <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Score Breakdown</p>
-          {breakdown.map(({ label, scored, max, icon, desc }) => {
+          {breakdown.map(({ key, label, icon, desc }) => {
+            const { score: scored, max } = breakdownSource[key];
             const pct = Math.round((scored / max) * 100);
             return (
               <div key={label}>
@@ -498,6 +530,30 @@ function ConfidenceScore({ claim }) {
               </div>
             );
           })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Positive Signals</p>
+              <ul className="mt-2 space-y-1.5">
+                {reasons.map((reason) => (
+                  <li key={reason} className="flex items-start gap-2 text-xs text-emerald-900">
+                    <i className="fas fa-check-circle mt-0.5 text-[10px] text-emerald-500"></i>
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Risk Flags</p>
+              <ul className="mt-2 space-y-1.5">
+                {(risks.length ? risks : ['No major risk flags detected by the current rules.']).map((risk) => (
+                  <li key={risk} className="flex items-start gap-2 text-xs text-amber-900">
+                    <i className="fas fa-triangle-exclamation mt-0.5 text-[10px] text-amber-500"></i>
+                    <span>{risk}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Total</span>
             <span className={`text-sm font-extrabold tabular-nums ${theme.label}`}>

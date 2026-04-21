@@ -370,11 +370,17 @@ export default function Verification() {
     setError("");
 
     try {
+      const isStudent = user?.role === "User" && user?.status === "Active";
+      if (!isStudent || !user?.id || !user?.email) {
+        throw new Error("You must be logged in with an active student account to submit a claim.");
+      }
+
       await api.post("/verification", {
         itemId: selectedItem._id,
         claimantInfo: {
-          name:    formData.name,
-          email:   formData.email,
+          userId:  user.id,
+          name:    user.name || formData.name,
+          email:   user.email,
           phone:   formData.phone,
           address: `${formData.faculty} — ${formData.yearOfStudy}${formData.semester ? `, ${formData.semester}` : ""}`,
         },
@@ -390,9 +396,17 @@ export default function Verification() {
       setClaimRef(ref);
 
       setFormData({
-        name: "", studentId: "IT", email: "", phone: "", faculty: "",
-        yearOfStudy: "", semester: "", description: "", ownershipProof: "",
-        additionalInfo: "", declaration: false,
+        name: user?.name || "",
+        studentId: user?.email ? user.email.split("@")[0].toUpperCase() : "IT",
+        email: user?.email || "",
+        phone: user?.phone || "",
+        faculty: "",
+        yearOfStudy: "",
+        semester: "",
+        description: "",
+        ownershipProof: "",
+        additionalInfo: "",
+        declaration: false,
       });
       setClaimantImages([]);
       setImageError("");

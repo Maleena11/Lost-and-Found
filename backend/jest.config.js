@@ -1,5 +1,7 @@
 module.exports = {
   testEnvironment: 'node',
-  testTimeout: 30000,
+  roots: ['<rootDir>/subsystems'],
   testMatch: ['**/__tests__/**/*.test.js'],
+  clearMocks: true,
+  verbose: false,
 };

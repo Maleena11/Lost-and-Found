@@ -1,13 +1,38 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import Sidebar from './Sidebar';
 import TopBar from '../components/TopBar';
 import { CSVLink } from 'react-csv';
+import { useSocket } from '../../../shared/hooks/useSocket';
 
 const EMPTY_STAGES = {
   stage1: { status: 'pending', notes: '' },
   stage2: { status: 'pending', notes: '' },
   stage3: { status: 'pending', notes: '' }
+};
+
+const REJECTION_REASONS = {
+  stage1: [
+    "Description doesn't match item",
+    "Category mismatch",
+    "Location details don't match",
+    "Date / time inconsistency",
+    "Not enough detail provided",
+  ],
+  stage2: [
+    "Ownership proof insufficient",
+    "Proof document unclear or unverifiable",
+    "Photos don't match item",
+    "Identity not verified",
+    "No supporting evidence submitted",
+  ],
+  stage3: [
+    "Insufficient overall evidence",
+    "Stronger claim exists for this item",
+    "Suspicious or duplicate submission",
+    "Claimant unresponsive",
+    "Other (see notes)",
+  ],
 };
 
 // ── In-modal photo gallery panel ───────────────────────────────────────────
@@ -30,7 +55,7 @@ function PhotoGalleryPanel({ images, activeIdx, setActiveIdx, accentColor, label
     <div>
       {/* Main photo */}
       <div
-        className="relative rounded-xl overflow-hidden cursor-zoom-in bg-slate-900 border border-slate-200 mb-2.5 group"
+        className="relative rounded-xl overflow-hidden cursor-zoom-in bg-slate-900 border border-slate-400 mb-2.5 group"
         style={{ aspectRatio: '4/3' }}
         onClick={() => onLightboxOpen(images, activeIdx, label)}
       >
@@ -145,27 +170,27 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
         </div>
 
         {/* Description */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Item Description</p>
           <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.description || <span className="text-slate-300 italic">None provided</span>}</p>
         </div>
 
         {/* Ownership Proof */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Ownership Proof</p>
           <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.ownershipProof || <span className="text-slate-300 italic">None provided</span>}</p>
         </div>
 
         {/* Additional Info */}
         {claim.verificationDetails.additionalInfo && (
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Additional Info</p>
             <p className="text-sm text-slate-700 leading-relaxed">{claim.verificationDetails.additionalInfo}</p>
           </div>
         )}
 
         {/* Photos */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
             Photos
             <span className="ml-2 text-slate-300 normal-case font-normal">{photos.length} submitted</span>
@@ -243,7 +268,7 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
         <div className="bg-white border-t border-slate-100 px-6 py-4 flex items-center justify-end shrink-0 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+            className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-400 rounded-xl hover:bg-slate-50 transition-colors"
           >
             Close Comparison
           </button>
@@ -285,6 +310,262 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
   );
 }
 
+// ── Confidence Score Logic ────────────────────────────────────────────────────
+const STOPWORDS = new Set([
+  'a','an','the','is','are','was','were','in','on','at','of','to','for','and',
+  'or','but','it','its','this','that','i','my','have','had','with','been','be',
+  'by','from','as','so','if','up','not','can','will','do','did','he','she',
+  'they','we','you','your','our','their','has','there','some','one','all',
+]);
+
+function extractKeywords(text) {
+  return (text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOPWORDS.has(w));
+}
+
+function computeConfidenceScore(claim) {
+  if (!claim) return { total: 0, completeness: 0, textMatch: 0, imageSubmitted: 0 };
+
+  const vd  = claim.verificationDetails || {};
+  const ci  = claim.claimantInfo        || {};
+  const imgs = claim.claimantImages     || [];
+
+  // A. Completeness — 50 pts
+  let completeness = 0;
+  const desc = (vd.description || '').trim();
+  if      (desc.length >= 50) completeness += 15;
+  else if (desc.length >= 20) completeness +=  8;
+
+  if ((vd.ownershipProof || '').trim().length > 0) completeness += 15;
+  if ((vd.additionalInfo || '').trim().length > 0) completeness += 10;
+
+  const infoFields   = [ci.name, ci.email, ci.phone, ci.address];
+  const filledFields = infoFields.filter(f => f && String(f).trim().length > 0).length;
+  completeness += Math.round((filledFields / 4) * 10);
+
+  // B. Text Match — 30 pts (Jaccard similarity on keywords)
+  let textMatch = 0;
+  const claimWords = extractKeywords(desc);
+  const itemWords  = extractKeywords(claim.itemId?.description || '');
+  if (claimWords.length > 0 && itemWords.length > 0) {
+    const claimSet = new Set(claimWords);
+    const itemSet  = new Set(itemWords);
+    const intersection = [...claimSet].filter(w => itemSet.has(w)).length;
+    const union        = new Set([...claimSet, ...itemSet]).size;
+    textMatch = union > 0 ? Math.round((intersection / union) * 30) : 0;
+  }
+
+  // C. Image Submitted — 20 pts
+  const imageSubmitted = imgs.length >= 1 ? 20 : 0;
+
+  const total = Math.min(100, completeness + textMatch + imageSubmitted);
+  return { total, completeness, textMatch, imageSubmitted };
+}
+
+// ── ConfidenceScore Component ─────────────────────────────────────────────────
+function ConfidenceScore({ claim }) {
+  const [open, setOpen] = useState(false);
+  const legacy = computeConfidenceScore(claim);
+  const recommendation = claim?.recommendation || null;
+  const total = recommendation?.score ?? legacy.total;
+
+  const band =
+    recommendation?.band ||
+    (total >= 70 ? 'High' : total >= 40 ? 'Medium' : 'Low');
+  const actionLabel = recommendation?.actionLabel || (band === 'High' ? 'Approve Candidate' : band === 'Medium' ? 'Manual Review' : 'Needs More Evidence');
+  const summary = recommendation?.summary || 'Fallback score derived from the current claim details.';
+  const reasons = recommendation?.reasons?.length ? recommendation.reasons : ['Detailed recommendation factors will appear after the claim is refreshed.'];
+  const risks = recommendation?.risks || [];
+  const competingClaims = recommendation?.competingClaims ?? 0;
+
+  const theme = {
+    High: {
+      bar:    'bg-emerald-500',
+      glow:   'shadow-emerald-200',
+      border: 'border-emerald-200',
+      bg:     'bg-gradient-to-br from-emerald-50 to-white',
+      badge:  'bg-emerald-100 text-emerald-700 border-emerald-200',
+      track:  'bg-emerald-100',
+      label:  'text-emerald-700',
+      icon:   'text-emerald-500',
+      dot:    'bg-emerald-500',
+    },
+    Medium: {
+      bar:    'bg-amber-400',
+      glow:   'shadow-amber-200',
+      border: 'border-amber-200',
+      bg:     'bg-gradient-to-br from-amber-50 to-white',
+      badge:  'bg-amber-100 text-amber-700 border-amber-200',
+      track:  'bg-amber-100',
+      label:  'text-amber-700',
+      icon:   'text-amber-500',
+      dot:    'bg-amber-400',
+    },
+    Low: {
+      bar:    'bg-red-500',
+      glow:   'shadow-red-200',
+      border: 'border-red-200',
+      bg:     'bg-gradient-to-br from-red-50 to-white',
+      badge:  'bg-red-100 text-red-700 border-red-200',
+      track:  'bg-red-100',
+      label:  'text-red-700',
+      icon:   'text-red-500',
+      dot:    'bg-red-500',
+    },
+  }[band];
+
+  const bandIcon = band === 'High' ? 'fa-circle-check' : band === 'Medium' ? 'fa-circle-half-stroke' : 'fa-circle-xmark';
+
+  const breakdownSource = recommendation?.breakdown || {
+    completeness: { score: legacy.completeness, max: 50 },
+    textMatch: { score: legacy.textMatch, max: 30 },
+    imageEvidence: { score: legacy.imageSubmitted, max: 20 },
+  };
+
+  const breakdown = [
+    { key: 'completeness', label: 'Completeness', icon: 'fa-list-check', desc: 'Description, proof, and claimant detail quality' },
+    { key: 'textMatch', label: 'Text Match', icon: 'fa-spell-check', desc: 'Keyword overlap with the found item description' },
+    { key: 'locationMatch', label: 'Location Match', icon: 'fa-location-dot', desc: 'Claim context versus the item location' },
+    { key: 'imageEvidence', label: 'Image Evidence', icon: 'fa-images', desc: 'Claimant submitted supporting photos' },
+    { key: 'stageProgress', label: 'Stage Progress', icon: 'fa-list-ol', desc: 'Passed verification stages so far' },
+    { key: 'competition', label: 'Competition', icon: 'fa-people-arrows', desc: 'Penalty for competing pending claims' },
+  ].filter(({ key }) => breakdownSource[key]);
+
+  return (
+    <div className={`rounded-xl border ${theme.border} ${theme.bg} shadow-sm ${theme.glow} p-5 relative`}>
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${theme.badge} border`}>
+            <i className={`fas fa-gauge-high text-sm ${theme.icon}`}></i>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Claim Recommendation Engine</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Real-time decision support for this claim</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Band badge */}
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${theme.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`}></span>
+            <i className={`fas ${bandIcon} text-[10px]`}></i>
+            {band}
+          </span>
+          <span className="hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border border-slate-200 bg-white text-slate-600">
+            {actionLabel}
+          </span>
+          {/* Score number */}
+          <span className={`text-2xl font-extrabold tabular-nums leading-none ${theme.label}`}>
+            {total}
+            <span className="text-sm font-medium text-slate-400">/100</span>
+          </span>
+          {/* Info toggle */}
+          <button
+            type="button"
+            onClick={() => setOpen(v => !v)}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all"
+            title="Show breakdown"
+          >
+            <i className={`fas ${open ? 'fa-chevron-up' : 'fa-info-circle'} text-xs`}></i>
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className={`w-full h-2.5 rounded-full ${theme.track} overflow-hidden`}>
+        <div
+          className={`h-full rounded-full ${theme.bar} transition-all duration-700`}
+          style={{ width: `${total}%` }}
+        />
+      </div>
+
+      {/* Band labels underneath bar */}
+      <div className="flex justify-between mt-1.5 px-0.5">
+        <span className={`text-[9px] font-semibold ${band === 'Low' ? theme.label : 'text-slate-300'}`}>Low (0–39)</span>
+        <span className={`text-[9px] font-semibold ${band === 'Medium' ? theme.label : 'text-slate-300'}`}>Medium (40–69)</span>
+        <span className={`text-[9px] font-semibold ${band === 'High' ? theme.label : 'text-slate-300'}`}>High (70–100)</span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-3 items-start">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Recommendation Summary</p>
+          <p className="mt-1.5 text-sm font-semibold text-slate-700">{actionLabel}</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">{summary}</p>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600">
+          <i className="fas fa-code-compare text-slate-400"></i>
+          {competingClaims} competing claim{competingClaims === 1 ? '' : 's'}
+        </div>
+      </div>
+
+      {/* Breakdown panel */}
+      {open && (
+        <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Score Breakdown</p>
+          {breakdown.map(({ key, label, icon, desc }) => {
+            const { score: scored, max } = breakdownSource[key];
+            const pct = Math.round((scored / max) * 100);
+            return (
+              <div key={label}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <i className={`fas ${icon} text-[10px] ${theme.icon}`}></i>
+                    <span className="text-xs font-semibold text-slate-600">{label}</span>
+                    <span className="text-[10px] text-slate-400 hidden sm:inline">— {desc}</span>
+                  </div>
+                  <span className="text-xs font-bold tabular-nums text-slate-700">
+                    {scored}<span className="text-slate-400 font-normal">/{max}</span>
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${theme.bar} opacity-70`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Positive Signals</p>
+              <ul className="mt-2 space-y-1.5">
+                {reasons.map((reason) => (
+                  <li key={reason} className="flex items-start gap-2 text-xs text-emerald-900">
+                    <i className="fas fa-check-circle mt-0.5 text-[10px] text-emerald-500"></i>
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Risk Flags</p>
+              <ul className="mt-2 space-y-1.5">
+                {(risks.length ? risks : ['No major risk flags detected by the current rules.']).map((risk) => (
+                  <li key={risk} className="flex items-start gap-2 text-xs text-amber-900">
+                    <i className="fas fa-triangle-exclamation mt-0.5 text-[10px] text-amber-500"></i>
+                    <span>{risk}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Total</span>
+            <span className={`text-sm font-extrabold tabular-nums ${theme.label}`}>
+              {total}<span className="text-slate-400 font-normal text-xs">/100</span>
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VerificationRequests({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen }) {
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -298,6 +579,10 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const [quickActionLoading, setQuickActionLoading] = useState(null); // requestId being quick-actioned
 
   const [approvalStages, setApprovalStages] = useState(EMPTY_STAGES);
+
+  // Rejection reason picker
+  const [rejectionPicker, setRejectionPicker] = useState(null); // stageKey | null
+  const [pendingReason, setPendingReason]     = useState('');
 
   // Lightbox
   const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0, label: '' });
@@ -354,6 +639,36 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
   // Quick-action confirm popup: { id, status, name } or null
   const [quickConfirm, setQuickConfirm] = useState(null);
+
+  // Real-time flash tracker: requestId → true for 3s after an update
+  const [liveFlash, setLiveFlash] = useState({});
+
+  // Socket.IO — receive live claim updates emitted by the server
+  const handleClaimUpdated = useCallback((payload) => {
+    const { claim } = payload;
+    if (!claim) return;
+
+    setVerificationRequests(prev => {
+      const idx = prev.findIndex(r => r._id === claim._id);
+      if (idx === -1) {
+        // New claim not yet in the list — prepend it
+        return [claim, ...prev];
+      }
+      const next = [...prev];
+      // Preserve populated itemId if the socket stripped images
+      next[idx] = { ...next[idx], ...claim, itemId: claim.itemId || next[idx].itemId };
+      return next;
+    });
+
+    // Flash the row/card
+    setLiveFlash(prev => ({ ...prev, [claim._id]: true }));
+    setTimeout(() => setLiveFlash(prev => { const n = { ...prev }; delete n[claim._id]; return n; }), 3000);
+
+    setSuccess(`Live update: claim for "${claim.itemId?.itemName || 'item'}" was ${claim.status}`);
+    setTimeout(() => setSuccess(''), 4000);
+  }, []);
+
+  useSocket({ isAdmin: true, handlers: { claimUpdated: handleClaimUpdated } });
 
   useEffect(() => {
     fetchVerificationRequests();
@@ -463,10 +778,17 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
     }
   };
 
-  const handleStageDecision = async (stageKey, decision) => {
+  const handleStageDecision = async (stageKey, decision, rejectionNote = '') => {
     const stageNum = parseInt(stageKey.replace('stage', ''));
     const updated = { ...approvalStages };
-    updated[stageKey] = { ...updated[stageKey], status: decision };
+    const existingNotes = updated[stageKey].notes || '';
+    updated[stageKey] = {
+      ...updated[stageKey],
+      status: decision,
+      notes: rejectionNote
+        ? rejectionNote + (existingNotes ? '\n' + existingNotes : '')
+        : existingNotes,
+    };
 
     // Reset downstream stages when a stage is failed
     if (decision === 'failed') {
@@ -477,8 +799,8 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
     setApprovalStages(updated);
 
-    // Stage 3 decision finalizes the request
-    if (stageKey === 'stage3') {
+    // Any failed stage immediately rejects the request; Stage 3 passed finalizes as approved
+    if (decision === 'failed' || stageKey === 'stage3') {
       setSaveLoading(true);
       try {
         await axios.patch(`http://localhost:3001/api/verification/${selectedRequest._id}/stages`, {
@@ -662,6 +984,23 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const indexOfFirstRequest = indexOfLastRequest - requestsPerPage;
   const currentRequests = sortedFilteredRequests.slice(indexOfFirstRequest, indexOfLastRequest);
   const totalPages = Math.ceil(filteredRequests.length / requestsPerPage);
+  const statusCounts = {
+    pending: verificationRequests.filter(r => r.status === 'pending').length,
+    approved: verificationRequests.filter(r => r.status === 'approved').length,
+    rejected: verificationRequests.filter(r => r.status === 'rejected').length,
+    total: verificationRequests.length,
+  };
+  const activeFiltersCount = [
+    statusFilter !== 'all',
+    categoryFilter !== 'all',
+    !!selectedFoundItemId,
+    !!searchTerm,
+    !!dateFilter.startDate,
+    !!dateFilter.endDate,
+  ].filter(Boolean).length;
+  const latestSubmission = verificationRequests.length
+    ? new Date(Math.max(...verificationRequests.map(r => new Date(r.submittedAt).getTime())))
+    : null;
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -899,7 +1238,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
           />
         </div>
 
-        <main className="flex-1 p-6 print-full-width" data-print-date={new Date().toLocaleString()}>
+        <main className="flex-1 p-6 print-full-width bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.08),_transparent_28%),linear-gradient(180deg,#f6f8fc_0%,#eef4ff_45%,#f8fafc_100%)]" data-print-date={new Date().toLocaleString()}>
         <div className="max-w-7xl mx-auto">
 
           {/* ── Print-only report header ── */}
@@ -937,12 +1276,24 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             </div>
           )}
 
+          {/* Real-time indicator */}
+          <div className="no-print mb-5 flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live Queue
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-full shadow-sm">
+              <i className="fas fa-layer-group text-[10px]"></i>
+              {statusCounts.total} claims total
+            </span>
+          </div>
+
           {/* Stats Row */}
-          <div className="no-print mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="no-print mb-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               {
                 label: 'Pending',
-                count: verificationRequests.filter(r => r.status === 'pending').length,
+                count: statusCounts.pending,
                 icon: 'fa-hourglass-half',
                 accent: '#d97706',
                 accentLight: 'rgba(251,191,36,0.12)',
@@ -952,7 +1303,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               },
               {
                 label: 'Approved',
-                count: verificationRequests.filter(r => r.status === 'approved').length,
+                count: statusCounts.approved,
                 icon: 'fa-check',
                 accent: '#059669',
                 accentLight: 'rgba(52,211,153,0.12)',
@@ -962,7 +1313,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               },
               {
                 label: 'Rejected',
-                count: verificationRequests.filter(r => r.status === 'rejected').length,
+                count: statusCounts.rejected,
                 icon: 'fa-times',
                 accent: '#e11d48',
                 accentLight: 'rgba(251,113,133,0.12)',
@@ -972,37 +1323,37 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               },
               {
                 label: 'Total',
-                count: verificationRequests.length,
+                count: statusCounts.total,
                 icon: 'fa-layer-group',
                 isTotal: true,
               },
             ].map(({ label, count, icon, accent, accentLight, accentBg, accentBorder, barGrad, isTotal }) => (
               <div
                 key={label}
-                className="relative overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:scale-[1.025] cursor-default"
+                className="relative overflow-hidden rounded-[24px] p-5 transition-all duration-200 hover:-translate-y-0.5 cursor-default shadow-[0_16px_36px_rgba(15,23,42,0.08)]"
                 style={{
-                  background: isTotal ? 'rgba(238,242,255,0.8)' : accentBg,
-                  boxShadow: '0 2px 14px rgba(0,0,0,0.06)',
-                  border: isTotal ? '2px solid rgba(99,102,241,0.45)' : `2px solid ${accentBorder}`,
+                  background: isTotal ? 'linear-gradient(135deg,rgba(224,231,255,0.92),rgba(255,255,255,0.98))' : `linear-gradient(135deg,${accentBg},rgba(255,255,255,0.96))`,
+                  border: isTotal ? '1px solid rgba(99,102,241,0.28)' : `1px solid ${accentBorder}`,
                 }}
               >
+                <div className="absolute inset-x-5 top-0 h-1 rounded-b-full" style={{background: isTotal ? 'linear-gradient(90deg,#6366f1,#3b82f6)' : barGrad}} />
 
                 <div className="relative">
                   <div className="flex items-start justify-between mb-4">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.15em]"
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em]"
                       style={{color: isTotal ? '#6366f1' : accent}}>
                       {label}
                     </p>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
                       style={isTotal
                         ? {background: 'rgba(99,102,241,0.12)', border: '1.5px solid rgba(99,102,241,0.3)'}
                         : {background: accentLight, border: `1.5px solid ${accentBorder}`}}>
-                      <i className={`fas ${icon} text-xs`} style={{color: isTotal ? '#6366f1' : accent}}></i>
+                      <i className={`fas ${icon} text-sm`} style={{color: isTotal ? '#6366f1' : accent}}></i>
                     </div>
                   </div>
 
-                  <p className="text-4xl font-black leading-none tracking-tight"
-                    style={{color: isTotal ? '#6366f1' : accent}}>
+                  <p className="text-[40px] font-black leading-none tracking-tight"
+                    style={{color: isTotal ? '#312e81' : accent}}>
                     {count}
                   </p>
 
@@ -1028,18 +1379,18 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
           </div>
 
           {/* Filters and Search */}
-          <div className="rounded-xl shadow-md mb-5 no-print" style={{background:'linear-gradient(135deg,#1e2d4a 0%,#1e3461 100%)',border:'1px solid rgba(147,197,253,0.15)'}}>
+          <div className="rounded-[26px] border border-[#244a86] bg-gradient-to-br from-[#17315c] via-[#163564] to-[#0f2347] shadow-[0_22px_50px_rgba(15,35,71,0.35)] mb-5 no-print overflow-hidden">
             {/* Top row: search + selects + dates + actions */}
-            <div className="flex flex-wrap items-end gap-2 p-3">
+            <div className="flex flex-wrap items-end gap-2 p-4">
               {/* Search */}
-              <div className="relative flex-1 min-w-[180px]">
-                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs"></i>
+              <div className="relative flex-1 min-w-[220px]">
+                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Name, email, item, location..."
-                  className="w-full pl-8 pr-3 py-2 text-sm border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-transparent bg-white/10 placeholder-white/35 text-white/85 transition-all"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-3 text-sm text-slate-700 placeholder-slate-400 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
                 />
               </div>
 
@@ -1047,7 +1398,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+                className="dark-select rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -1060,7 +1411,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+                className="dark-select rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               >
                 <option value="all">All Categories</option>
                 {availableCategories.map(cat => (
@@ -1072,7 +1423,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <select
                 value={selectedFoundItemId || 'all'}
                 onChange={(e) => setSelectedFoundItemId(e.target.value === 'all' ? null : e.target.value)}
-                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+                className="dark-select rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               >
                 <option value="all">All Items ({verificationRequests.length})</option>
                 {foundItemGroups.map(group => {
@@ -1090,7 +1441,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 type="date"
                 value={dateFilter.startDate}
                 onChange={(e) => setDateFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                className="border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all [color-scheme:dark]"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               />
 
               {/* To Date */}
@@ -1098,7 +1449,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 type="date"
                 value={dateFilter.endDate}
                 onChange={(e) => setDateFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                className="border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all [color-scheme:dark]"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               />
 
               {/* Action Buttons */}
@@ -1112,7 +1463,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       setCategoryFilter('all');
                       setSelectedFoundItemId(null);
                     }}
-                    className="px-3 py-2 border border-white/20 text-white/60 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                    className="px-4 py-3 border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-sm font-semibold"
                   >
                     <i className="fas fa-times text-xs"></i>
                     Clear
@@ -1122,14 +1473,14 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   data={csvData}
                   headers={csvHeaders}
                   filename={`verification-requests-${new Date().toISOString().split('T')[0]}.csv`}
-                  className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-semibold"
+                  className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl transition-colors flex items-center gap-1.5 text-sm font-semibold shadow-sm shadow-emerald-200"
                 >
                   <i className="fas fa-download text-xs"></i>
                   Export
                 </CSVLink>
                 <button
                   onClick={() => window.print()}
-                  className="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-semibold"
+                  className="px-4 py-3 bg-[#17315c] hover:bg-[#0f2347] text-white rounded-2xl transition-colors flex items-center gap-1.5 text-sm font-semibold shadow-sm shadow-slate-300"
                 >
                   <i className="fas fa-print text-xs"></i>
                   Print
@@ -1138,19 +1489,19 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             </div>
 
             {/* Results Summary bar */}
-            <div className="px-3 py-2 border-t border-white/10 bg-white/[0.04] rounded-b-xl flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+            <div className="px-4 py-3 border-t border-white/10 bg-[#0f2347]/70 rounded-b-[26px] flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 bg-sky-400/15 text-sky-100 font-semibold px-2.5 py-1 rounded-full text-xs border border-sky-300/20">
                 <i className="fas fa-list-ul text-[10px]"></i>
                 {filteredRequests.length} result{filteredRequests.length !== 1 ? 's' : ''}
               </span>
               {searchTerm && (
-                <span className="text-xs text-white/40">matching <span className="text-blue-300 font-medium">"{searchTerm}"</span></span>
+                <span className="text-xs text-blue-100/75">matching <span className="text-sky-200 font-medium">"{searchTerm}"</span></span>
               )}
               {statusFilter !== 'all' && (
-                <span className="text-xs text-white/40">· status: <span className="font-medium text-white/70 capitalize">{statusFilter}</span></span>
+                <span className="text-xs text-blue-100/75">status: <span className="font-semibold text-white capitalize">{statusFilter}</span></span>
               )}
               {categoryFilter !== 'all' && (
-                <span className="inline-flex items-center gap-1 bg-indigo-400/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 bg-indigo-400/15 text-indigo-100 font-semibold px-2.5 py-1 rounded-full text-xs border border-indigo-300/20">
                   <i className="fas fa-tag text-[9px]"></i>
                   {categoryFilter}
                   <button onClick={() => setCategoryFilter('all')} className="ml-0.5 hover:text-white">
@@ -1159,10 +1510,10 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 </span>
               )}
               {selectedFoundItemId && (
-                <span className="inline-flex items-center gap-1 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 font-semibold px-2.5 py-1 rounded-full text-xs">
                   <i className="fas fa-box text-[9px]"></i>
                   {foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Item'}
-                  <button onClick={() => setSelectedFoundItemId(null)} className="ml-0.5 hover:text-white">
+                  <button onClick={() => setSelectedFoundItemId(null)} className="ml-0.5 hover:text-blue-900">
                     <i className="fas fa-times text-[8px]"></i>
                   </button>
                 </span>
@@ -1175,15 +1526,15 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             <div className="w-full">
 
               {/* Claims sub-header */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-4 px-5 py-3.5 flex items-center justify-between">
+              <div className="bg-white/95 rounded-[24px] border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.06)] mb-4 px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight">
                       {selectedFoundItemId
                         ? (foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Claims')
                         : 'All Claims'}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-1">
                       {filteredRequests.length} claim{filteredRequests.length !== 1 ? 's' : ''}
                       {selectedFoundItemId ? ' for this item' : ' across all items'}
                     </p>
@@ -1193,7 +1544,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   {/* Sort toggle */}
                   <button
                     onClick={() => setSortOrder(o => o === 'oldest' ? 'newest' : 'oldest')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors"
                     title={sortOrder === 'oldest' ? 'Showing oldest first — click for newest first' : 'Showing newest first — click for oldest first'}
                   >
                     <i className={`fas fa-sort-amount-${sortOrder === 'oldest' ? 'up' : 'down'} text-xs text-slate-400`}></i>
@@ -1202,7 +1553,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   {selectedFoundItemId && (
                     <button
                       onClick={() => setSelectedFoundItemId(null)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors"
                     >
                       <i className="fas fa-times text-xs"></i>
                       Show All
@@ -1212,7 +1563,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
 
           {loading ? (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+            <div className="bg-white rounded-xl border border-slate-400 shadow-sm p-12 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                   <i className="fas fa-spinner fa-spin text-xl text-blue-500"></i>
@@ -1224,7 +1575,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
             </div>
           ) : filteredRequests.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+            <div className="bg-white rounded-xl border border-slate-400 shadow-sm p-12 text-center">
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-100 to-slate-100 flex items-center justify-center shadow-inner">
                   <i className="fas fa-inbox text-2xl text-gray-300"></i>
@@ -1305,227 +1656,248 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 );
               })()}
 
-              <div className="space-y-2">
-                {currentRequests.map((request) => {
-                  const initials = request.claimantInfo.name
-                    ? request.claimantInfo.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-                    : '?';
-                  const avatarColors = [
-                    'from-blue-400 to-indigo-500', 'from-violet-400 to-purple-500',
-                    'from-rose-400 to-pink-500',   'from-amber-400 to-orange-500',
-                    'from-teal-400 to-cyan-500',   'from-emerald-400 to-green-500',
-                  ];
-                  const idHash = request._id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-                  const avatarGrad = avatarColors[idHash % avatarColors.length];
-                  const statusStyles = {
-                    pending:   'bg-amber-50 text-amber-600 border border-amber-200',
-                    approved:  'bg-emerald-50 text-emerald-600 border border-emerald-200',
-                    rejected:  'bg-rose-50 text-rose-600 border border-rose-200',
-                    processed: 'bg-sky-50 text-sky-600 border border-sky-200',
-                  };
-                  const dotStyles = {
-                    pending: 'bg-amber-400', approved: 'bg-emerald-400',
-                    rejected: 'bg-rose-400', processed: 'bg-sky-400',
-                  };
-                  const { badge, subtitle, subtitleColor } = getStatusDisplay(request);
-                  const ageMs = Date.now() - new Date(request.submittedAt).getTime();
-                  const ageDays = Math.floor(ageMs / 86400000);
-                  const isStale = request.status === 'pending' && ageDays > 3;
-                  const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays} days ago`;
-                  const agePillStyle = request.status !== 'pending'
-                    ? 'bg-slate-50 text-slate-400 border-slate-200'
-                    : ageDays > 3
-                      ? 'bg-red-50 text-red-600 border-red-200'
-                      : ageDays >= 2
-                        ? 'bg-amber-50 text-amber-600 border-amber-200'
-                        : 'bg-emerald-50 text-emerald-600 border-emerald-200';
+              {/* ── Claims Table ── */}
+              <div className="bg-white/95 rounded-[24px] border border-slate-400 shadow-[0_18px_45px_rgba(15,23,42,0.06)] overflow-hidden">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-slate-200/80">
+                      <th className="w-8 px-4 py-3 text-left border-b border-r border-slate-400"></th>
+                      <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-r border-slate-400">Claimant</th>
+                      {!selectedFoundItemId && (
+                        <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-r border-slate-400">Item</th>
+                      )}
+                      <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-r border-slate-400">Submitted</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-r border-slate-400">Status</th>
+                      <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-slate-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRequests.map((request) => {
+                      const initials = request.claimantInfo.name
+                        ? request.claimantInfo.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                        : '?';
+                      const avatarColors = [
+                        'from-blue-400 to-indigo-500', 'from-violet-400 to-purple-500',
+                        'from-rose-400 to-pink-500',   'from-amber-400 to-orange-500',
+                        'from-teal-400 to-cyan-500',   'from-emerald-400 to-green-500',
+                      ];
+                      const idHash = request._id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+                      const avatarGrad = avatarColors[idHash % avatarColors.length];
+                      const statusStyles = {
+                        pending:   'bg-amber-50 text-amber-600 border border-amber-200',
+                        approved:  'bg-emerald-50 text-emerald-600 border border-emerald-200',
+                        rejected:  'bg-rose-50 text-rose-600 border border-rose-200',
+                        processed: 'bg-sky-50 text-sky-600 border border-sky-200',
+                      };
+                      const dotStyles = {
+                        pending: 'bg-amber-400', approved: 'bg-emerald-400',
+                        rejected: 'bg-rose-400', processed: 'bg-sky-400',
+                      };
+                      const { badge, subtitle, subtitleColor } = getStatusDisplay(request);
+                      const ageMs = Date.now() - new Date(request.submittedAt).getTime();
+                      const ageDays = Math.floor(ageMs / 86400000);
+                      const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? '1 day' : `${ageDays} days`;
+                      const ageTier =
+                        request.status !== 'pending' ? null :
+                        ageDays === 0               ? 'new' :
+                        ageDays <= 2                ? 'amber' :
+                        ageDays <= 7                ? 'red' : 'critical';
 
-                  const accentBorder = {
-                    pending:   'border-l-blue-400',
-                    approved:  'border-l-emerald-400',
-                    rejected:  'border-l-rose-400',
-                    processed: 'border-l-sky-400',
-                  }[request.status] || 'border-l-slate-300';
+                      const isLive = !!liveFlash[request._id];
+                      const rowBg = bulkSelected.has(request._id)
+                        ? 'bg-rose-50/60'
+                        : isLive
+                        ? 'bg-blue-50'
+                        : 'bg-white hover:bg-slate-50/60';
+                      const leftAccent = isLive
+                        ? 'border-l-4 border-l-blue-500'
+                        : ({
+                          pending:   'border-l-4 border-l-blue-400',
+                          approved:  'border-l-4 border-l-emerald-400',
+                          rejected:  'border-l-4 border-l-rose-400',
+                          processed: 'border-l-4 border-l-sky-400',
+                        }[request.status] || 'border-l-4 border-l-slate-300');
 
-                  const accentRing = {
-                    pending:   'border-blue-300 shadow-blue-100',
-                    approved:  'border-emerald-300 shadow-emerald-100',
-                    rejected:  'border-rose-300 shadow-rose-100',
-                    processed: 'border-sky-300 shadow-sky-100',
-                  }[request.status] || 'border-slate-200 shadow-slate-100';
+                      return (
+                        <tr key={request._id} className={`transition-colors ${rowBg} ${leftAccent} hover:shadow-[inset_0_0_0_9999px_rgba(248,250,252,0.55)]`}>
 
-                  return (
-                    <div
-                      key={request._id}
-                      className={`rounded-xl border-l-4 border-2 transition-all shadow-sm hover:shadow-md ${accentBorder} ${
-                        bulkSelected.has(request._id)
-                          ? 'bg-rose-50/60 border-rose-300 ring-1 ring-rose-300'
-                          : `bg-white ${accentRing} hover:shadow-md`
-                      }`}
-                    >
-                      {/* ── Single compact row ── */}
-                      <div className="flex items-center gap-3 px-4 py-3">
-
-                        {/* Checkbox */}
-                        <div className="shrink-0">
-                          {request.status === 'pending' ? (
-                            <input
-                              type="checkbox"
-                              checked={bulkSelected.has(request._id)}
-                              onChange={() => toggleBulkSelect(request._id)}
-                              onClick={e => e.stopPropagation()}
-                              className="w-4 h-4 accent-rose-500 cursor-pointer"
-                            />
-                          ) : (
-                            <div className="w-4" />
-                          )}
-                        </div>
-
-                        {/* Avatar */}
-                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm`}>
-                          {initials}
-                        </div>
-
-                        {/* Claimant info */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-slate-800 leading-tight truncate">{request.claimantInfo.name}</p>
-                            {request.claimantInfo.address && (
-                              <span className="text-xs text-slate-400 truncate hidden lg:block">{request.claimantInfo.address}</span>
+                          {/* Checkbox */}
+                          <td className="px-4 py-3 border-b border-r border-slate-400">
+                            {request.status === 'pending' ? (
+                              <input
+                                type="checkbox"
+                                checked={bulkSelected.has(request._id)}
+                                onChange={() => toggleBulkSelect(request._id)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-4 h-4 accent-rose-500 cursor-pointer"
+                              />
+                            ) : (
+                              <div className="w-4" />
                             )}
-                          </div>
-                          <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-xs text-slate-400 flex items-center gap-1">
-                              <i className="fas fa-envelope text-slate-300 text-[10px]"></i>
-                              {request.claimantInfo.email}
-                            </span>
-                            <span className="text-xs text-slate-400 flex items-center gap-1">
-                              <i className="fas fa-phone text-slate-300 text-[10px]"></i>
-                              {request.claimantInfo.phone}
-                            </span>
-                          </div>
-                        </div>
+                          </td>
 
-                        {/* Item + date + status — hidden on small screens */}
-                        <div className="hidden md:flex items-center gap-4 shrink-0">
-                          {/* Item info */}
-                          <div className="flex flex-col items-end gap-0.5">
-                            {!selectedFoundItemId && request.itemId?.itemName && (
-                              <div className="flex items-center gap-1.5 justify-end flex-wrap">
-                                <span className="text-sm font-medium text-slate-700">{request.itemId.itemName}</span>
-                                {request.itemId?.category && (
-                                  <span className="text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
-                                    {request.itemId.category}
-                                  </span>
-                                )}
-                                {(() => {
-                                  const n = claimCountByItemId[request.itemId?._id || '__unknown__'] || 0;
-                                  if (n < 2) return null;
-                                  return (
-                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-500 border border-rose-100">
-                                      {n} claims
-                                    </span>
-                                  );
-                                })()}
+                          {/* Claimant */}
+                          <td className="px-4 py-3 border-b border-r border-slate-400">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm`}>
+                                {initials}
                               </div>
-                            )}
-                            <div className="flex items-center gap-1.5">
-                              {isStale && (
-                                <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                                  <i className="fas fa-clock text-[9px] mr-0.5"></i>{ageLabel}
-                                </span>
+                              <p className="text-sm font-semibold text-slate-800 leading-tight">{request.claimantInfo.name}</p>
+                            </div>
+                          </td>
+
+                          {/* Item */}
+                          {!selectedFoundItemId && (
+                            <td className="px-4 py-3 border-b border-r border-slate-400">
+                              {request.itemId?.itemName ? (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-sm font-medium text-slate-700">{request.itemId.itemName}</span>
+                                  {request.itemId?.category && (
+                                    <span className="text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                                      {request.itemId.category}
+                                    </span>
+                                  )}
+                                  {(() => {
+                                    const n = claimCountByItemId[request.itemId?._id || '__unknown__'] || 0;
+                                    if (n < 2) return null;
+                                    return (
+                                      <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-500 border border-rose-100">
+                                        {n} claims
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">—</span>
                               )}
-                              <span className="text-[11px] text-slate-400">
+                            </td>
+                          )}
+
+                          {/* Submitted date */}
+                          <td className="px-4 py-3 whitespace-nowrap border-b border-r border-slate-400">
+                            <div className="flex flex-col gap-0.5">
+                              {ageTier && (() => {
+                                const tierStyle = {
+                                  new:      'bg-blue-50 text-blue-600 border-blue-200',
+                                  amber:    'bg-amber-50 text-amber-600 border-amber-200',
+                                  red:      'bg-red-50 text-red-600 border-red-200',
+                                  critical: 'bg-red-100 text-red-700 border-red-300',
+                                }[ageTier];
+                                const tierIcon = ageTier === 'new' ? 'fa-bolt' : 'fa-clock';
+                                const tierSuffix = ageTier === 'critical' ? ' — Action needed' : ageTier === 'red' ? ' — Overdue' : '';
+                                return (
+                                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold border px-1.5 py-0.5 rounded w-fit ${tierStyle} ${ageTier === 'critical' ? 'animate-pulse' : ''}`}>
+                                    <i className={`fas ${tierIcon} text-[9px]`}></i>
+                                    {ageLabel}{tierSuffix}
+                                  </span>
+                                );
+                              })()}
+                              <span className="text-xs text-slate-500">
                                 {new Date(request.submittedAt).toLocaleDateString()}
                               </span>
                             </div>
-                          </div>
+                          </td>
 
-                          {/* Status badge */}
-                          <div className="flex flex-col items-end gap-0.5 min-w-[110px]">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${statusStyles[request.status] || statusStyles.processed}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
-                              {badge}
-                            </span>
-                            <p className={`text-[11px] font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
-                          </div>
-                        </div>
+                          {/* Status */}
+                          <td className="px-4 py-3 border-b border-r border-slate-400">
+                            <div className="flex flex-col gap-0.5">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap w-fit ${statusStyles[request.status] || statusStyles.processed}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
+                                {badge}
+                              </span>
+                              {isLive && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded w-fit animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> LIVE
+                                </span>
+                              )}
+                              {subtitle && (
+                                <p className={`text-[11px] font-medium ${subtitleColor || 'text-slate-400'}`}>{subtitle}</p>
+                              )}
+                            </div>
+                          </td>
 
-                        {/* Divider */}
-                        <div className="hidden md:block w-px h-8 bg-slate-100 shrink-0"></div>
+                          {/* Actions */}
+                          <td className="px-4 py-3 border-b border-slate-400">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              {/* Compare toggle */}
+                              {(() => {
+                                const thisItemId = request.itemId?._id || '__unknown__';
+                                if ((claimCountByItemId[thisItemId] || 0) < 2) return null;
+                                const isSel = compareIds.includes(request._id);
+                                const firstSelectedItemId = compareIds.length > 0
+                                  ? (verificationRequests.find(r => r._id === compareIds[0])?.itemId?._id || '__unknown__')
+                                  : null;
+                                const isDisabled = !isSel && (compareIds.length >= 2 || (firstSelectedItemId && firstSelectedItemId !== thisItemId));
+                                const disabledTitle = compareIds.length >= 2
+                                  ? 'Deselect one claim first'
+                                  : firstSelectedItemId && firstSelectedItemId !== thisItemId
+                                    ? 'Can only compare claims for the same item'
+                                    : '';
+                                return (
+                                  <button
+                                    onClick={() => toggleCompare(request._id)}
+                                    disabled={isDisabled}
+                                    title={isDisabled ? disabledTitle : isSel ? 'Remove from comparison' : 'Add to comparison'}
+                                    className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
+                                      isSel
+                                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                                        : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
+                                    }`}
+                                  >
+                                    <i className={`fas ${isSel ? 'fa-check-square' : 'fa-columns'} text-xs`}></i>
+                                    {isSel ? 'Selected' : 'Compare'}
+                                  </button>
+                                );
+                              })()}
 
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Compare toggle */}
-                          {selectedFoundItemId && (() => {
-                            const group = foundItemGroups.find(g => g.itemId === selectedFoundItemId);
-                            if (!group || group.claims.length < 2) return null;
-                            const isSel = compareIds.includes(request._id);
-                            const isDisabled = !isSel && compareIds.length >= 2;
-                            return (
+                              {/* Quick-action Approve / Reject — pending only */}
+                              {request.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => setQuickConfirm({ id: request._id, status: 'approved', name: request.claimantInfo.name })}
+                                    disabled={quickActionLoading !== null}
+                                    title="Approve"
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shadow-sm"
+                                  >
+                                    {quickActionLoading === request._id + 'approved'
+                                      ? <i className="fas fa-spinner fa-spin text-xs"></i>
+                                      : <i className="fas fa-check text-xs"></i>}
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => setQuickConfirm({ id: request._id, status: 'rejected', name: request.claimantInfo.name })}
+                                    disabled={quickActionLoading !== null}
+                                    title="Reject"
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-500 border border-rose-200 hover:border-rose-300 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                                  >
+                                    {quickActionLoading === request._id + 'rejected'
+                                      ? <i className="fas fa-spinner fa-spin text-xs"></i>
+                                      : <i className="fas fa-times text-xs"></i>}
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Review button */}
                               <button
-                                onClick={() => toggleCompare(request._id)}
-                                disabled={isDisabled}
-                                title={isDisabled ? 'Deselect one claim first' : isSel ? 'Remove from comparison' : 'Add to comparison'}
-                                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed ${
-                                  isSel
-                                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                                    : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
-                                }`}
+                                onClick={() => openModal(request)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-[#1a3560] hover:bg-[#0f2347] text-white text-xs font-semibold rounded-lg transition-all shadow-sm whitespace-nowrap"
                               >
-                                <i className={`fas ${isSel ? 'fa-check-square' : 'fa-columns'} text-xs`}></i>
-                                {isSel ? 'Selected' : 'Compare'}
+                                <i className="fas fa-eye text-xs"></i>
+                                Review
                               </button>
-                            );
-                          })()}
+                            </div>
+                          </td>
 
-                          {/* Quick-action Approve / Reject — pending only */}
-                          {request.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => setQuickConfirm({ id: request._id, status: 'approved', name: request.claimantInfo.name })}
-                                disabled={quickActionLoading !== null}
-                                title="Approve"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shadow-sm"
-                              >
-                                {quickActionLoading === request._id + 'approved'
-                                  ? <i className="fas fa-spinner fa-spin text-xs"></i>
-                                  : <i className="fas fa-check text-xs"></i>}
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => setQuickConfirm({ id: request._id, status: 'rejected', name: request.claimantInfo.name })}
-                                disabled={quickActionLoading !== null}
-                                title="Reject"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-500 border border-rose-200 hover:border-rose-300 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                              >
-                                {quickActionLoading === request._id + 'rejected'
-                                  ? <i className="fas fa-spinner fa-spin text-xs"></i>
-                                  : <i className="fas fa-times text-xs"></i>}
-                                Reject
-                              </button>
-                            </>
-                          )}
-
-                          {/* Review button */}
-                          <button
-                            onClick={() => openModal(request)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-[#1a3560] hover:bg-[#0f2347] text-white text-xs font-semibold rounded-lg transition-all shadow-sm whitespace-nowrap"
-                          >
-                            <i className="fas fa-eye text-xs"></i>
-                            Review
-                          </button>
-
-                        </div>
-
-                      </div>
-                    </div>
-                  );
-                })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               {/* Pagination */}
-              <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-xl border border-slate-200 shadow-sm">
+              <div className="bg-white/95 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-[24px] border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
                 <div className="text-sm text-gray-400 flex items-center gap-1.5">
                   <i className="fas fa-table-list text-gray-300 text-xs"></i>
                   Showing{' '}
@@ -1538,7 +1910,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-gray-300 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-slate-300 transition-all"
                     >
                       <i className="fas fa-chevron-left text-[9px]"></i>
                       Prev
@@ -1549,8 +1921,8 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         onClick={() => setCurrentPage(page)}
                         className={`w-9 h-9 rounded-xl text-xs font-semibold transition-all ${
                           currentPage === page
-                            ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-200'
-                            : 'border border-gray-200 text-gray-500 hover:bg-slate-50 hover:border-gray-300'
+                            ? 'bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm shadow-sky-200'
+                            : 'border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
                         }`}
                       >
                         {page}
@@ -1559,7 +1931,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-gray-300 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-slate-300 transition-all"
                     >
                       Next
                       <i className="fas fa-chevron-right text-[9px]"></i>
@@ -1668,7 +2040,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   </button>
                   <button
                     onClick={() => setQuickConfirm(null)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 border border-slate-400 hover:bg-slate-50 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1732,9 +2104,27 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </span>
                         );
                       })()}
-                      <p className="text-[11px] text-blue-300/60 mt-1.5 font-medium">
-                        Submitted&nbsp;
-                        {new Date(selectedRequest.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <p className="text-[11px] text-blue-300/60 mt-1.5 font-medium flex items-center gap-2 flex-wrap">
+                        <span>
+                          Submitted&nbsp;
+                          {new Date(selectedRequest.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        {selectedRequest.status === 'pending' && (() => {
+                          const days = Math.floor((Date.now() - new Date(selectedRequest.submittedAt).getTime()) / 86400000);
+                          const label = days === 0 ? 'Today' : days === 1 ? '1 day pending' : `${days} days pending`;
+                          const style =
+                            days === 0  ? 'bg-blue-400/20 text-blue-200 border-blue-400/30' :
+                            days <= 2   ? 'bg-amber-400/20 text-amber-200 border-amber-400/30' :
+                            days <= 7   ? 'bg-red-400/20 text-red-200 border-red-400/30' :
+                                          'bg-red-500/30 text-red-100 border-red-400/50 animate-pulse';
+                          const icon = days === 0 ? 'fa-bolt' : 'fa-hourglass-half';
+                          return (
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${style}`}>
+                              <i className={`fas ${icon} text-[9px]`}></i>
+                              {label}{days > 7 ? ' — Action needed' : days > 2 ? ' — Overdue' : ''}
+                            </span>
+                          );
+                        })()}
                       </p>
                     </div>
 
@@ -1752,6 +2142,9 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               {/* ── Scrollable Body ── */}
               <div className="overflow-y-auto flex-1 bg-[#eef0f6]">
                 <div className="p-6 space-y-4">
+
+                  {/* Confidence Score */}
+                  <ConfidenceScore claim={selectedRequest} />
 
                   {/* Section 1 – Claimant + Found Item */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1826,7 +2219,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     if (foundPhotos.length === 0 && claimantPhotos.length === 0) return null;
                     const openLb = (imgs, idx, lbl) => setLightbox({ open: true, images: imgs, index: idx, label: lbl });
                     return (
-                      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                      <div className="bg-white border border-slate-400 rounded-xl overflow-hidden shadow-sm">
                         {/* Header */}
                         <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-slate-50/70">
                           <div className="w-[3px] h-4 bg-violet-500 rounded-full shrink-0"></div>
@@ -1834,7 +2227,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Photo Comparison</p>
                             <p className="text-[11px] text-slate-400 mt-0.5">Compare photos side-by-side to verify ownership</p>
                           </div>
-                          <span className="text-[11px] text-slate-400 bg-white border border-slate-200 px-2.5 py-0.5 rounded-full shrink-0">
+                          <span className="text-[11px] text-slate-400 bg-white border border-slate-400 px-2.5 py-0.5 rounded-full shrink-0">
                             {foundPhotos.length + claimantPhotos.length} photo{(foundPhotos.length + claimantPhotos.length) !== 1 ? 's' : ''} total
                           </span>
                         </div>
@@ -1890,7 +2283,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/50 flex items-center gap-2">
                           <i className="fas fa-expand-alt text-slate-300 text-xs shrink-0"></i>
                           <p className="text-[11px] text-slate-400">
-                            Click any photo to open full-screen · Use <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">←</kbd> <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">→</kbd> to navigate · <kbd className="px-1 py-px bg-white border border-slate-200 rounded text-[10px] font-mono">Esc</kbd> to close
+                            Click any photo to open full-screen · Use <kbd className="px-1 py-px bg-white border border-slate-400 rounded text-[10px] font-mono">←</kbd> <kbd className="px-1 py-px bg-white border border-slate-400 rounded text-[10px] font-mono">→</kbd> to navigate · <kbd className="px-1 py-px bg-white border border-slate-400 rounded text-[10px] font-mono">Esc</kbd> to close
                           </p>
                         </div>
                       </div>
@@ -1930,7 +2323,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
                   {/* Processing record – only when processed */}
                   {selectedRequest.processedAt && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div className="bg-slate-50 border border-slate-400 rounded-xl p-5 shadow-sm">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-[3px] h-4 bg-slate-400 rounded-full"></div>
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Processing Record</p>
@@ -2028,7 +2421,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                               isCurrent              ? 'border-2 border-blue-400 shadow-lg shadow-blue-100/50' :
                               stage.status === 'passed' ? 'border border-emerald-200' :
                               stage.status === 'failed'  ? 'border border-red-200' :
-                                                           'border border-slate-200'
+                                                           'border border-slate-400'
                             } ${isLocked ? 'opacity-40' : ''}`}
                           >
                             {/* Card header — colour changes per state */}
@@ -2090,7 +2483,11 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                                 {isEnabled && (
                                   <div className="flex gap-2 mb-3">
                                     <button
-                                      onClick={() => handleStageDecision(stageDef.key, 'passed')}
+                                      onClick={() => {
+                                        setRejectionPicker(null);
+                                        setPendingReason('');
+                                        handleStageDecision(stageDef.key, 'passed');
+                                      }}
                                       disabled={actionLoading || saveLoading}
                                       className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${
                                         stage.status === 'passed'
@@ -2102,17 +2499,84 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                                       {stageDef.isFinal ? 'Approve Request' : 'Mark as Passed'}
                                     </button>
                                     <button
-                                      onClick={() => handleStageDecision(stageDef.key, 'failed')}
+                                      onClick={() => {
+                                        setPendingReason('');
+                                        setRejectionPicker(prev => prev === stageDef.key ? null : stageDef.key);
+                                      }}
                                       disabled={actionLoading || saveLoading}
                                       className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${
                                         stage.status === 'failed'
                                           ? 'bg-red-500 border-red-500 text-white shadow-sm'
+                                          : rejectionPicker === stageDef.key
+                                          ? 'bg-red-50 border-red-400 text-red-600'
                                           : 'bg-white border-slate-200 text-slate-600 hover:border-red-400 hover:bg-red-50 hover:text-red-600'
                                       }`}
                                     >
                                       <i className="fas fa-times text-[10px]"></i>
                                       {stageDef.isFinal ? 'Reject Request' : 'Mark as Failed'}
                                     </button>
+                                  </div>
+                                )}
+
+                                {/* Rejection reason picker */}
+                                {isEnabled && rejectionPicker === stageDef.key && (
+                                  <div className="mb-3 rounded-lg border border-red-200 bg-red-50/60 p-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-red-500 mb-2 flex items-center gap-1.5">
+                                      <i className="fas fa-circle-exclamation text-[10px]"></i>
+                                      Select a rejection reason
+                                    </p>
+                                    <div className="flex flex-col gap-1.5 mb-3">
+                                      {REJECTION_REASONS[stageDef.key].map(reason => (
+                                        <label
+                                          key={reason}
+                                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer text-xs font-medium transition-all ${
+                                            pendingReason === reason
+                                              ? 'bg-red-100 border-red-400 text-red-700'
+                                              : 'bg-white border-slate-200 text-slate-600 hover:border-red-300 hover:bg-red-50/50'
+                                          }`}
+                                        >
+                                          <input
+                                            type="radio"
+                                            name={`reason-${stageDef.key}`}
+                                            value={reason}
+                                            checked={pendingReason === reason}
+                                            onChange={() => setPendingReason(reason)}
+                                            className="accent-red-500 shrink-0"
+                                          />
+                                          {reason}
+                                        </label>
+                                      ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => { setRejectionPicker(null); setPendingReason(''); }}
+                                        className="flex-1 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={!pendingReason || actionLoading || saveLoading}
+                                        onClick={() => {
+                                          handleStageDecision(stageDef.key, 'failed', pendingReason);
+                                          setRejectionPicker(null);
+                                          setPendingReason('');
+                                        }}
+                                        className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-red-500 text-white border border-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                                      >
+                                        <i className="fas fa-times text-[10px]"></i>
+                                        Confirm {stageDef.isFinal ? 'Rejection' : 'Failure'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Show stored rejection reason on failed stages */}
+                                {stage.status === 'failed' && stage.notes && (
+                                  <div className="mb-3 flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                    <i className="fas fa-circle-xmark text-red-400 text-xs mt-0.5 shrink-0"></i>
+                                    <p className="text-xs text-red-700 font-medium leading-snug">{stage.notes.split('\n')[0]}</p>
                                   </div>
                                 )}
 
@@ -2128,7 +2592,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                                   placeholder="Stage notes…"
                                   className={`w-full text-xs rounded-lg px-3 py-2 resize-none transition-colors focus:outline-none ${
                                     isEnabled
-                                      ? 'border border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-300'
+                                      ? 'border border-slate-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-300'
                                       : 'bg-slate-50 border border-slate-100 text-slate-500 cursor-default'
                                   }`}
                                 />
@@ -2147,7 +2611,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Admin Notes</p>
                     </div>
                     {selectedRequest.notes && selectedRequest.status !== 'pending' && (
-                      <div className="mb-3 bg-slate-50 rounded-lg p-3.5 text-sm text-slate-700 border border-slate-200 leading-relaxed">
+                      <div className="mb-3 bg-slate-50 rounded-lg p-3.5 text-sm text-slate-700 border border-slate-400 leading-relaxed">
                         {selectedRequest.notes}
                       </div>
                     )}
@@ -2155,7 +2619,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       value={adminNotes}
                       onChange={(e) => setAdminNotes(e.target.value)}
                       rows="3"
-                      className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 text-sm text-slate-700 placeholder-slate-400 resize-none transition-colors"
+                      className="w-full border border-slate-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 text-sm text-slate-700 placeholder-slate-400 resize-none transition-colors"
                       placeholder="Add notes about your decision or any additional context…"
                     />
                   </div>
@@ -2193,7 +2657,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   <button
                     onClick={closeModal}
                     disabled={actionLoading || saveLoading}
-                    className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-400 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
                   >
                     Close
                   </button>
@@ -2241,7 +2705,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <div className="p-6 space-y-5">
 
                 {/* Claimant + item summary */}
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-400">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
                       <span className="text-white text-sm font-bold">
@@ -2323,7 +2787,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 <button
                   onClick={() => setCollectionModal({ open: false, request: null, pin: '', loading: false, error: '' })}
                   disabled={collectionModal.loading}
-                  className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-400 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>

@@ -1,4 +1,5 @@
 require("dotenv").config();
+const http = require("http");
 const express = require("express");
 const dbConnection = require("./config/db");
 const cors = require("cors");
@@ -8,6 +9,7 @@ const logger = require("./middleware/logger");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const alertRoutes = require("./subsystems/admin/routes/alerts");
+const socketInstance = require("./socketInstance");
 
 // Import Admin model (make sure this exists)
 const Admin = require("./subsystems/admin/models/admin");
@@ -30,36 +32,7 @@ const settingsRoutes = require('./subsystems/admin/routes/settingsRoutes');
 const zoneRoutes = require('./subsystems/admin/routes/zoneRoutes');
 const { seedZones } = require('./subsystems/admin/controllers/zoneController');
 
-const { Server } = require("socket.io");
-const http = require("http");
-
 const app = express(); 
-
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    credentials: true
-  }
-});
-
-app.set('io', io);
-
-io.on("connection", (socket) => {
-  console.log("Socket connected:", socket.id);
-  
-  socket.on("join_notifications", (email) => {
-    if (email) {
-      socket.join(email.toLowerCase());
-      console.log(`Socket ${socket.id} joined room: ${email}`);
-    }
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Socket disconnected:", socket.id);
-  });
-});
 
 // Enhanced CORS configuration
 const corsOptions = {
@@ -162,4 +135,6 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
+const httpServer = http.createServer(app);
+socketInstance.init(httpServer);
+httpServer.listen(PORT, () => console.log(`Server running on PORT ${PORT} (Socket.IO enabled)`));

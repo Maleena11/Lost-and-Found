@@ -10,7 +10,8 @@ const {
   getVerificationRequestsByItem,
   getVerificationRequestsByEmail,
   confirmCollection,
-  regeneratePin
+  regeneratePin,
+  getClaimHistory,
 } = require('../controllers/verificationController');
 
 // Create new verification request
@@ -42,5 +43,8 @@ router.post('/:id/confirm-collection', confirmCollection);
 
 // Regenerate collection PIN for an approved claim
 router.patch('/:id/regenerate-pin', regeneratePin);
+
+// Get full event history / timeline for a claim
+router.get('/:id/history', getClaimHistory);
 
 module.exports = router;

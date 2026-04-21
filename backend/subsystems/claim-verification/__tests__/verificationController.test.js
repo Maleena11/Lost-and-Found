@@ -18,6 +18,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 
+// First run can take a while because mongodb-memory-server may need to
+// download a MongoDB binary before the in-memory instance can start.
+jest.setTimeout(180000);
+
 // ── Silence non-fatal console noise during tests ─────────────────────────────
 jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -73,12 +77,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
+  if (mongod) {
+    await mongod.stop();
+  }
 });
 
 // Clean collections between tests
 afterEach(async () => {
+  if (mongoose.connection.readyState !== 1) return;
+
   await VerificationRequest.deleteMany({});
   await ClaimHistory.deleteMany({});
   await LostFoundItem.deleteMany({});

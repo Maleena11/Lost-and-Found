@@ -21,6 +21,14 @@ async function generateThumbnail(base64DataUrl) {
   return 'data:image/jpeg;base64,' + thumbBuffer.toString('base64');
 }
 
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}
+
+function canManageSighting(sighting, reporterEmail) {
+  return normalizeEmail(sighting?.reporterEmail) && normalizeEmail(sighting?.reporterEmail) === normalizeEmail(reporterEmail);
+}
+
 // Get all lost and found items
 // Supports ?lean=true to exclude base64 images for fast list views
 // Supports ?page=1&limit=50 for pagination
@@ -305,7 +313,12 @@ exports.addSighting = async (req, res) => {
       return res.status(403).json({ success: false, error: 'You cannot add a sighting to your own item.' });
     }
 
-    const sighting = { location, dateTime: new Date(dateTime), note: note || '' };
+    const sighting = {
+      location,
+      dateTime: new Date(dateTime),
+      note: note || '',
+      reporterEmail: reporterEmail ? reporterEmail.toLowerCase() : ''
+    };
     item.sightings.push(sighting);
     await item.save();
 
@@ -359,6 +372,69 @@ exports.reactToSighting = async (req, res) => {
 
     await item.save();
     res.status(200).json({ success: true, data: sighting, sightings: item.sightings });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+// Update a sighting note by the original reporter
+// PUT /api/lost-found/:id/sightings/:sightingId
+exports.updateSighting = async (req, res) => {
+  try {
+    const item = await LostFoundItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, error: 'Item not found' });
+
+    const sighting = item.sightings.id(req.params.sightingId);
+    if (!sighting) return res.status(404).json({ success: false, error: 'Sighting not found' });
+
+    const { reporterEmail, note } = req.body;
+    if (!canManageSighting(sighting, reporterEmail)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to edit this sighting' });
+    }
+
+    if (sighting.helpful) {
+      return res.status(400).json({ success: false, error: 'Confirmed helpful sightings cannot be edited.' });
+    }
+
+    const { location, dateTime } = req.body;
+    if (!location || !dateTime) {
+      return res.status(400).json({ success: false, error: 'Location and dateTime are required' });
+    }
+
+    sighting.location = location;
+    sighting.dateTime = new Date(dateTime);
+    sighting.note = typeof note === 'string' ? note.trim() : '';
+
+    await item.save();
+    res.status(200).json({ success: true, data: sighting, sightings: item.sightings });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+// Delete a sighting by the original reporter
+// DELETE /api/lost-found/:id/sightings/:sightingId
+exports.deleteSighting = async (req, res) => {
+  try {
+    const item = await LostFoundItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, error: 'Item not found' });
+
+    const sighting = item.sightings.id(req.params.sightingId);
+    if (!sighting) return res.status(404).json({ success: false, error: 'Sighting not found' });
+
+    const { reporterEmail } = req.body;
+    if (!canManageSighting(sighting, reporterEmail)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this sighting' });
+    }
+
+    if (sighting.helpful) {
+      return res.status(400).json({ success: false, error: 'Confirmed helpful sightings cannot be deleted.' });
+    }
+
+    item.sightings.pull(req.params.sightingId);
+
+    await item.save();
+    res.status(200).json({ success: true, sightings: item.sightings });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server Error' });
   }

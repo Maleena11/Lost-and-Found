@@ -11,6 +11,8 @@ const {
   getHeatmapData,
   addSighting,
   reactToSighting,
+  updateSighting,
+  deleteSighting,
   getSightingNotifications,
   markSightingNotificationRead,
 } = require('../controllers/lostFoundController');
@@ -44,5 +46,7 @@ router.patch('/sighting-notifications/:notifId/read', markSightingNotificationRe
 // Sightings on a specific item
 router.post('/:id/sightings', addSighting);
 router.patch('/:id/sightings/:sightingId', reactToSighting);
+router.put('/:id/sightings/:sightingId', updateSighting);
+router.delete('/:id/sightings/:sightingId', deleteSighting);
 
 module.exports = router;

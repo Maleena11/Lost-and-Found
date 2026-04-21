@@ -57,6 +57,18 @@ function formatSightingDate(dateStr) {
   });
 }
 
+function formatDateTimeForInput(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+}
+
+function normalizeEmail(email) {
+  return typeof email === "string" ? email.trim().toLowerCase() : "";
+}
+
 function isStale(dateStr) {
   return Date.now() - new Date(dateStr).getTime() > 48 * 3600000;
 }
@@ -75,9 +87,38 @@ function latestSighting(sightings = []) {
   return active.reduce((a, b) => new Date(a.createdAt) > new Date(b.createdAt) ? a : b);
 }
 
+function visibleSightingsForItem(item, authUser) {
+  const sightings = item?.sightings || [];
+  if (!authUser) return [];
+
+  const ownerEmail = normalizeEmail(item?.contactInfo?.email);
+  const viewerEmail = normalizeEmail(authUser.email);
+  const ownerById = item?.userId === String(authUser.id);
+  const ownerByEmail = ownerEmail && viewerEmail && ownerEmail === viewerEmail;
+
+  if (ownerById || ownerByEmail) return sightings;
+
+  return sightings.filter((sighting) => {
+    const reporterEmail = normalizeEmail(sighting.reporterEmail);
+    return reporterEmail && reporterEmail === viewerEmail;
+  });
+}
+
 // ── Sighting Trail Timeline ───────────────────────────────────────────────────
-function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
-  const active = activeSightings(sightings).sort(
+function SightingTrail({
+  sightings,
+  isOwner,
+  viewerEmail,
+  onReact,
+  onEditSighting,
+  onDeleteSighting,
+  reactionLoadingId,
+  actionLoadingId,
+}) {
+  const [editingId, setEditingId] = useState(null);
+  const [editingForm, setEditingForm] = useState({ location: "", dateTime: "", note: "" });
+  const [actionError, setActionError] = useState("");
+  const active = (isOwner ? activeSightings(sightings) : sightings).sort(
     (a, b) => new Date(a.dateTime) - new Date(b.dateTime)
   );
 
@@ -102,9 +143,15 @@ function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
         const hot    = isHot(s.createdAt);
         const isLast = i === active.length - 1;
         const dayAge = Math.floor((Date.now() - new Date(s.createdAt).getTime()) / 86400000);
+        const isReporter = normalizeEmail(s.reporterEmail) === normalizeEmail(viewerEmail);
+        const isEditing = editingId === s._id;
+        const isBusy = actionLoadingId === s._id;
+        const isLocked = s.helpful;
 
         const dotColor = s.helpful
           ? "bg-emerald-500 ring-emerald-200"
+          : s.dismissed
+          ? "bg-rose-300 ring-rose-100"
           : stale
           ? "bg-slate-300 ring-slate-100"
           : hot
@@ -115,7 +162,7 @@ function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
           <div key={s._id} className="flex gap-3 group">
             {/* Connector column */}
             <div className="flex flex-col items-center flex-shrink-0 pt-3">
-              <div className={`w-3 h-3 rounded-full ring-2 flex-shrink-0 transition-all ${dotColor} ${hot && !s.helpful ? "animate-pulse" : ""}`} />
+              <div className={`w-3 h-3 rounded-full ring-2 flex-shrink-0 transition-all ${dotColor} ${hot && !s.helpful && !s.dismissed ? "animate-pulse" : ""}`} />
               {!isLast && (
                 <div className="w-px flex-1 min-h-[20px] mt-1"
                   style={{ background: stale ? "#e2e8f0" : "linear-gradient(to bottom, #bfdbfe, #e0e7ff)" }} />
@@ -126,6 +173,8 @@ function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
             <div className={`flex-1 mb-3 rounded-xl border transition-all ${
               s.helpful
                 ? "bg-emerald-50 border-emerald-200 shadow-sm"
+                : s.dismissed
+                ? "bg-rose-50 border-rose-200 shadow-sm"
                 : stale
                 ? "bg-slate-50 border-slate-200 opacity-60"
                 : hot
@@ -138,6 +187,7 @@ function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
                   {/* Location pill */}
                   <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${
                     s.helpful ? "bg-emerald-100 text-emerald-700" :
+                    s.dismissed ? "bg-rose-100 text-rose-700" :
                     hot        ? "bg-orange-100 text-orange-700"  :
                     stale      ? "bg-slate-100 text-slate-500"    :
                     "bg-blue-100 text-blue-700"
@@ -147,17 +197,22 @@ function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
                   </span>
 
                   {/* Status badges */}
-                  {isLast && !stale && (
+                  {isLast && !stale && !s.dismissed && (
                     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                       hot ? "bg-orange-500 text-white" : "bg-blue-600 text-white"
                     }`}>
                       {hot && <span className="w-1 h-1 rounded-full bg-white animate-pulse inline-block"></span>}
-                      {hot ? "Latest · Active" : "Most Recent"}
+                      {hot ? "Latest Active" : "Most Recent"}
                     </span>
                   )}
                   {s.helpful && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
                       <i className="fas fa-check text-[8px]"></i> Confirmed Helpful
+                    </span>
+                  )}
+                  {s.dismissed && !isOwner && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-600">
+                      <i className="fas fa-eye-slash text-[8px]"></i> Dismissed
                     </span>
                   )}
                 </div>
@@ -170,9 +225,90 @@ function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
               </div>
 
               {/* Note */}
-              {s.note && (
+              {isEditing ? (
+                <div className="mx-3 mb-2">
+                  <div className="grid grid-cols-1 gap-2">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Location
+                      </label>
+                      <select
+                        value={editingForm.location}
+                        onChange={(e) => setEditingForm((prev) => ({ ...prev, location: e.target.value }))}
+                        className="w-full rounded-lg border border-blue-200 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select a location...</option>
+                        {LOCATIONS.map((location) => (
+                          <option key={location} value={location}>{location}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Date and Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editingForm.dateTime}
+                        onChange={(e) => setEditingForm((prev) => ({ ...prev, dateTime: e.target.value }))}
+                        className="w-full rounded-lg border border-blue-200 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Message
+                      </label>
+                      <textarea
+                        value={editingForm.note}
+                        onChange={(e) => setEditingForm((prev) => ({ ...prev, note: e.target.value }))}
+                        rows={3}
+                        maxLength={300}
+                        className="w-full rounded-lg border border-blue-200 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Update your sighting message"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-400">{editingForm.note.length}/300</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditingForm({ location: "", dateTime: "", note: "" });
+                          setActionError("");
+                        }}
+                        disabled={isBusy}
+                        className="inline-flex items-center justify-center gap-1.5 text-xs font-medium bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setActionError("");
+                            await onEditSighting(s._id, editingForm);
+                            setEditingId(null);
+                            setEditingForm({ location: "", dateTime: "", note: "" });
+                          } catch (err) {
+                            setActionError(err?.message || "Failed to update sighting.");
+                          }
+                        }}
+                        disabled={isBusy}
+                        className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {isBusy
+                          ? <><i className="fas fa-spinner fa-spin text-[10px]"></i> Saving...</>
+                          : <><i className="fas fa-save text-[10px]"></i> Save</>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : s.note && (
                 <div className={`mx-3 mb-2 px-3 py-2 rounded-lg text-xs leading-relaxed italic border-l-2 ${
                   s.helpful ? "bg-emerald-50 border-emerald-300 text-emerald-800" :
+                  s.dismissed ? "bg-rose-50 border-rose-200 text-rose-700" :
                   stale      ? "bg-slate-50 border-slate-300 text-slate-500"      :
                   hot        ? "bg-orange-50 border-orange-300 text-orange-800"   :
                   "bg-slate-50 border-blue-300 text-slate-600"
@@ -181,12 +317,65 @@ function SightingTrail({ sightings, isOwner, onReact, reactionLoadingId }) {
                 </div>
               )}
 
+              {actionError && (isEditing || isReporter) && (
+                <p className="mx-3 mb-2 text-[11px] text-rose-600">{actionError}</p>
+              )}
+
               {/* Stale warning */}
               {stale && (
                 <div className="mx-3 mb-2 flex items-center gap-1.5 text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
                   <i className="fas fa-exclamation-triangle text-amber-500"></i>
-                  <span>{dayAge}d old — this sighting may no longer be current</span>
+                  <span>{dayAge}d old - this sighting may no longer be current</span>
                 </div>
+              )}
+
+              {isReporter && (
+                <div className="flex gap-2 px-3 pb-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(s._id);
+                      setEditingForm({
+                        location: s.location || "",
+                        dateTime: formatDateTimeForInput(s.dateTime),
+                        note: s.note || "",
+                      });
+                      setActionError("");
+                    }}
+                    disabled={isBusy || isLocked}
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-medium bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <i className="fas fa-pen text-[10px]"></i> Edit sighting
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm("Delete this sighting?")) return;
+                      try {
+                        setActionError("");
+                        await onDeleteSighting(s._id);
+                        if (editingId === s._id) {
+                          setEditingId(null);
+                          setEditingForm({ location: "", dateTime: "", note: "" });
+                        }
+                      } catch (err) {
+                        setActionError(err?.message || "Failed to delete sighting.");
+                      }
+                    }}
+                    disabled={isBusy || isLocked}
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-medium bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {isBusy
+                      ? <><i className="fas fa-spinner fa-spin text-[10px]"></i> Deleting...</>
+                      : <><i className="fas fa-trash text-[10px]"></i> Delete</>}
+                  </button>
+                </div>
+              )}
+
+              {isReporter && isLocked && !isEditing && (
+                <p className="px-3 pb-3 text-[11px] text-emerald-700">
+                  This sighting was marked helpful, so it can no longer be edited or deleted.
+                </p>
               )}
 
               {/* Owner reaction buttons */}
@@ -352,7 +541,9 @@ function NotificationBell({ email }) {
     try {
       await axios.patch(`${API}/sighting-notifications/${id}/read`);
       setNotifs(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
-    } catch {}
+    } catch {
+      // Ignore notification read failures and leave the item unread.
+    }
   };
 
   if (!email) return null;
@@ -431,6 +622,8 @@ export default function ItemBoard() {
   // sighting state
   const [sightingModalItem, setSightingModalItem] = useState(null); // item whose sighting form is open
   const [sightingLoadingId, setSightingLoadingId] = useState(null);
+  const [sightingActionLoadingId, setSightingActionLoadingId] = useState(null);
+  const authUserEmail = authUser?.email || null;
 
   // password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -464,7 +657,9 @@ export default function ItemBoard() {
     try {
       const response = await axios.get(`${API}/${item._id}`);
       setSelectedItem(response.data.data);
-    } catch {}
+    } catch {
+      // Keep the modal open with the existing item preview if refresh fails.
+    }
   };
 
   const closeModal = () => {
@@ -552,6 +747,56 @@ export default function ItemBoard() {
     setSightingLoadingId(null);
   };
 
+  const syncSightingsForItem = (itemId, updatedSightings) => {
+    setSelectedItem(prev => prev && prev._id === itemId ? { ...prev, sightings: updatedSightings } : prev);
+    setItems(prev => prev.map(i =>
+      i._id === itemId ? { ...i, sightings: updatedSightings } : i
+    ));
+  };
+
+  const handleEditSighting = async (sightingId, formData) => {
+    if (!selectedItem || !authUserEmail) return;
+    setSightingActionLoadingId(sightingId);
+    try {
+      if (!formData.location) {
+        throw new Error("Please select a location.");
+      }
+      if (!formData.dateTime) {
+        throw new Error("Please choose the date and time.");
+      }
+      const { data } = await axios.put(
+        `${API}/${selectedItem._id}/sightings/${sightingId}`,
+        {
+          reporterEmail: authUserEmail,
+          location: formData.location,
+          dateTime: formData.dateTime,
+          note: formData.note,
+        }
+      );
+      syncSightingsForItem(selectedItem._id, data.sightings);
+    } catch (err) {
+      throw new Error(err.response?.data?.error || "Failed to update sighting.");
+    } finally {
+      setSightingActionLoadingId(null);
+    }
+  };
+
+  const handleDeleteSighting = async (sightingId) => {
+    if (!selectedItem || !authUserEmail) return;
+    setSightingActionLoadingId(sightingId);
+    try {
+      const { data } = await axios.delete(
+        `${API}/${selectedItem._id}/sightings/${sightingId}`,
+        { data: { reporterEmail: authUserEmail } }
+      );
+      syncSightingsForItem(selectedItem._id, data.sightings);
+    } catch (err) {
+      throw new Error(err.response?.data?.error || "Failed to delete sighting.");
+    } finally {
+      setSightingActionLoadingId(null);
+    }
+  };
+
   const filteredItems = items
     .filter(item => {
       const typeMatch     = activeTab === "all" || item.itemType === activeTab;
@@ -579,8 +824,6 @@ export default function ItemBoard() {
     { key: "lost",  label: "Lost Items",  icon: "fa-search-minus" },
     { key: "found", label: "Found Items", icon: "fa-hand-holding" },
   ];
-
-  const authUserEmail = authUser?.email || null;
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-gray-50">
@@ -1012,8 +1255,10 @@ export default function ItemBoard() {
 
                     {/* ── Sighting Trail — only on lost items ── */}
                     {selectedItem.itemType === "lost" && (() => {
-                      const sightingCount = activeSightings(selectedItem.sightings || []).length;
-                      const latest = latestSighting(selectedItem.sightings || []);
+                      const isOwner = userOwnsItem(selectedItem);
+                      const visibleSightings = visibleSightingsForItem(selectedItem, authUser);
+                      const sightingCount = activeSightings(visibleSightings).length;
+                      const latest = latestSighting(visibleSightings);
                       const hot = latest && isHot(latest.createdAt);
                       return (
                         <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
@@ -1046,15 +1291,19 @@ export default function ItemBoard() {
                                 </div>
                                 <p className="text-[11px] text-white/70 mt-0.5">
                                   {sightingCount === 0
-                                    ? "Community sightings of this item will appear here"
+                                    ? isOwner
+                                      ? "Community sightings of this item will appear here"
+                                      : "Only sightings you submit for this item will appear here"
                                     : latest
                                     ? `Last seen ${timeAgo(latest.createdAt)} · ${latest.location}`
-                                    : `${sightingCount} community sighting${sightingCount > 1 ? "s" : ""}`}
+                                    : isOwner
+                                    ? `${sightingCount} community sighting${sightingCount > 1 ? "s" : ""}`
+                                    : `${sightingCount} of your sighting${sightingCount > 1 ? "s" : ""}`}
                                 </p>
                               </div>
                             </div>
 
-                            {!userOwnsItem(selectedItem) && (
+                            {!isOwner && (
                               <button
                                 onClick={() => setSightingModalItem(selectedItem)}
                                 className="inline-flex items-center gap-1.5 bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold px-3 py-2 rounded-xl transition-colors shadow-sm flex-shrink-0"
@@ -1076,7 +1325,7 @@ export default function ItemBoard() {
                                 },
                                 {
                                   label: "Helpful",
-                                  value: (selectedItem.sightings || []).filter(s => s.helpful).length,
+                                  value: visibleSightings.filter(s => s.helpful).length,
                                   icon: "fa-check-circle",
                                   color: "text-emerald-600",
                                 },
@@ -1099,10 +1348,14 @@ export default function ItemBoard() {
                           {/* Timeline body */}
                           <div className="p-4 bg-white max-h-72 overflow-y-auto">
                             <SightingTrail
-                              sightings={selectedItem.sightings || []}
-                              isOwner={userOwnsItem(selectedItem)}
+                              sightings={visibleSightings}
+                              isOwner={isOwner}
+                              viewerEmail={authUserEmail}
                               onReact={handleReact}
+                              onEditSighting={handleEditSighting}
+                              onDeleteSighting={handleDeleteSighting}
                               reactionLoadingId={sightingLoadingId}
+                              actionLoadingId={sightingActionLoadingId}
                             />
                           </div>
                         </div>

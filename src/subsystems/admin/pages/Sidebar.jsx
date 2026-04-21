@@ -27,8 +27,6 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
       label: "Communications",
       items: [
         { id: "notices", label: "Notices", icon: "fa-bullhorn", path: "/admin/dashboard/notices" },
-        { id: "secure-tips", label: "Found Item Messages", icon: "fa-hand-holding", path: "/admin/dashboard/secure-tips", sub: true },
-        { id: "pending-notices", label: "Pending Smart Reports", icon: "fa-clock", path: "/admin/dashboard/pending-notices", sub: true },
       ]
     },
     {
@@ -64,7 +62,7 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
       <aside
         className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 flex flex-col
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
-        style={{ background: "linear-gradient(180deg, #1e3a8a 0%, #172554 100%)" }}
+        style={{ background: "linear-gradient(180deg, #1e3a5f 0%, #162d4a 60%, #0f1f33 100%)" }}
       >
         {/* Brand */}
         <div className="px-5 py-5 border-b border-white/8">
@@ -75,7 +73,7 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
             </div>
             <div>
               <h2 className="text-sm font-bold text-white leading-tight tracking-wide">UniFind</h2>
-              <p className="text-xs mt-0.5" style={{ color: "#ffffff" }}>Admin Management Portal</p>
+              <p className="text-xs mt-0.5" style={{ color: "#7ba3cc" }}>Admin Management Portal</p>
             </div>
           </div>
         </div>
@@ -86,7 +84,7 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
           {navSections.map(section => (
             <div key={section.label}>
               <p className="text-xs font-semibold uppercase tracking-widest px-3 mb-2"
-                style={{ color: "#ffffff", letterSpacing: "0.1em" }}>
+                style={{ color: "#4a7ba3", letterSpacing: "0.1em" }}>
                 {section.label}
               </p>
               <div className="space-y-0.5">
@@ -102,15 +100,15 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
                       style={
                         isActive
                           ? { background: "rgba(59,130,246,0.18)", color: "#ffffff" }
-                          : { color: "#ffffff" }
+                          : { color: "#94b8d4" }
                       }
                       onMouseEnter={e => {
-                        if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-                        if (!isActive) e.currentTarget.style.color = "#ffffff";
+                        if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                        if (!isActive) e.currentTarget.style.color = "#c8dff0";
                       }}
                       onMouseLeave={e => {
                         if (!isActive) e.currentTarget.style.background = "transparent";
-                        if (!isActive) e.currentTarget.style.color = "#ffffff";
+                        if (!isActive) e.currentTarget.style.color = "#94b8d4";
                       }}
                     >
                       {/* Active left accent bar */}
@@ -132,7 +130,7 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
                         style={
                           isActive
                             ? { background: "rgba(59,130,246,0.3)", color: "#60a5fa" }
-                            : { background: "rgba(255,255,255,0.12)", color: "#ffffff" }
+                            : { background: "rgba(255,255,255,0.06)", color: "#7ba3cc" }
                         }
                       >
                         <i className={`fas ${link.icon}`}></i>
@@ -166,21 +164,21 @@ export default function Sidebar({ activeSection: propActiveSection, setActiveSec
             </div>
             <div className="overflow-hidden flex-1">
               <p className="text-sm font-semibold text-white leading-tight truncate">Administrator</p>
-              <p className="text-xs truncate" style={{ color: "#ffffff" }}>UniFind Admin</p>
+              <p className="text-xs truncate" style={{ color: "#7ba3cc" }}>UniFind Admin</p>
             </div>
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#22c55e" }} />
           </div>
 
           <button
             className="flex items-center w-full px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group"
-            style={{ color: "#ffffff" }}
+            style={{ color: "#94b8d4" }}
             onMouseEnter={e => {
               e.currentTarget.style.background = "rgba(239,68,68,0.12)";
               e.currentTarget.style.color = "#fca5a5";
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#ffffff";
+              e.currentTarget.style.color = "#94b8d4";
             }}
             onClick={() => navigate("/")}
           >

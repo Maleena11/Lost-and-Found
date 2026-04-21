@@ -27,13 +27,29 @@ module.exports = {
     io.on('connection', (socket) => {
       console.log(`[Socket.IO] Client connected: ${socket.id}`);
 
+      socket.on('join_notifications', (email) => {
+        if (email) {
+          const normalized = String(email).toLowerCase();
+          socket.join(normalized);
+          console.log(`[Socket.IO] ${socket.id} joined room ${normalized}`);
+        }
+      });
+
       // Clients join a personal room keyed by their email so we can target
       // events at a specific user without broadcasting to everyone.
       socket.on('joinClaimRoom', (email) => {
-        if (email) {
-          socket.join(`user:${email}`);
-          console.log(`[Socket.IO] ${socket.id} joined room user:${email}`);
+        if (!email) return;
+
+        if (email === '__admin__') {
+          socket.join('admins');
+          console.log(`[Socket.IO] ${socket.id} joined admins room`);
+          return;
         }
+
+        const normalized = String(email).toLowerCase();
+        socket.join(`user:${normalized}`);
+        socket.join(normalized);
+        console.log(`[Socket.IO] ${socket.id} joined rooms user:${normalized}, ${normalized}`);
       });
 
       // Admin clients join a shared "admins" room

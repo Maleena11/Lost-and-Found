@@ -55,7 +55,7 @@ export default function App() {
         <Route path="/item-board" element={<ProtectedRoute><ItemBoard /></ProtectedRoute>} />
         <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
         <Route path="/notice" element={<ProtectedRoute><Notice /></ProtectedRoute>} />
-        <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
+        <Route path="/verification" element={<ProtectedRoute studentOnly><Verification /></ProtectedRoute>} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

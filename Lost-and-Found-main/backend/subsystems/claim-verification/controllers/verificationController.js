@@ -2,10 +2,57 @@ const bcrypt = require('bcryptjs');
 const VerificationRequest = require('../models/VerificationRequest');
 const ClaimHistory = require('../models/ClaimHistory');
 const LostFoundItem = require('../../lost-found-reporting/models/LostFoundItem');
+const UserModel = require('../../admin/models/users');
 const { sendClaimConfirmation, sendApprovalWithPin, sendCollectionReceipt } = require('../../../utils/emailService');
 const socketInstance = require('../../../socketInstance');
+const { buildClaimRecommendation } = require('../utils/claimRecommendation');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+function emitClaimUpdatedEvent(claim, history = null) {
+  const claimData = claim.toObject ? claim.toObject() : claim;
+  const lightClaim = { ...claimData, claimantImages: undefined };
+
+  try {
+    const io = socketInstance.getIO();
+    const payload = {
+      claim: lightClaim,
+      history,
+      timestamp: new Date().toISOString(),
+    };
+    io.to('admins').emit('claimUpdated', payload);
+    if (claim.claimantInfo?.email) {
+      io.to(`user:${claim.claimantInfo.email}`).emit('claimUpdated', payload);
+    }
+  } catch (err) {
+    console.warn('[Socket.IO] Could not emit claimUpdated:', err.message);
+  }
+}
+
+async function recalculateClaimRecommendation(claimDoc) {
+  if (!claimDoc) return null;
+  if (claimDoc.populate && !claimDoc.populated('itemId')) {
+    await claimDoc.populate('itemId');
+  }
+  claimDoc.recommendation = await buildClaimRecommendation(claimDoc);
+  await claimDoc.save();
+  return claimDoc;
+}
+
+async function refreshCompetingClaimRecommendations(itemId, skipClaimId = null) {
+  if (!itemId) return [];
+
+  const claims = await VerificationRequest.find({ itemId }).populate('itemId');
+  const refreshed = [];
+
+  for (const claim of claims) {
+    if (skipClaimId && String(claim._id) === String(skipClaimId)) continue;
+    await recalculateClaimRecommendation(claim);
+    refreshed.push(claim);
+  }
+
+  return refreshed;
+}
 
 /**
  * Persist a history entry and broadcast the updated claim to:
@@ -21,11 +68,14 @@ async function recordAndEmit(claim, historyPayload) {
       status: claim.status,
       approvalStages: claim.approvalStages,
       notes: claim.notes,
+      recommendation: claim.recommendation,
     },
   });
 
   // 2. Fetch the freshest history for this claim to attach to the event
   const history = await ClaimHistory.find({ claimId: claim._id }).sort({ createdAt: 1 });
+  emitClaimUpdatedEvent(claim, history);
+  return;
 
   // 3. Build the payload (strip large base64 images to keep the WS frame small)
   const claimData = claim.toObject ? claim.toObject() : claim;
@@ -58,6 +108,17 @@ async function recordAndEmit(claim, historyPayload) {
 exports.createVerificationRequest = async (req, res) => {
   try {
     const { itemId, claimantInfo, verificationDetails, claimantImages } = req.body;
+    const normalizedEmail = claimantInfo?.email?.trim().toLowerCase();
+    const studentUser = await UserModel.findOne({
+      _id: claimantInfo?.userId,
+      email: normalizedEmail,
+      role: 'User',
+      status: 'Active',
+    });
+
+    if (!studentUser) {
+      return res.status(403).json({ success: false, error: 'Only logged in active student accounts can submit claims' });
+    }
 
     // Check if the item exists and is a found item
     const item = await LostFoundItem.findById(itemId);
@@ -74,7 +135,7 @@ exports.createVerificationRequest = async (req, res) => {
     // Check for existing pending request from the same person
     const existingRequest = await VerificationRequest.findOne({
       itemId,
-      'claimantInfo.email': claimantInfo.email,
+      'claimantInfo.email': studentUser.email,
       status: 'pending',
     });
     if (existingRequest) {
@@ -84,11 +145,18 @@ exports.createVerificationRequest = async (req, res) => {
     // Create claim
     const verificationRequest = await VerificationRequest.create({
       itemId,
-      claimantInfo,
+      claimantInfo: {
+        name: claimantInfo?.name?.trim() || studentUser.fullname,
+        email: studentUser.email,
+        phone: claimantInfo?.phone,
+        address: claimantInfo?.address,
+      },
       verificationDetails,
       claimantImages: Array.isArray(claimantImages) ? claimantImages : [],
     });
     await verificationRequest.populate('itemId');
+    await recalculateClaimRecommendation(verificationRequest);
+    const competingClaims = await refreshCompetingClaimRecommendations(itemId, verificationRequest._id);
 
     // Log + emit
     await recordAndEmit(verificationRequest, {
@@ -96,6 +164,7 @@ exports.createVerificationRequest = async (req, res) => {
       actor: 'system',
       description: `Claim submitted by ${claimantInfo.name} for "${verificationRequest.itemId?.itemName || 'item'}"`,
     });
+    competingClaims.forEach((claim) => emitClaimUpdatedEvent(claim));
 
     // Confirmation email (non-blocking)
     const claimRef = `CLM-${verificationRequest._id.toString().slice(-6).toUpperCase()}`;
@@ -174,6 +243,8 @@ exports.updateVerificationRequestStatus = async (req, res) => {
 
     await request.save();
     await request.populate('itemId');
+    await recalculateClaimRecommendation(request);
+    const competingClaims = await refreshCompetingClaimRecommendations(request.itemId?._id || request.itemId, request._id);
 
     // Build a readable description for the timeline
     const statusLabel = { approved: 'Approved', rejected: 'Rejected', processed: 'Processed' }[status];
@@ -184,6 +255,7 @@ exports.updateVerificationRequestStatus = async (req, res) => {
       actor: processedBy || 'admin',
       description,
     });
+    competingClaims.forEach((claim) => emitClaimUpdatedEvent(claim));
 
     // Approval email with PIN (non-blocking)
     if (status === 'approved' && plainCollectionPin) {
@@ -225,6 +297,7 @@ exports.updateApprovalStages = async (req, res) => {
       { $set: updateFields },
       { new: true, runValidators: true }
     ).populate('itemId');
+    await recalculateClaimRecommendation(updated);
 
     // Build a human-readable summary of which stages changed
     const stageDescriptions = [];
@@ -260,9 +333,12 @@ exports.deleteVerificationRequest = async (req, res) => {
     if (!request) {
       return res.status(404).json({ success: false, error: 'Verification request not found' });
     }
+    const itemId = request.itemId;
     await VerificationRequest.findByIdAndDelete(req.params.id);
     // Also clean up history
     await ClaimHistory.deleteMany({ claimId: req.params.id });
+    const competingClaims = await refreshCompetingClaimRecommendations(itemId);
+    competingClaims.forEach((claim) => emitClaimUpdatedEvent(claim));
     res.status(200).json({ success: true, data: {} });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server Error' });
@@ -314,6 +390,7 @@ exports.confirmCollection = async (req, res) => {
     request.collectedAt = new Date();
     await request.save();
     await request.populate('itemId');
+    await recalculateClaimRecommendation(request);
 
     await LostFoundItem.findByIdAndUpdate(request.itemId?._id || request.itemId, { status: 'returned' });
 
@@ -357,6 +434,7 @@ exports.regeneratePin = async (req, res) => {
     request.collectionPinExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await request.save();
     await request.populate('itemId');
+    await recalculateClaimRecommendation(request);
 
     await recordAndEmit(request, {
       event: 'pin_regenerated',

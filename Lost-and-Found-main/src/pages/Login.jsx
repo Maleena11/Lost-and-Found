@@ -72,6 +72,8 @@ export default function Login() {
         login(userData);
         if (userData.role === "Admin") {
           localStorage.setItem("unifind_admin", JSON.stringify({ username: userData.name, id: userData.id }));
+        } else {
+          localStorage.removeItem("unifind_admin");
         }
         setSuccessMsg("Login successful! Redirecting…");
         setTimeout(() => navigate(from, { replace: true }), 1200);

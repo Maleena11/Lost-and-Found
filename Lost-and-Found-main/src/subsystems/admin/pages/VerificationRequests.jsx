@@ -984,6 +984,23 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
   const indexOfFirstRequest = indexOfLastRequest - requestsPerPage;
   const currentRequests = sortedFilteredRequests.slice(indexOfFirstRequest, indexOfLastRequest);
   const totalPages = Math.ceil(filteredRequests.length / requestsPerPage);
+  const statusCounts = {
+    pending: verificationRequests.filter(r => r.status === 'pending').length,
+    approved: verificationRequests.filter(r => r.status === 'approved').length,
+    rejected: verificationRequests.filter(r => r.status === 'rejected').length,
+    total: verificationRequests.length,
+  };
+  const activeFiltersCount = [
+    statusFilter !== 'all',
+    categoryFilter !== 'all',
+    !!selectedFoundItemId,
+    !!searchTerm,
+    !!dateFilter.startDate,
+    !!dateFilter.endDate,
+  ].filter(Boolean).length;
+  const latestSubmission = verificationRequests.length
+    ? new Date(Math.max(...verificationRequests.map(r => new Date(r.submittedAt).getTime())))
+    : null;
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -1221,7 +1238,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
           />
         </div>
 
-        <main className="flex-1 p-6 print-full-width" data-print-date={new Date().toLocaleString()}>
+        <main className="flex-1 p-6 print-full-width bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.08),_transparent_28%),linear-gradient(180deg,#f6f8fc_0%,#eef4ff_45%,#f8fafc_100%)]" data-print-date={new Date().toLocaleString()}>
         <div className="max-w-7xl mx-auto">
 
           {/* ── Print-only report header ── */}
@@ -1260,19 +1277,23 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
           )}
 
           {/* Real-time indicator */}
-          <div className="no-print mb-4 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+          <div className="no-print mb-5 flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live — updates automatically via Socket.IO
+              Live Queue
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-full shadow-sm">
+              <i className="fas fa-layer-group text-[10px]"></i>
+              {statusCounts.total} claims total
             </span>
           </div>
 
           {/* Stats Row */}
-          <div className="no-print mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="no-print mb-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               {
                 label: 'Pending',
-                count: verificationRequests.filter(r => r.status === 'pending').length,
+                count: statusCounts.pending,
                 icon: 'fa-hourglass-half',
                 accent: '#d97706',
                 accentLight: 'rgba(251,191,36,0.12)',
@@ -1282,7 +1303,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               },
               {
                 label: 'Approved',
-                count: verificationRequests.filter(r => r.status === 'approved').length,
+                count: statusCounts.approved,
                 icon: 'fa-check',
                 accent: '#059669',
                 accentLight: 'rgba(52,211,153,0.12)',
@@ -1292,7 +1313,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               },
               {
                 label: 'Rejected',
-                count: verificationRequests.filter(r => r.status === 'rejected').length,
+                count: statusCounts.rejected,
                 icon: 'fa-times',
                 accent: '#e11d48',
                 accentLight: 'rgba(251,113,133,0.12)',
@@ -1302,37 +1323,37 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               },
               {
                 label: 'Total',
-                count: verificationRequests.length,
+                count: statusCounts.total,
                 icon: 'fa-layer-group',
                 isTotal: true,
               },
             ].map(({ label, count, icon, accent, accentLight, accentBg, accentBorder, barGrad, isTotal }) => (
               <div
                 key={label}
-                className="relative overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:scale-[1.025] cursor-default"
+                className="relative overflow-hidden rounded-[24px] p-5 transition-all duration-200 hover:-translate-y-0.5 cursor-default shadow-[0_16px_36px_rgba(15,23,42,0.08)]"
                 style={{
-                  background: isTotal ? 'rgba(238,242,255,0.8)' : accentBg,
-                  boxShadow: '0 2px 14px rgba(0,0,0,0.06)',
-                  border: isTotal ? '2px solid rgba(99,102,241,0.45)' : `2px solid ${accentBorder}`,
+                  background: isTotal ? 'linear-gradient(135deg,rgba(224,231,255,0.92),rgba(255,255,255,0.98))' : `linear-gradient(135deg,${accentBg},rgba(255,255,255,0.96))`,
+                  border: isTotal ? '1px solid rgba(99,102,241,0.28)' : `1px solid ${accentBorder}`,
                 }}
               >
+                <div className="absolute inset-x-5 top-0 h-1 rounded-b-full" style={{background: isTotal ? 'linear-gradient(90deg,#6366f1,#3b82f6)' : barGrad}} />
 
                 <div className="relative">
                   <div className="flex items-start justify-between mb-4">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.15em]"
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em]"
                       style={{color: isTotal ? '#6366f1' : accent}}>
                       {label}
                     </p>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
                       style={isTotal
                         ? {background: 'rgba(99,102,241,0.12)', border: '1.5px solid rgba(99,102,241,0.3)'}
                         : {background: accentLight, border: `1.5px solid ${accentBorder}`}}>
-                      <i className={`fas ${icon} text-xs`} style={{color: isTotal ? '#6366f1' : accent}}></i>
+                      <i className={`fas ${icon} text-sm`} style={{color: isTotal ? '#6366f1' : accent}}></i>
                     </div>
                   </div>
 
-                  <p className="text-4xl font-black leading-none tracking-tight"
-                    style={{color: isTotal ? '#6366f1' : accent}}>
+                  <p className="text-[40px] font-black leading-none tracking-tight"
+                    style={{color: isTotal ? '#312e81' : accent}}>
                     {count}
                   </p>
 
@@ -1358,18 +1379,18 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
           </div>
 
           {/* Filters and Search */}
-          <div className="rounded-xl shadow-md mb-5 no-print" style={{background:'linear-gradient(135deg,#1e2d4a 0%,#1e3461 100%)',border:'1px solid rgba(147,197,253,0.15)'}}>
+          <div className="rounded-[26px] border border-[#d9e5ff] bg-white/90 shadow-[0_18px_45px_rgba(30,64,175,0.08)] mb-5 no-print overflow-hidden">
             {/* Top row: search + selects + dates + actions */}
-            <div className="flex flex-wrap items-end gap-2 p-3">
+            <div className="flex flex-wrap items-end gap-2 p-4">
               {/* Search */}
-              <div className="relative flex-1 min-w-[180px]">
-                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs"></i>
+              <div className="relative flex-1 min-w-[220px]">
+                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Name, email, item, location..."
-                  className="w-full pl-8 pr-3 py-2 text-sm border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-transparent bg-white/10 placeholder-white/35 text-white/85 transition-all"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-3 text-sm text-slate-700 placeholder-slate-400 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
                 />
               </div>
 
@@ -1377,7 +1398,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+                className="dark-select rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -1390,7 +1411,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+                className="dark-select rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               >
                 <option value="all">All Categories</option>
                 {availableCategories.map(cat => (
@@ -1402,7 +1423,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               <select
                 value={selectedFoundItemId || 'all'}
                 onChange={(e) => setSelectedFoundItemId(e.target.value === 'all' ? null : e.target.value)}
-                className="dark-select border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all"
+                className="dark-select rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               >
                 <option value="all">All Items ({verificationRequests.length})</option>
                 {foundItemGroups.map(group => {
@@ -1420,7 +1441,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 type="date"
                 value={dateFilter.startDate}
                 onChange={(e) => setDateFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                className="border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all [color-scheme:dark]"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               />
 
               {/* To Date */}
@@ -1428,7 +1449,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                 type="date"
                 value={dateFilter.endDate}
                 onChange={(e) => setDateFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                className="border border-white/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40 bg-white/10 text-white/85 transition-all [color-scheme:dark]"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 transition-all focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
               />
 
               {/* Action Buttons */}
@@ -1442,7 +1463,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                       setCategoryFilter('all');
                       setSelectedFoundItemId(null);
                     }}
-                    className="px-3 py-2 border border-white/20 text-white/60 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                    className="px-4 py-3 border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-sm font-semibold"
                   >
                     <i className="fas fa-times text-xs"></i>
                     Clear
@@ -1452,14 +1473,14 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   data={csvData}
                   headers={csvHeaders}
                   filename={`verification-requests-${new Date().toISOString().split('T')[0]}.csv`}
-                  className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-semibold"
+                  className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl transition-colors flex items-center gap-1.5 text-sm font-semibold shadow-sm shadow-emerald-200"
                 >
                   <i className="fas fa-download text-xs"></i>
                   Export
                 </CSVLink>
                 <button
                   onClick={() => window.print()}
-                  className="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-semibold"
+                  className="px-4 py-3 bg-[#17315c] hover:bg-[#0f2347] text-white rounded-2xl transition-colors flex items-center gap-1.5 text-sm font-semibold shadow-sm shadow-slate-300"
                 >
                   <i className="fas fa-print text-xs"></i>
                   Print
@@ -1468,31 +1489,31 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             </div>
 
             {/* Results Summary bar */}
-            <div className="px-3 py-2 border-t border-white/10 bg-white/[0.04] rounded-b-xl flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+            <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/80 rounded-b-[26px] flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 bg-sky-100 text-sky-700 font-semibold px-2.5 py-1 rounded-full text-xs">
                 <i className="fas fa-list-ul text-[10px]"></i>
                 {filteredRequests.length} result{filteredRequests.length !== 1 ? 's' : ''}
               </span>
               {searchTerm && (
-                <span className="text-xs text-white/40">matching <span className="text-blue-300 font-medium">"{searchTerm}"</span></span>
+                <span className="text-xs text-slate-500">matching <span className="text-sky-700 font-medium">"{searchTerm}"</span></span>
               )}
               {statusFilter !== 'all' && (
-                <span className="text-xs text-white/40">· status: <span className="font-medium text-white/70 capitalize">{statusFilter}</span></span>
+                <span className="text-xs text-slate-500">status: <span className="font-semibold text-slate-700 capitalize">{statusFilter}</span></span>
               )}
               {categoryFilter !== 'all' && (
-                <span className="inline-flex items-center gap-1 bg-indigo-400/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1 rounded-full text-xs">
                   <i className="fas fa-tag text-[9px]"></i>
                   {categoryFilter}
-                  <button onClick={() => setCategoryFilter('all')} className="ml-0.5 hover:text-white">
+                  <button onClick={() => setCategoryFilter('all')} className="ml-0.5 hover:text-indigo-900">
                     <i className="fas fa-times text-[8px]"></i>
                   </button>
                 </span>
               )}
               {selectedFoundItemId && (
-                <span className="inline-flex items-center gap-1 bg-blue-400/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 font-semibold px-2.5 py-1 rounded-full text-xs">
                   <i className="fas fa-box text-[9px]"></i>
                   {foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Item'}
-                  <button onClick={() => setSelectedFoundItemId(null)} className="ml-0.5 hover:text-white">
+                  <button onClick={() => setSelectedFoundItemId(null)} className="ml-0.5 hover:text-blue-900">
                     <i className="fas fa-times text-[8px]"></i>
                   </button>
                 </span>
@@ -1505,15 +1526,15 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
             <div className="w-full">
 
               {/* Claims sub-header */}
-              <div className="bg-white rounded-xl border border-slate-400 shadow-sm mb-4 px-5 py-3.5 flex items-center justify-between">
+              <div className="bg-white/95 rounded-[24px] border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.06)] mb-4 px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight">
                       {selectedFoundItemId
                         ? (foundItemGroups.find(g => g.itemId === selectedFoundItemId)?.itemName || 'Claims')
                         : 'All Claims'}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-1">
                       {filteredRequests.length} claim{filteredRequests.length !== 1 ? 's' : ''}
                       {selectedFoundItemId ? ' for this item' : ' across all items'}
                     </p>
@@ -1523,7 +1544,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   {/* Sort toggle */}
                   <button
                     onClick={() => setSortOrder(o => o === 'oldest' ? 'newest' : 'oldest')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-400 rounded-lg hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors"
                     title={sortOrder === 'oldest' ? 'Showing oldest first — click for newest first' : 'Showing newest first — click for oldest first'}
                   >
                     <i className={`fas fa-sort-amount-${sortOrder === 'oldest' ? 'up' : 'down'} text-xs text-slate-400`}></i>
@@ -1532,7 +1553,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                   {selectedFoundItemId && (
                     <button
                       onClick={() => setSelectedFoundItemId(null)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 border border-slate-400 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors"
                     >
                       <i className="fas fa-times text-xs"></i>
                       Show All
@@ -1636,18 +1657,18 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               })()}
 
               {/* ── Claims Table ── */}
-              <div className="bg-white rounded-xl border border-slate-400 shadow-sm overflow-hidden">
-                <table className="w-full text-sm border-collapse border border-slate-500">
+              <div className="bg-white/95 rounded-[24px] border border-slate-200 shadow-[0_18px_45px_rgba(15,23,42,0.06)] overflow-hidden">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="bg-slate-100">
-                      <th className="w-8 px-4 py-3 text-left border border-slate-500"></th>
-                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Claimant</th>
+                    <tr className="bg-slate-100/80">
+                      <th className="w-8 px-4 py-3 text-left border-b border-slate-200"></th>
+                      <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-slate-200">Claimant</th>
                       {!selectedFoundItemId && (
-                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Item</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-slate-200">Item</th>
                       )}
-                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Submitted</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Status</th>
-                      <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 border border-slate-500">Actions</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-slate-200">Submitted</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-slate-200">Status</th>
+                      <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 border-b border-slate-200">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1698,10 +1719,10 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         }[request.status] || 'border-l-4 border-l-slate-300');
 
                       return (
-                        <tr key={request._id} className={`transition-colors ${rowBg} ${leftAccent}`}>
+                        <tr key={request._id} className={`transition-colors ${rowBg} ${leftAccent} hover:shadow-[inset_0_0_0_9999px_rgba(248,250,252,0.55)]`}>
 
                           {/* Checkbox */}
-                          <td className="px-4 py-3 border border-slate-500">
+                          <td className="px-4 py-3 border-b border-slate-200">
                             {request.status === 'pending' ? (
                               <input
                                 type="checkbox"
@@ -1716,7 +1737,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </td>
 
                           {/* Claimant */}
-                          <td className="px-4 py-3 border border-slate-500">
+                          <td className="px-4 py-3 border-b border-slate-200">
                             <div className="flex items-center gap-2.5">
                               <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm`}>
                                 {initials}
@@ -1727,7 +1748,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
 
                           {/* Item */}
                           {!selectedFoundItemId && (
-                            <td className="px-4 py-3 border border-slate-500">
+                            <td className="px-4 py-3 border-b border-slate-200">
                               {request.itemId?.itemName ? (
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="text-sm font-medium text-slate-700">{request.itemId.itemName}</span>
@@ -1753,7 +1774,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           )}
 
                           {/* Submitted date */}
-                          <td className="px-4 py-3 whitespace-nowrap border border-slate-500">
+                          <td className="px-4 py-3 whitespace-nowrap border-b border-slate-200">
                             <div className="flex flex-col gap-0.5">
                               {ageTier && (() => {
                                 const tierStyle = {
@@ -1778,7 +1799,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </td>
 
                           {/* Status */}
-                          <td className="px-4 py-3 border border-slate-500">
+                          <td className="px-4 py-3 border-b border-slate-200">
                             <div className="flex flex-col gap-0.5">
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap w-fit ${statusStyles[request.status] || statusStyles.processed}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles[request.status] || dotStyles.processed}`}></span>
@@ -1796,7 +1817,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                           </td>
 
                           {/* Actions */}
-                          <td className="px-4 py-3 border border-slate-500">
+                          <td className="px-4 py-3 border-b border-slate-200">
                             <div className="flex items-center gap-1.5 justify-end">
                               {/* Compare toggle */}
                               {(() => {
@@ -1876,7 +1897,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
               </div>
 
               {/* Pagination */}
-              <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-xl border border-slate-400 shadow-sm">
+              <div className="bg-white/95 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 rounded-[24px] border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
                 <div className="text-sm text-gray-400 flex items-center gap-1.5">
                   <i className="fas fa-table-list text-gray-300 text-xs"></i>
                   Showing{' '}
@@ -1889,7 +1910,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-gray-300 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-slate-300 transition-all"
                     >
                       <i className="fas fa-chevron-left text-[9px]"></i>
                       Prev
@@ -1900,8 +1921,8 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                         onClick={() => setCurrentPage(page)}
                         className={`w-9 h-9 rounded-xl text-xs font-semibold transition-all ${
                           currentPage === page
-                            ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-200'
-                            : 'border border-gray-200 text-gray-500 hover:bg-slate-50 hover:border-gray-300'
+                            ? 'bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm shadow-sky-200'
+                            : 'border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
                         }`}
                       >
                         {page}
@@ -1910,7 +1931,7 @@ export default function VerificationRequests({ activeSection, setActiveSection, 
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-gray-300 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-slate-300 transition-all"
                     >
                       Next
                       <i className="fas fa-chevron-right text-[9px]"></i>

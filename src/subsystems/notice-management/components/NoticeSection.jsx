@@ -314,9 +314,20 @@ export default function NoticeSection() {
     translateNotice();
   }, [targetLang, selectedNotice]);
 
-  const openNoticeDetails = (notice) => {
+  const openNoticeDetails = async (notice) => {
     setSelectedNotice(notice);
     setShowModal(true);
+    
+    // Increment view count in backend
+    try {
+      const response = await axios.put(`http://localhost:3001/api/notices/${notice._id}/view`);
+      if (response.data.success) {
+        setNotices(prev => prev.map(n => n._id === notice._id ? { ...n, views: response.data.views } : n));
+        setSelectedNotice(prev => ({ ...prev, views: response.data.views }));
+      }
+    } catch (err) {
+      console.log('Error incrementing view count:', err);
+    }
   };
 
   const closeModal = () => {
@@ -1055,6 +1066,11 @@ export default function NoticeSection() {
                 <div className="flex items-center gap-1.5 text-gray-400">
                   <i className="fas fa-calendar-alt text-xs"></i>
                   <span>{formatDate(notice.createdAt || new Date())}</span>
+                  <span className="mx-1 text-gray-200 font-light">|</span>
+                  <div className="flex items-center gap-1 text-cyan-500 font-medium bg-cyan-50/60 px-1.5 py-0.5 rounded-md border border-cyan-100 transition-colors hover:bg-cyan-100">
+                    <i className="fas fa-eye text-xs"></i>
+                    <span>{notice.views || 0} Views</span>
+                  </div>
                 </div>
                 {notice.endDate ? (
                   <div className={`flex items-center gap-1 font-semibold ${isUrgent ? 'text-red-500' : isMedium ? 'text-green-600' : isLow ? 'text-yellow-600' : 'text-gray-400'}`}>
@@ -1243,8 +1259,6 @@ export default function NoticeSection() {
                   <option value="en">English (Default)</option>
                   <option value="si">සිංහල (Sinhala)</option>
                   <option value="ta">தமிழ் (Tamil)</option>
-                  <option value="fr">Français (French)</option>
-                  <option value="zh-CN">中文 (Chinese)</option>
                 </select>
                 
                 <button 

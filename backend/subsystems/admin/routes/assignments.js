@@ -30,7 +30,7 @@ router.post("/", async (req, res) => {
     if (!routeObj) return res.status(400).json({ message: "Route not found." });
 
     // If vehicle is a bus → conductor is required
-    if (vehicleObj.vehicleId && !conductor) {
+    if (vehicleObj.vehicleType === "Bus" && !conductor) {
       return res.status(400).json({ message: "Conductor is required for buses." });
     }
 
@@ -86,7 +86,7 @@ router.put("/:id", async (req, res) => {
     const vehicleObj = await Vehicle.findById(vehicle);
     if (!vehicleObj) return res.status(400).json({ message: "Vehicle not found." });
 
-    if (vehicleObj.vehicleId && !conductor) {
+    if (vehicleObj.vehicleType === "Bus" && !conductor) {
       return res.status(400).json({ message: "Conductor is required for buses." });
     }
 

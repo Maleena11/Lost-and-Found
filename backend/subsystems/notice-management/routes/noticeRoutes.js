@@ -19,7 +19,8 @@ const {
   getPendingNotices,
   updateNoticeStatus,
   getComments,
-  createComment
+  createComment,
+  incrementViewCount
 } = require('../controllers/noticeController');
 
 // Smart keyword search (must be before /:id)
@@ -58,6 +59,7 @@ router.get('/:id', getNotice);
 // Routes for creating, updating and deleting
 router.post('/', createNotice);
 router.put('/:id', updateNotice);
+router.put('/:id/view', incrementViewCount);
 router.delete('/expired', deleteExpiredNotices);
 router.delete('/:id', deleteNotice);
 

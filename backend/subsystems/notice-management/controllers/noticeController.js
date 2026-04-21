@@ -597,6 +597,22 @@ const createComment = async (req, res) => {
   }
 };
 
+// @desc    Increment notice view count
+// @route   PUT /api/notices/:id/view
+const incrementViewCount = async (req, res) => {
+  try {
+    const notice = await Notice.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true, runValidators: false }
+    );
+    if (!notice) return res.status(404).json({ success: false, error: 'Notice not found' });
+    res.status(200).json({ success: true, views: notice.views });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createNotice,
   getNotices,
@@ -616,5 +632,6 @@ module.exports = {
   getPendingNotices,
   updateNoticeStatus,
   getComments,
-  createComment
+  createComment,
+  incrementViewCount
 };

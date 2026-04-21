@@ -91,6 +91,10 @@ const NoticeSchema = new mongoose.Schema({
   },
   archivedAt: {
     type: Date
+  },
+  views: {
+    type: Number,
+    default: 0
   }
 }, { timestamps: true });
 

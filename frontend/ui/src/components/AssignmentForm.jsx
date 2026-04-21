@@ -41,7 +41,7 @@ export default function AssignmentForm({ assignment, onSaved, vehicles, employee
 
     // If vehicle is a bus, conductor is required
     const selectedVehicle = vehicles.find(v => v._id === vehicleId);
-    if (selectedVehicle?.vehicleId && !conductorId) {
+    if (selectedVehicle?.vehicleType === "Bus" && !conductorId) {
       return setErrorMessage("Conductor is required for buses.");
     }
 

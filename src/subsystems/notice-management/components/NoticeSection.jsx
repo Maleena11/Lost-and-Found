@@ -1066,8 +1066,8 @@ export default function NoticeSection() {
                 <div className="flex items-center gap-1.5 text-gray-400">
                   <i className="fas fa-calendar-alt text-xs"></i>
                   <span>{formatDate(notice.createdAt || new Date())}</span>
-                  <span className="mx-1 text-gray-200 font-light">|</span>
-                  <div className="flex items-center gap-1 text-cyan-500 font-medium bg-cyan-50/60 px-1.5 py-0.5 rounded-md border border-cyan-100 transition-colors hover:bg-cyan-100">
+                  <span className="mx-1 text-gray-200 font-light dark:text-gray-600">|</span>
+                  <div className="flex items-center gap-1 text-cyan-500 font-medium bg-cyan-50/60 px-1.5 py-0.5 rounded-md border border-cyan-100 transition-colors hover:bg-cyan-100 dark:text-cyan-300 dark:bg-cyan-900/40 dark:border-cyan-800 dark:hover:bg-cyan-800/60">
                     <i className="fas fa-eye text-xs"></i>
                     <span>{notice.views || 0} Views</span>
                   </div>

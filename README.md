@@ -57,3 +57,20 @@ Database: MongoDB
 
 📌 Conclusion
 This system improves the traditional lost and found process by digitizing it, making it faster, more reliable, and accessible for all university students.
+
+## Automated Testing
+
+The project includes automated backend integration testing with `Jest`, `Supertest`, and `mongodb-memory-server`.
+
+For the admin dashboard contribution area, the suite in [backend/subsystems/admin/__tests__/adminDashboardUserSettings.test.js](/e:/ITPM-PROJECT/Lost-and-Found/backend/subsystems/admin/__tests__/adminDashboardUserSettings.test.js) covers these user journeys:
+
+- Dashboard overview: verifies the APIs that feed overview cards and widgets for users, items, notices, and verification requests.
+- User management: verifies create, list, update, delete, duplicate-email handling, and login flows for both users and admins.
+- System settings: verifies default singleton creation on first load and safe updates of persisted settings.
+
+Run the admin-focused suite with:
+
+```bash
+cd backend
+npm test -- --runInBand subsystems/admin/__tests__/adminDashboardUserSettings.test.js
+```

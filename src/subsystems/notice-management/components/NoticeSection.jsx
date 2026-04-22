@@ -114,12 +114,8 @@ export default function NoticeSection() {
       const { keywords } = parseQuery(q);
       if (keywords) {
         const kws = keywords.split(/\s+/);
-        const matched = notices.filter(n =>
-          kws.some(k =>
-            n.title?.toLowerCase().includes(k) ||
-            n.content?.toLowerCase().includes(k) ||
-            n.itemType?.toLowerCase().includes(k)
-          )
+        const matched = notices.filter((n) =>
+          kws.some((k) => getNoticeSearchText(n).includes(k))
         );
         setFilteredNotices(matched);
       }
@@ -127,6 +123,17 @@ export default function NoticeSection() {
   }, [searchParams, notices, selectedNotice]);
 
   const [highlightedNoticeId, setHighlightedNoticeId] = useState(null);
+
+  const getNoticeSearchText = (notice) =>
+    [
+      notice?.title,
+      notice?.content,
+      notice?.contentPreview,
+      notice?.itemType,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
 
   // Auto-scroll and highlight notice if noticeId is in URL (from notification click)
   useEffect(() => {
@@ -166,7 +173,7 @@ export default function NoticeSection() {
   const fetchNotices = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:3001/api/notices');
+      const response = await axios.get('http://localhost:3001/api/notices?lean=true');
       setNotices(response.data.data);
       setError(null);
     } catch (err) {
@@ -314,19 +321,57 @@ export default function NoticeSection() {
     translateNotice();
   }, [targetLang, selectedNotice]);
 
+  useEffect(() => {
+    if (!showModal || !selectedNotice?._id) return;
+    if (selectedNotice.content !== undefined && selectedNotice.attachments !== undefined) return;
+
+    let cancelled = false;
+
+    const loadFullNotice = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3001/api/notices/${selectedNotice._id}`);
+        if (!cancelled && response.data?.data) {
+          setSelectedNotice((prev) => ({
+            ...response.data.data,
+            views: prev?.views ?? response.data.data.views,
+          }));
+        }
+      } catch (err) {
+        console.log('Error fetching full notice payload:', err);
+      }
+    };
+
+    loadFullNotice();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showModal, selectedNotice]);
+
   const openNoticeDetails = async (notice) => {
     setSelectedNotice(notice);
     setShowModal(true);
-    
-    // Increment view count in backend
+
     try {
-      const response = await axios.put(`http://localhost:3001/api/notices/${notice._id}/view`);
-      if (response.data.success) {
-        setNotices(prev => prev.map(n => n._id === notice._id ? { ...n, views: response.data.views } : n));
-        setSelectedNotice(prev => ({ ...prev, views: response.data.views }));
+      const [detailResponse, viewResponse] = await Promise.all([
+        axios.get(`http://localhost:3001/api/notices/${notice._id}`),
+        axios.put(`http://localhost:3001/api/notices/${notice._id}/view`)
+      ]);
+
+      const fullNotice = detailResponse.data?.data;
+      const updatedViews = viewResponse.data?.success ? viewResponse.data.views : notice.views;
+
+      if (fullNotice) {
+        setSelectedNotice({ ...fullNotice, views: updatedViews });
+      } else if (viewResponse.data?.success) {
+        setSelectedNotice(prev => ({ ...prev, views: updatedViews }));
+      }
+
+      if (viewResponse.data?.success) {
+        setNotices(prev => prev.map(n => n._id === notice._id ? { ...n, views: updatedViews } : n));
       }
     } catch (err) {
-      console.log('Error incrementing view count:', err);
+      console.log('Error loading notice details:', err);
     }
   };
 
@@ -519,12 +564,8 @@ export default function NoticeSection() {
     const { keywords } = parseQuery(searchQuery);
     if (!keywords) { setFilteredNotices(null); return; }
     const kws = keywords.split(/\s+/);
-    const matched = notices.filter(n =>
-      kws.some(k =>
-        n.title?.toLowerCase().includes(k) ||
-        n.content?.toLowerCase().includes(k) ||
-        n.itemType?.toLowerCase().includes(k)
-      )
+    const matched = notices.filter((n) =>
+      kws.some((k) => getNoticeSearchText(n).includes(k))
     );
     setFilteredNotices(matched);
     setShowDropdown(false);
@@ -858,7 +899,7 @@ export default function NoticeSection() {
                       </div>
                       <p className="text-sm font-semibold text-gray-800 truncate">{n.title}</p>
                       {n.category !== 'found-item' && (
-                        <p className="text-xs text-gray-500 truncate mt-0.5">{n.content?.substring(0, 80)}...</p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{n.contentPreview?.substring(0, 80) || ''}</p>
                       )}
                     </div>
                   </div>
@@ -1013,8 +1054,7 @@ export default function NoticeSection() {
               }`} />
 
               {/* Full-width framed image */}
-              {notice.attachments && notice.attachments.length > 0 &&
-                notice.attachments.some(att => isBase64Image(att)) && (
+              {notice.coverImage && (
                 <div className="mt-3 flex-shrink-0">
                   {/* Outer mat — priority-tinted gradient */}
                   <div className={`p-1 shadow-md ${
@@ -1026,7 +1066,7 @@ export default function NoticeSection() {
                     {/* Inner mat — white */}
                     <div className="bg-white p-1 shadow-inner">
                       <img
-                        src={notice.attachments.find(att => isBase64Image(att))}
+                        src={notice.coverImage}
                         alt="Notice attachment"
                         className="w-full object-cover"
                         style={{ height: '260px' }}
@@ -1051,7 +1091,7 @@ export default function NoticeSection() {
                 </h3>
                 {notice.category !== 'found-item' && (
                   <p className="card-body-text text-gray-500 text-xs flex-1 leading-relaxed line-clamp-3">
-                    {notice.content.length > 120 ? `${notice.content.substring(0, 120)}...` : notice.content}
+                    {notice.contentPreview || ''}
                   </p>
                 )}
               </div>

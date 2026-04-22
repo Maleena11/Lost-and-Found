@@ -6,6 +6,34 @@ const AppNotification = require('../../claim-verification/models/AppNotification
 const mongoose = require('mongoose');
 const { sendNoticeNotification, sendForwardAlertEmail } = require('../../../utils/emailService');
 
+function getFirstBase64Image(attachments = []) {
+  if (!Array.isArray(attachments)) return null;
+  return attachments.find(
+    (attachment) => typeof attachment === 'string' && attachment.startsWith('data:image/')
+  ) || null;
+}
+
+function buildNoticeListItem(notice) {
+  const content = typeof notice.content === 'string' ? notice.content : '';
+
+  return {
+    _id: notice._id,
+    title: notice.title,
+    category: notice.category,
+    itemType: notice.itemType,
+    priority: notice.priority,
+    targetAudience: notice.targetAudience,
+    createdAt: notice.createdAt,
+    startDate: notice.startDate,
+    endDate: notice.endDate,
+    postedBy: notice.postedBy,
+    userId: notice.userId,
+    views: notice.views,
+    contentPreview: content.length > 160 ? `${content.slice(0, 160)}...` : content,
+    coverImage: getFirstBase64Image(notice.attachments),
+  };
+}
+
 /**
  * @desc    Create a new notice 
  * @route   POST /api/notices
@@ -87,7 +115,7 @@ const createNotice = async (req, res) => {
 const getNotices = async (req, res) => {
   try {
     // Extract query parameters for filtering
-    const { category, priority, isActive, targetAudience, userId, limit = 10 } = req.query;
+    const { category, priority, isActive, targetAudience, userId, limit = 10, lean } = req.query;
     
     // Build filter object
     const filter = {};
@@ -102,9 +130,15 @@ const getNotices = async (req, res) => {
     }
     
     // Execute query
-    const notices = await Notice.find(filter)
+    const query = Notice.find(filter)
       .sort({ createdAt: -1 })
       .limit(parseInt(limit));
+    if (lean === 'true') query.lean();
+
+    const rawNotices = await query;
+    const notices = lean === 'true'
+      ? rawNotices.map(buildNoticeListItem)
+      : rawNotices;
       
     res.status(200).json({
       success: true,
@@ -476,6 +510,12 @@ const forwardNoticeAlert = async (req, res) => {
 
     if (!friendEmail) {
       return res.status(400).json({ success: false, message: 'Recipient email is required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(friendEmail)) {
+      return res.status(400).json({ success: false, message: 'Invalid email format' });
     }
 
     const notice = await Notice.collection.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });

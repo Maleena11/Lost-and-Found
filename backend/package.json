@@ -6,6 +6,7 @@
     "test": "jest --runInBand",
     "test:admin": "jest --runInBand subsystems/admin/__tests__/adminDashboardUserSettings.test.js",
     "test:verification": "jest --runInBand subsystems/claim-verification/__tests__/verificationController.test.js",
+    "test:notices": "jest --runInBand subsystems/notice-management/__tests__/noticeController.test.js",
     "start": "nodemon index.js",
     "dev": "nodemon index.js"
   },

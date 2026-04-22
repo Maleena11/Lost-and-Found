@@ -36,6 +36,16 @@ const STAGE_STATE = {
   pending: { bg: "bg-gray-200",  ring: "ring-2 ring-gray-200",  text: "text-gray-400",   icon: "fas fa-ellipsis-h", label: "Pending" },
 };
 
+function getFailedClaimReason(claim) {
+  const approvalStages = claim?.approvalStages || {};
+  const failedStage = ["stage1", "stage2", "stage3"]
+    .map((key) => approvalStages[key])
+    .find((stage) => stage?.status === "failed" && stage?.notes?.trim());
+
+  if (!failedStage) return "";
+  return failedStage.notes.split("\n")[0].trim();
+}
+
 /* ── sub-components ──────────────────────────────────────────── */
 function StatCard({ icon, label, value, color, bg }) {
   return (
@@ -661,6 +671,16 @@ export default function UserAccount() {
                                   )}
                                 </button>
                               </div>
+                            </div>
+                          )}
+
+                          {/* Rejection reason */}
+                          {claim.status === "rejected" && getFailedClaimReason(claim) && (
+                            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-2.5">
+                              <i className="fas fa-circle-xmark text-red-400 mt-0.5 flex-shrink-0 text-xs" />
+                              <p className="text-xs text-red-700">
+                                <span className="font-semibold">Rejection reason:</span> {getFailedClaimReason(claim)}
+                              </p>
                             </div>
                           )}
 

@@ -131,11 +131,24 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
 
   const ClaimColumn = ({ claim, accent, photoIdx, setPhotoIdx }) => {
     const photos = claim.claimantImages || [];
+    const recommendation = claim?.recommendation || null;
+    const engineScore = recommendation?.score ?? computeConfidenceScore(claim).total;
+    const engineBand =
+      recommendation?.band ||
+      (engineScore >= 70 ? 'High' : engineScore >= 40 ? 'Medium' : 'Low');
+    const engineAction =
+      recommendation?.actionLabel ||
+      (engineBand === 'High' ? 'Approve Candidate' : engineBand === 'Medium' ? 'Manual Review' : 'Needs More Evidence');
     const accentMap = {
       blue:   { bar: 'bg-blue-500', head: 'bg-gradient-to-br from-blue-50 to-white border-blue-100', icon: 'bg-blue-100 text-blue-500', label: 'text-blue-700 bg-blue-50 border-blue-200' },
       violet: { bar: 'bg-violet-500', head: 'bg-gradient-to-br from-violet-50 to-white border-violet-100', icon: 'bg-violet-100 text-violet-500', label: 'text-violet-700 bg-violet-50 border-violet-200' },
     };
     const a = accentMap[accent];
+    const engineTheme = {
+      High: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      Medium: 'bg-amber-50 text-amber-700 border-amber-200',
+      Low: 'bg-red-50 text-red-700 border-red-200',
+    }[engineBand];
 
     return (
       <div className="flex-1 min-w-0 flex flex-col gap-4">
@@ -166,6 +179,29 @@ function ClaimCompareModal({ claimA, claimB, onClose }) {
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-400">
             <i className="fas fa-clock text-[10px]"></i>
             {new Date(claim.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+        </div>
+
+        {/* Engine rate */}
+        <div className="bg-white border border-slate-400 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Engine Rate</p>
+              <p className="text-[10px] text-slate-400 mt-1">Claim recommendation score</p>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${engineTheme}`}>
+              <i className="fas fa-gauge-high text-[10px]"></i>
+              {engineBand}
+            </span>
+          </div>
+          <div className="flex items-end justify-between gap-3">
+            <div className="text-3xl font-extrabold tabular-nums text-slate-800 leading-none">
+              {engineScore}
+              <span className="text-sm font-medium text-slate-400">/100</span>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500 text-right">
+              {engineAction}
+            </span>
           </div>
         </div>
 

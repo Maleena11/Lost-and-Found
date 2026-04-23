@@ -385,9 +385,10 @@ export default function NoticeSection() {
     setIsSpeaking(false);
     setTargetLang('en');
     
-    if (searchParams.get('alertItem')) {
+    if (searchParams.get('alertItem') || searchParams.get('noticeId')) {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('alertItem');
+      newParams.delete('noticeId');
       setSearchParams(newParams, { replace: true });
     }
   };

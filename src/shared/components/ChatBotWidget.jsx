@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { api } from "../../api";
 
 export default function ChatBot() {
   const [messages, setMessages] = useState([
@@ -18,11 +18,16 @@ export default function ChatBot() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:3001/chat", { message: userMessage });
+      const res = await api.post("/chat", { message: userMessage });
       const botReply = res.data.reply || "Sorry, I didn't understand that.";
       setMessages(prev => [...prev, { sender: "bot", text: botReply }]);
     } catch (err) {
-      setMessages(prev => [...prev, { sender: "bot", text: "Error connecting to server." }]);
+      const errorReply =
+        err.response?.data?.reply ||
+        err.response?.data?.error ||
+        "The chat service is unavailable right now. Please try again in a moment.";
+
+      setMessages(prev => [...prev, { sender: "bot", text: errorReply }]);
       console.error(err);
     } finally {
       setLoading(false);

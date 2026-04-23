@@ -69,6 +69,18 @@ function normalizeEmail(email) {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
 }
 
+function normalizePhone(phone) {
+  return typeof phone === "string" ? phone.trim() : "";
+}
+
+function validatePhone(phone) {
+  if (!phone) return "Phone number is required.";
+  if (!/^07\d{8}$/.test(phone)) {
+    return "Phone number must be a valid 10-digit mobile number starting with 07.";
+  }
+  return "";
+}
+
 function isStale(dateStr) {
   return Date.now() - new Date(dateStr).getTime() > 48 * 3600000;
 }
@@ -317,6 +329,13 @@ function SightingTrail({
                 </div>
               )}
 
+              {s.reporterPhone && !isEditing && (
+                <div className="mx-3 mb-2 inline-flex items-center gap-1.5 rounded-lg bg-white/70 px-2.5 py-1 text-[11px] font-medium text-slate-600 border border-slate-200">
+                  <i className="fas fa-phone text-[10px] text-slate-400"></i>
+                  {s.reporterPhone}
+                </div>
+              )}
+
               {actionError && (isEditing || isReporter) && (
                 <p className="mx-3 mb-2 text-[11px] text-rose-600">{actionError}</p>
               )}
@@ -410,7 +429,8 @@ function SightingTrail({
 // ── "I Saw This" inline form ──────────────────────────────────────────────────
 function SightingForm({ itemId, reporterEmail, onSuccess, onCancel }) {
   const [loc, setLoc]       = useState("");
-  const [dt, setDt]         = useState(() => new Date().toISOString().slice(0, 16));
+  const [dt, setDt]         = useState("");
+  const [phone, setPhone]   = useState("");
   const [note, setNote]     = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
@@ -418,11 +438,18 @@ function SightingForm({ itemId, reporterEmail, onSuccess, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!loc) { setError("Please select a location."); return; }
+    if (!dt) { setError("Please choose the date and time."); return; }
+    const phoneError = validatePhone(phone);
+    if (phoneError) { setError(phoneError); return; }
     setLoading(true);
     setError("");
     try {
       const { data } = await axios.post(`${API}/${itemId}/sightings`, {
-        location: loc, dateTime: dt, note, reporterEmail,
+        location: loc,
+        dateTime: dt,
+        note,
+        reporterEmail,
+        reporterPhone: normalizePhone(phone),
       });
       onSuccess(data.sightings);
     } catch (err) {
@@ -456,6 +483,24 @@ function SightingForm({ itemId, reporterEmail, onSuccess, onCancel }) {
             type="datetime-local"
             value={dt}
             onChange={e => setDt(e.target.value)}
+            className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
+            Phone number *
+          </label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={e => {
+              const next = e.target.value.replace(/\D/g, "").slice(0, 10);
+              setPhone(next);
+              if (error) setError("");
+            }}
+            placeholder="e.g. 0712345678"
+            inputMode="numeric"
+            maxLength={10}
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

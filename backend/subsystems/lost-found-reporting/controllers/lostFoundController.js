@@ -304,8 +304,12 @@ exports.addSighting = async (req, res) => {
     if (!item) return res.status(404).json({ success: false, error: 'Item not found' });
     if (item.itemType !== 'lost') return res.status(400).json({ success: false, error: 'Sightings are only for lost items' });
 
-    const { location, dateTime, note, reporterEmail } = req.body;
+    const { location, dateTime, note, reporterEmail, reporterPhone } = req.body;
     if (!location || !dateTime) return res.status(400).json({ success: false, error: 'Location and dateTime are required' });
+    const normalizedPhone = typeof reporterPhone === 'string' ? reporterPhone.trim() : '';
+    if (!/^07\d{8}$/.test(normalizedPhone)) {
+      return res.status(400).json({ success: false, error: 'Phone number must be a valid 10-digit mobile number starting with 07.' });
+    }
 
     // Prevent item owner from adding sightings to their own item
     if (reporterEmail && item.contactInfo?.email &&
@@ -317,7 +321,8 @@ exports.addSighting = async (req, res) => {
       location,
       dateTime: new Date(dateTime),
       note: note || '',
-      reporterEmail: reporterEmail ? reporterEmail.toLowerCase() : ''
+      reporterEmail: reporterEmail ? reporterEmail.toLowerCase() : '',
+      reporterPhone: normalizedPhone
     };
     item.sightings.push(sighting);
     await item.save();

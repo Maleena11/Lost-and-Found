@@ -67,6 +67,20 @@ export default function App() {
         <Route path="/admin/dashboard/allitems" element={<AdminRoute><Items /></AdminRoute>} />
         <Route path="/admin/dashboard/users" element={<AdminRoute><Users /></AdminRoute>} />
         <Route path="/admin/dashboard/settings" element={<AdminRoute><Settings /></AdminRoute>} />
+        <Route
+          path="/admin/dashboard/report-item"
+          element={
+            <AdminRoute>
+              <ReportItem
+                adminLayout
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+              />
+            </AdminRoute>
+          }
+        />
         <Route path="/admin/dashboard/notices" element={<AdminRoute><AdminNotices /></AdminRoute>} />
         <Route path="/admin/dashboard/pending-notices" element={<AdminRoute><AdminPendingNotices /></AdminRoute>} />
         <Route path="/admin/dashboard/secure-tips" element={<AdminRoute><AdminSecureTips /></AdminRoute>} />
@@ -149,5 +163,4 @@ export default function App() {
     </>
   );
 }
-
 

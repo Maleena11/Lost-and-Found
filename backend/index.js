@@ -125,6 +125,7 @@ app.use("/items", itemRoutes);
 app.use("/routes", RouteRoutes);
 app.use("/signup", authRoutes);
 app.use("/login", authRoutes);
+app.use("/api/chat", chatRoutes);
 app.use("/chat", chatRoutes);
 app.use(errorHandler);
 app.use((req, res) => {

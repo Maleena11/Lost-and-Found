@@ -5,9 +5,13 @@ import Footer from "../../../shared/components/Footer";
 import axios from "axios";
 import { getTempUser } from "../../../shared/utils/tempUserAuth"; // Import the temp user utility
 import { useAuth } from "../../../shared/utils/AuthContext";
+import Sidebar from "../../admin/pages/Sidebar";
+import TopBar from "../../admin/components/TopBar";
 
-export default function ReportItem() {
+export default function ReportItem({ adminLayout = false, activeSection, setActiveSection, sidebarOpen, setSidebarOpen }) {
   const navigate = useNavigate();
+  const isAdminView = Boolean(adminLayout);
+  const itemListPath = isAdminView ? "/admin/dashboard/allitems" : "/item-board";
   const compressImage = (base64, maxWidth = 1200, quality = 0.8) => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -146,6 +150,12 @@ export default function ReportItem() {
       }
     }));
   }, []);
+
+  useEffect(() => {
+    if (isAdminView && setActiveSection) {
+      setActiveSection("report");
+    }
+  }, [isAdminView, setActiveSection]);
 
   const validateStep1 = () => {
     const newErrors = {};
@@ -418,7 +428,7 @@ export default function ReportItem() {
         type: "success"
       });
 
-      setTimeout(() => navigate('/item-board'), 1500);
+      setTimeout(() => navigate(itemListPath), 1500);
 
       // Reset the form after successful submission but keep user contact info
       setFormData({
@@ -456,12 +466,13 @@ export default function ReportItem() {
     { label: "Photos & Submit", icon: "fa-camera" },
   ];
 
-  return (
-    <div className="flex flex-col min-h-screen w-full bg-gray-50">
-      <Header />
-
+  const pageContent = (
+    <>
       {/* Page Banner */}
-      <div className="relative overflow-hidden text-white" style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}>
+      <div
+        className={`relative overflow-hidden text-white ${isAdminView ? "rounded-b-3xl shadow-xl shadow-slate-900/10" : ""}`}
+        style={{ background: "linear-gradient(135deg, #0f1f4d 0%, #162660 40%, #1a1050 100%)" }}
+      >
         <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #34d399, #60a5fa, #a78bfa, #f472b6, #34d399)", backgroundSize: "200% 100%", animation: "shimmer 4s linear infinite" }} />
         <style>{`@keyframes shimmer { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }`}</style>
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
@@ -471,14 +482,14 @@ export default function ReportItem() {
           <div className="flex items-center justify-between gap-8">
             <div className="flex-1">
               <div className="flex items-center gap-1.5 text-blue-300 text-xs mb-4">
-                <i className="fas fa-home text-[10px]"></i>
-                <span>Home</span>
+                <i className={`fas ${isAdminView ? "fa-user-shield" : "fa-home"} text-[10px]`}></i>
+                <span>{isAdminView ? "Admin Dashboard" : "Home"}</span>
                 <i className="fas fa-chevron-right text-[10px]"></i>
                 <span className="text-white font-semibold">Report Item</span>
               </div>
               <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-blue-200 mb-3 backdrop-blur-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
-                Lost &amp; Found System
+                {isAdminView ? "Admin Item Reporting" : "Lost &amp; Found System"}
               </div>
               <h1 className="text-4xl font-extrabold mb-2 tracking-tight leading-tight">
                 Lost &amp; Found<br />
@@ -505,11 +516,11 @@ export default function ReportItem() {
               </div>
               <div className="text-center">
                 <Link
-                  to="/item-board"
+                  to={itemListPath}
                   className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-semibold text-xs transition-colors shadow-lg mt-1"
                 >
                   <i className="fas fa-clipboard-list text-[11px]"></i>
-                  View Item Catalogue
+                  {isAdminView ? "View All Reported Items" : "View Item Catalogue"}
                 </Link>
               </div>
             </div>
@@ -1098,7 +1109,35 @@ export default function ReportItem() {
           </form>
         </div>
       </main>
+    </>
+  );
 
+  if (isAdminView) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
+        <div className="flex-1 min-h-screen lg:ml-64 flex flex-col bg-gray-50">
+          <TopBar
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            title="Report Item"
+            subtitle="Create a lost or found item report without leaving the admin dashboard"
+          />
+          {pageContent}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen w-full bg-gray-50">
+      <Header />
+      {pageContent}
       <Footer />
     </div>
   );

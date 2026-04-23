@@ -312,16 +312,35 @@ describe('4. Sightings and notifications', () => {
         dateTime: '2026-04-16T10:00:00.000Z',
         note: 'Seen near the bench',
         reporterEmail: 'helper@sliit.lk',
+        reporterPhone: '0712345678',
       });
 
     expect(res.status).toBe(201);
     expect(res.body.data.location).toBe('Bus Stop');
+    expect(res.body.data.reporterPhone).toBe('0712345678');
 
     const notifications = await SightingNotification.find({ itemId: item._id });
     expect(notifications).toHaveLength(1);
     expect(notifications[0].recipientEmail).toBe('nimali@sliit.lk');
     expect(ioMock.to).toHaveBeenCalledWith('nimali@sliit.lk');
     expect(ioMock.emit).toHaveBeenCalled();
+  });
+
+  test('TC-14B | Reject sighting with invalid reporter phone', async () => {
+    const item = await seedItem({ itemType: 'lost' });
+
+    const res = await request(app)
+      .post(`/api/lost-found/${item._id}/sightings`)
+      .send({
+        location: 'Bus Stop',
+        dateTime: '2026-04-16T10:00:00.000Z',
+        note: 'Seen near the bench',
+        reporterEmail: 'helper@sliit.lk',
+        reporterPhone: '712345678',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/mobile number starting with 07/i);
   });
 
   test('TC-15 | Reject sighting on a found item', async () => {
@@ -333,6 +352,7 @@ describe('4. Sightings and notifications', () => {
         location: 'Library',
         dateTime: '2026-04-16T10:00:00.000Z',
         reporterEmail: 'helper@sliit.lk',
+        reporterPhone: '0712345678',
       });
 
     expect(res.status).toBe(400);
@@ -348,6 +368,7 @@ describe('4. Sightings and notifications', () => {
         location: 'Library',
         dateTime: '2026-04-16T10:00:00.000Z',
         reporterEmail: 'nimali@sliit.lk',
+        reporterPhone: '0712345678',
       });
 
     expect(res.status).toBe(403);
